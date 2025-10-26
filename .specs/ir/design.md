@@ -20,6 +20,7 @@ The Ansilust Intermediate Representation (IR) design transforms the normative re
 | Module | Responsibility |
 |--------|----------------|
 | `ansilust-ir/src/document.zig` | Root `Document` type, metadata tables, serialization entry points |
+| `ansilust-ir/src/document_builder.zig` | Safe construction facade for parsers, manages arenas and slab migration |
 | `ansilust-ir/src/cell_grid.zig` | Structure-of-arrays cell storage, grapheme map, accessor APIs |
 | `ansilust-ir/src/encoding.zig` | `SourceEncoding` enum, helpers for raw-byte preservation |
 | `ansilust-ir/src/color.zig` | Tagged union for colors, palette table management |
@@ -47,26 +48,25 @@ All modules follow the namespace container pattern. The public surface re-export
   - Palettes (`PaletteTable` array with entry counts).
   - Font descriptors and embedded glyph buffers.
   - SAUCE payload (`SauceRecord`) plus parsed view.
-  - Grapheme pool arena (deduplicated UTF-8 slices).
-  - Raw byte arena with per-cell offsets.
+  - Grapheme pool arena (deduplicated UTF-8 slices, migrated to slab allocators after build finalization).
+  - Raw byte arena with per-cell offsets (arena-backed during construction, slab-backed after finalization).
   - Animation table (`Animation`).
   - Hyperlink table.
   - Event log capturing non-modeled control sequences.
-  - Dirty bitmask flags for diff-based renderers (optional allocation).
+  - Dirty bitmask flags for diff-based renderers (eager allocation).
 
 ### 3.2 Cell Grid Structure
 
 - Structure-of-arrays layout to maximize cache locality.
 - Parallel slices:
-  - `source_offset: []u32` and `source_len: []u8`.
+  - `source_offset: []u32` and `source_len: []u32`.
   - `encoding: []SourceEncoding`.
-  - `unicode_scalar: []u32` with sentinel `GraphemePool.sentinel`.
-  - `grapheme_id: []u32` (0 for none).
+  - `contents: []CellContents` where `CellContents = union(enum) { scalar: u21, grapheme: u32 }`.
   - `fg_color: []Color`, `bg_color: []Color`.
   - `attributes: []AttributeFlags`.
   - `wide_flags: []WideFlag` (`None`, `Head`, `Tail`).
   - `hyperlink_id: []u32`.
-  - `dirty: ?[]bool` (enabled when diffing requested).
+  - `dirty: []bool`.
 
 ---
 
@@ -87,7 +87,7 @@ All modules follow the namespace container pattern. The public surface re-export
 ### 4.3 Error Unions
 
 - All fallible APIs return `!Type`.
-- Error sets consolidated into `error{OutOfMemory, InvalidCoordinate, InvalidEncoding, UnsupportedAnimation, SerializationFailed, DuplicateId}` with module-specific extensions when necessary.
+- Error sets consolidated into `error{OutOfMemory, InvalidCoordinate, InvalidEncoding, UnsupportedAnimation, SerializationFailed, DuplicateHyperlinkId, DuplicatePaletteId, DuplicateFrameId}` with module-specific extensions when necessary.
 
 ---
 
@@ -98,12 +98,13 @@ All modules follow the namespace container pattern. The public surface re-export
 - The `Document` constructor receives an `Allocator` and caches it for owned allocations.
 - Subcomponents (palettes, fonts, frames) accept an `Allocator` argument when independent lifetimes are desirable but typically borrow the document allocator.
 - `CellGrid` uses a single contiguous allocation for slices via `Allocator.alloc` to simplify teardown.
-- Grapheme and raw-byte arenas employ `std.heap.ArenaAllocator` wrappers layered over the provided allocator; `Document.deinit` ensures `arena_state.deinit()` to release memory.
+- Grapheme and raw-byte storage begin life in `std.heap.ArenaAllocator` wrappers during construction; once finalized, slabs with freelists absorb mutations so bytes and graphemes can be recycled without heap churn. `Document.deinit` releases both arenas and slabs.
 
 ### 5.2 Ownership Rules
 
 - `Document` is the sole owner of all IR resources.
-- Parsers receive a mutable `DocumentBuilder` facade to enforce invariants during construction.
+- Parsers receive a mutable `DocumentBuilder` facade to enforce invariants during construction and to migrate arena-backed buffers into slab allocators during finalization.
+- `DocumentBuilder` exposes `pushCell`, `pushEvent`, and `finalize` so parsers can stream updates safely without violating coordinate or encoding checks.
 - Renderers operate on read-only views; mutation utilities guarded behind `*Document` methods to ensure diff/dirty bookkeeping stays consistent.
 
 ---
@@ -115,6 +116,7 @@ All modules follow the namespace container pattern. The public surface re-export
 - Exposes `pub fn init(allocator: Allocator, width: usize, height: usize) !Document`.
 - `pub fn deinit(self: *Document)` releases all owned resources.
 - Provides metadata setters/getters and references to substructures.
+- Offers builder access via `pub fn builder(self: *Document) DocumentBuilder`.
 - Houses `pub fn resize(self: *Document, width: usize, height: usize) !void` delegating to `CellGrid.resize`.
 
 ### 6.2 `cell_grid.zig`
@@ -127,9 +129,9 @@ All modules follow the namespace container pattern. The public surface re-export
 
 ### 6.3 `animation.zig`
 
-- `Frame` union: `.Full(CellGridSnapshot)` | `.Delta([]DeltaCell)`.
+- `Frame` union: `.Snapshot(CellGridHandle)` or `.Delta([]DeltaCell)`; snapshots use reference-counted grids with copy-on-write semantics.
 - `pub fn appendFrame(self: *Animation, frame: Frame, duration_ms: u32, delay_ms: u32) !void`.
-- Deltas store coordinate, grapheme/color/attribute references referencing canonical tables.
+- Deltas store coordinate, grapheme/color/attribute references referencing canonical tables, defaulting to delta frames except for the initial snapshot.
 
 ### 6.4 `serialize.zig`
 
@@ -167,7 +169,7 @@ All modules follow the namespace container pattern. The public surface re-export
 
 - `ansilust-ir/tests/roundtrip.zig` ensures ANSI/XBin/UTF8 samples survive parse→IR→render (T7, T8).
 - Ghostty stream generation validated with fixture comparisons (T9).
-- Optional OpenTUI conversion tests compile when openTUI references available.
+- OpenTUI conversion tests run in CI alongside Ghostty and round-trip suites (AC7).
 
 ### 8.3 Property & Fuzz Testing
 
@@ -194,6 +196,8 @@ All modules follow the namespace container pattern. The public surface re-export
 ## 10. Code Examples
 
 ### 10.1 Creating a Document
+
+Helper types such as `CellInput` and fluent attribute setters ship with `cell_grid.zig` and `attributes.zig`, so the snippets compile against the public API.
 
 ```ansilust/src/examples/create_document.zig#L1-32
 const std = @import("std");
@@ -258,6 +262,7 @@ pub fn main() !void {
 - **Ghostty Renderer:** `ghostty.zig` converts IR cells into Ghostty-compatible VT sequences, honoring wrap flags, hyperlink metadata, and color `None`.
 - **OpenTUI Bridge:** `opentui.zig` emits `OptimizedBuffer` by mapping `Color` union into RGBA floats and reusing grapheme IDs.
 - **Parsers:** Legacy format parsers populate IR via builder APIs; modern VT parser writes event log and cell updates in real time.
+- **Event Log Replay:** Events capture `(frame_index, sequence_id, payload)` tuples and serialization preserves ordering for deterministic playback.
 
 ---
 
@@ -266,7 +271,7 @@ pub fn main() !void {
 - Structure-of-arrays keeps per-field slices contiguous, improving SIMD-friendly diff scanning.
 - Inline raw bytes ≤ 2 bytes using packed fields reduces arena lookups for ASCII content.
 - Grapheme pool deduplicates repeated multi-codepoint sequences (e.g., linedrawing).
-- Optional dirty bit array toggled only when diff-based renderers request state; the allocation is deferred until first use.
+- Dirty bit array travels with the grid and resets on resize while preserving diff invariants.
 - Serialization writes contiguous buffers to minimize IO calls; compressed/delta encoding reserved for future work.
 
 ---
