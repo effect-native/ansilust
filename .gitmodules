@@ -16,3 +16,6 @@
 [submodule "reference/bun"]
 	path = reference/bun
 	url = https://github.com/oven-sh/bun.git
+[submodule "reference/pablodraw/pablodraw"]
+	path = reference/pablodraw/pablodraw
+	url = https://github.com/cwensley/pablodraw.git
