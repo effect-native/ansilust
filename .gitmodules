@@ -1,0 +1,9 @@
+[submodule "reference/libansilove/libansilove"]
+	path = reference/libansilove/libansilove
+	url = https://github.com/ansilove/libansilove
+[submodule "reference/ansilove/ansilove"]
+	path = reference/ansilove/ansilove
+	url = https://github.com/ansilove/ansilove
+[submodule "reference/ghostty/ghostty"]
+	path = reference/ghostty/ghostty
+	url = https://github.com/ghostty-org/ghostty.git
