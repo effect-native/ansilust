@@ -1,6 +1,6 @@
 # Ansilust Project
 
-Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules. Keep `.specs/ir/prior-art-notes.md` close; it lists the exact Ghostty/Bun/ansilove files to re-read before refreshing IR decisions.
+Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules. Keep `.specs/ir/prior-art-notes.md` close; it lists the exact files from Ghostty, Bun, and ansilove to re-read before refreshing IR decisions.
 
 ## Project Architecture
 
@@ -79,6 +79,29 @@ Located at `reference/effect-smol/`
 - Powerful patterns for asynchronous programming and data pipelines
 - Reference for building robust TypeScript-based parsers and renderers
 - See `reference/effect-smol/AGENTS.md` for detailed development guidelines
+
+### Bun Runtime
+Located at `reference/bun/`
+- All-in-one JavaScript/TypeScript runtime written in Zig
+- FFI (Foreign Function Interface) for Zig/JavaScript interop
+- High-performance systems programming patterns
+- Built-in package manager, test runner, bundler
+- See `reference/bun/AGENTS.md` for development guidelines
+- Prior art to revisit: When designing Zig/TypeScript hybrid systems or optimizing parser performance
+
+## When to Reference Each Project
+
+- **libansilove** (`reference/libansilove/`) - When implementing BBS art parsers (ANSI, Binary, PCBoard, XBin, ArtWorx, Tundra, iCE Draw). Study before modifying IR encoding/font handling.
+
+- **ansilove CLI** (`reference/ansilove/`) - When implementing CLI tools or SAUCE metadata handling. Study before building command-line interfaces or metadata processing.
+
+- **Ghostty** (`reference/ghostty/`) - When implementing UTF8ANSI parser, terminal state machines, or modern terminal features. Study before modifying IR cell/grid/attribute structures.
+
+- **OpenTUI** (`reference/opentui/`) - When designing IR compatibility, buffer structures, or rendering pipelines. Study for OptimizedBuffer patterns and integration targets.
+
+- **Effect-TS** (`reference/effect-smol/`) - When building TypeScript-based parsers, renderers, or APIs. Study for type-safe error handling and functional composition patterns.
+
+- **Bun** (`reference/bun/`) - When designing Zig/TypeScript hybrid systems, optimizing parser performance, or building FFI bridges. Study for memory allocation patterns and cross-boundary optimization.
 
 ## Key Learnings Summary
 
