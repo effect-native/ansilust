@@ -7,9 +7,11 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Demo: Create a simple IR
-    var ir = try ansilust.AnsilustIR.init(allocator, 80, 25);
-    defer ir.deinit();
+    var doc = try ansilust.Document.init(allocator, 80, 25);
+    defer doc.deinit();
 
-    std.debug.print("Ansilust IR initialized: {}x{} cells\n", .{ ir.width, ir.height });
+    const dims = doc.getDimensions();
+    std.debug.print("Ansilust Document initialized: {}x{}\n", .{ dims.width, dims.height });
+    std.debug.print("Cell count: {}\n", .{dims.width * dims.height});
     std.debug.print("Next step: Implement parsers and renderers\n", .{});
 }
