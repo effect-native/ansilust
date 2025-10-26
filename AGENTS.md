@@ -69,7 +69,26 @@ Located at `reference/opentui/opentui/`
 - Direct integration target for ansilust
 - See `reference/opentui/AGENTS.md` for detailed guide
 
+### Effect-TS
+Located at `reference/effect-smol/`
+- Functional programming library for TypeScript
+- Effect system for type-safe error handling and resource management
+- Powerful patterns for asynchronous programming and data pipelines
+- Reference for building robust TypeScript-based parsers and renderers
+- See `reference/effect-smol/AGENTS.md` for detailed development guidelines
+
 ## Key Learnings Summary
+
+### From OpenTUI (Integration Target)
+- **OptimizedBuffer IR**: Structure-of-arrays cell grid
+- **Cell structure**: char, fg, bg, attributes (u8 bitflags)
+- **RGBA colors**: Normalized floats (0.0-1.0)
+- **Diff-based rendering**: Only emit ANSI for changed cells
+- **Grapheme pooling**: Shared storage for multi-column Unicode
+- **Animation support**: Frame-based updates with delta-time
+- **Direct integration**: Our IR should convert to OptimizedBuffer
+
+## IR Design Requirements
 
 ### From libansilove (Classic BBS Art)
 - **Two-pass parsing**: Parse to character buffer (IR), then render
@@ -105,6 +124,17 @@ Located at `reference/opentui/opentui/`
 - **Grapheme pooling**: Shared storage for multi-column Unicode
 - **Animation support**: Frame-based updates with delta-time
 - **Direct integration**: Our IR should convert to OptimizedBuffer
+
+### From Effect-TS (TypeScript Architecture)
+- **Effect type system**: Type-safe error handling without exceptions
+- **Generator-based syntax**: Clean async/error handling with `Effect.gen`
+- **Pipeable APIs**: Functional composition with `pipe()` for data transformations
+- **Resource management**: Safe resource allocation/cleanup with `Effect.acquireRelease`
+- **Schema validation**: Runtime type checking with `@effect/schema`
+- **Layered architecture**: Dependency injection and modular service design
+- **Error tracking**: Typed errors in function signatures (no hidden exceptions)
+- **Stream processing**: Efficient data pipeline patterns for parsing large files
+- **Testing patterns**: `it.effect` for async effect-based tests
 
 ## IR Design Requirements
 
@@ -155,7 +185,7 @@ Based on research, our IR must support:
      - Grapheme cluster map
      - SAUCE metadata preservation
      - Animation frame support
-   
+
 3. **Implement parsers** (IR output):
    - BBS art: ANSI, Binary, PCBoard, XBin, Tundra, ArtWorx, iCE Draw
    - Modern: UTF8ANSI terminal output (VT/xterm sequences)
