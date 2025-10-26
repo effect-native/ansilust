@@ -7,3 +7,6 @@
 [submodule "reference/ghostty/ghostty"]
 	path = reference/ghostty/ghostty
 	url = https://github.com/ghostty-org/ghostty.git
+[submodule "reference/opentui/opentui"]
+	path = reference/opentui/opentui
+	url = https://github.com/sst/opentui.git
