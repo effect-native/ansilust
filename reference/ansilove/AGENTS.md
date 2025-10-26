@@ -51,7 +51,7 @@ Key options include:
 
 ## SAUCE Metadata (CRITICAL!)
 
-SAUCE (Standard Architecture for Universal Comment Extensions) is a **128-byte** record appended to the end of files.
+SAUCE (Standard Architecture for Universal Comment Extensions) is a **128-byte** record appended to the end of files. Before touching IR metadata or SAUCE handling, revisit [`.specs/ir/prior-art-notes.md`](../../.specs/ir/prior-art-notes.md#ansilove-referenceansilove), then re-read `src/ansilove.c` (SAUCE detection + rendering hints) and `src/sauce.c` (record parsing) so the exact behavior stays fresh.
 
 ### SAUCE Record Structure
 

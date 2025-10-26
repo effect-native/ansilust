@@ -2,7 +2,7 @@
 
 ## What is libansilove?
 
-libansilove is a C library for converting ANSI, ASCII art, and other text-based art formats into PNG images. It's the core library that powers the ansilove command-line tool.
+libansilove is a C library for converting ANSI, ASCII art, and other text-based art formats into PNG images. It's the core library that powers the ansilove command-line tool. Before adjusting IR encoding or classic-format decisions, re-read [`.specs/ir/prior-art-notes.md`](../../.specs/ir/prior-art-notes.md#libansilove-referencelibansilovelibansilove), then skim `src/loaders/ansi.c`, `src/drawchar.c`, and `src/loaders/xbin.c` so the byte-for-byte expectations stay fresh.
 
 ## Contents
 

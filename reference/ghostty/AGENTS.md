@@ -2,7 +2,7 @@
 
 ## What is Ghostty?
 
-Ghostty is a modern, fast, feature-rich terminal emulator written in Zig. It's designed to be cross-platform (macOS, Linux, Windows) with native platform integration and GPU-accelerated rendering.
+Ghostty is a modern, fast, feature-rich terminal emulator written in Zig. It's designed to be cross-platform (macOS, Linux, Windows) with native platform integration and GPU-accelerated rendering. Before adjusting IR cell/grid/state logic, revisit [`.specs/ir/prior-art-notes.md`](../../.specs/ir/prior-art-notes.md#ghostty-referenceghosttyghostty) for the exact files to re-read.
 
 ## Contents
 
@@ -57,6 +57,9 @@ This reference implementation can be used to:
 - `src/terminal/Terminal.zig` - Main terminal state machine
 - `src/terminal/Screen.zig` - Terminal screen buffer
 - `src/terminal/Parser.zig` - VT escape sequence parser
+- `src/terminal/page.zig` - Packed cell layout, grapheme arenas, hyperlink maps (see [prior art notes](../../.specs/ir/prior-art-notes.md#ghostty-referenceghosttyghostty))
+- `src/terminal/color.zig` - 256-color palette construction, ANSI name mapping (see [prior art notes](../../.specs/ir/prior-art-notes.md#ghostty-referenceghosttyghostty))
+- `src/terminal/style.zig` - Packed style flags, underline color handling (see [prior art notes](../../.specs/ir/prior-art-notes.md#ghostty-referenceghosttyghostty))
 
 ### Rendering
 - `src/renderer/` - GPU rendering pipeline

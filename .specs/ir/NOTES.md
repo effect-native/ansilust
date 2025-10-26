@@ -1,3 +1,9 @@
+ensure all your recent changes are in git
+
+ok, I think we're ready to move on to writing up the .specs/ir/requirements.md
+
+
+
 per-cell data vs per-document data
 what must be defined for each cell and what can be defined once for the entire document?
 

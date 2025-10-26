@@ -1,6 +1,6 @@
 # Ansilust Project
 
-Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules.
+Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules. Keep `.specs/ir/prior-art-notes.md` close; it lists the exact Ghostty/Bun/ansilove files to re-read before refreshing IR decisions.
 
 ## Project Architecture
 
@@ -48,12 +48,14 @@ Located at `reference/libansilove/libansilove/`
 - C library for converting classic text art formats to PNG
 - Clean API design and format parsing reference
 - See `reference/libansilove/AGENTS.md` for detailed guide
+- Prior art to revisit: `.specs/ir/prior-art-notes.md` (libansilove + SAUCE sections) before touching IR encoding/metadata decisions
 
 ### ansilove CLI
 Located at `reference/ansilove/ansilove/`
 - Command-line interface reference
 - SAUCE metadata handling
 - See `reference/ansilove/AGENTS.md` for detailed guide
+- Prior art to revisit: `.specs/ir/prior-art-notes.md` (ansilove CLI section) ahead of IR metadata or CLI-alignment work
 
 ### Ghostty Terminal
 Located at `reference/ghostty/ghostty/`
@@ -61,6 +63,7 @@ Located at `reference/ghostty/ghostty/`
 - VT/xterm protocol implementation
 - GPU-accelerated rendering techniques
 - See `reference/ghostty/AGENTS.md` for detailed guide
+- Prior art to revisit: `.specs/ir/prior-art-notes.md` (Ghostty section) before editing IR cell/grid/state decisions
 
 ### OpenTUI Framework
 Located at `reference/opentui/opentui/`
