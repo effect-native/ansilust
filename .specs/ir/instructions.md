@@ -16,11 +16,12 @@ The Ansilust Intermediate Representation (IR) is a unified data format that serv
 - No unified representation exists to bridge these worlds
 
 **Solution**: Create a Cell Grid IR that:
-- Supports both legacy CP437 and modern Unicode characters
-- Handles both palette-indexed and true color (RGBA)
-- Preserves SAUCE metadata and rendering hints
-- Enables lossless conversion between compatible formats
-- Provides a clean API for parsers (write IR) and renderers (read IR)
+- Captures raw source bytes plus an encoding tag (CP437, PETSCII, UTF-8, etc.) for every cell while also storing normalized Unicode.
+- Handles both palette-indexed and true color (RGBA) pipelines.
+- Preserves SAUCE metadata and rendering hints.
+- Represents ansimation frames and timing metadata even when downstream renderers ignore animations.
+- Enables lossless conversion between compatible formats.
+- Provides a clean API for parsers (write IR) and renderers (read IR).
 
 ## Core Requirements (EARS Notation)
 
@@ -32,7 +33,8 @@ The Ansilust Intermediate Representation (IR) is a unified data format that serv
 
 **R1.3**: WHEN SAUCE metadata is present in source data the IR shall preserve all 128 bytes of the SAUCE record.
 
-**R1.4**: The IR shall support both CP437 character encoding and full Unicode codepoints.
+**R1.4**: The IR shall store per-cell source code unit bytes plus an explicit encoding tag (e.g., CP437, PETSCII, UTF-8) together with the normalized Unicode representation.
+**R1.5**: WHEN ansimation data is present in source content the IR shall preserve frame ordering, timing metadata, and repeat semantics even if no renderer consumes it.
 
 ### Character and Color Representation
 
@@ -102,12 +104,13 @@ The Ansilust Intermediate Representation (IR) is a unified data format that serv
 
 **Cell Grid**: Structure-of-arrays design inspired by OpenTUI's OptimizedBuffer
 - Width and height (usize)
-- Cell data (character, foreground, background, attributes)
+- Cell arrays for raw source byte slices, encoding tags, normalized Unicode scalars or grapheme IDs, foreground, background, and attribute bitflags
 - Grapheme cluster map for multi-codepoint characters
 - Style reference counting for memory efficiency
 
 **Character Representation**:
-- CP437 byte (u8) OR Unicode codepoint (u21)
+- Source code unit bytes (e.g., []u8) plus an encoding tag enumerating CP437, PETSCII, UTF-8, or future code pages.
+- Normalized Unicode codepoint (u21) or grapheme cluster reference for renderer-friendly text.
 - Wide character flags (spacer_head, spacer_tail)
 - Grapheme cluster ID for complex characters
 
@@ -130,6 +133,11 @@ The Ansilust Intermediate Representation (IR) is a unified data format that serv
 - Embedded font data (optional, for XBin/ArtWorx)
 - Font dimensions (character width x height in pixels)
 
+**Animation Support**:
+- Ordered frame list with each frame referencing a cell grid snapshot or delta against a previous frame.
+- Per-frame timing metadata (duration, optional delay, repeat markers) preserved from source data.
+- Global animation controls such as loop count or play-until-end flags, even when renderers ignore them.
+
 ### API Design
 
 **Parser API** (writes to IR):
@@ -151,7 +159,8 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 
 ### Integration Points
 
-- **OpenTUI Integration**: Direct conversion to OptimizedBuffer
+- **Ghostty Integration**: Primary terminal target ensuring VT/xterm semantics, grapheme handling, OSC 8, and color None behavior remain intact.
+- **OpenTUI Integration (optional)**: Provide conversion to OptimizedBuffer when that toolchain is part of the deployment story.
 - **Parser Integration**: ANSI, Binary, PCBoard, XBin parsers write to IR
 - **Renderer Integration**: UTF8ANSI, HTML Canvas, PNG renderers read from IR
 
@@ -165,17 +174,19 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 
 **AC4**: WHEN an XBin file with embedded fonts is parsed THEN the IR preserves the complete font bitmap data.
 
-**AC5**: The IR can be serialized to bytes and deserialized without data loss.
+**AC5**: WHEN ansimation data is parsed THEN the IR preserves frame ordering, timing metadata, and repeat semantics even if renderers ignore animations.
 
-**AC6**: The IR can be converted to OpenTUI's OptimizedBuffer format.
+**AC6**: The IR can be serialized to bytes and deserialized without data loss.
 
-**AC7**: WHEN rendering the IR to UTF8ANSI THEN the output produces visually identical results to the original.
+**AC7**: The IR can be converted to OpenTUI's OptimizedBuffer format.
 
-**AC8**: All IR operations pass memory leak detection with std.testing.allocator.
+**AC8**: WHEN rendering the IR to UTF8ANSI THEN the output produces visually identical results to the original.
 
-**AC9**: All public IR APIs have comprehensive doc comments with examples.
+**AC9**: All IR operations pass memory leak detection with std.testing.allocator.
 
-**AC10**: The IR processes a 1KB ANSI file in under 1ms on reference hardware.
+**AC10**: All public IR APIs have comprehensive doc comments with examples.
+
+**AC11**: The IR processes a 1KB ANSI file in under 1ms on reference hardware.
 
 ## Out of Scope
 
@@ -238,9 +249,14 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - Delta encoding for similar cells
 - Reference-based deduplication
 
+**FC7**: Additional encoding families
+- Extend the encoding enumeration to cover PETSCII variants, Shift-JIS, ISO-8859, and future code pages.
+- Maintain raw source bytes and mapping tables even when renderers lack native support for those encodings.
+
+
 ## Testing Requirements
 
-### Unit Tests
+### Unit Tests (T1–T6)
 
 **T1**: Cell Grid Operations
 - Create grid with specified dimensions
@@ -249,7 +265,9 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - Memory leak detection
 
 **T2**: Character Encoding
-- CP437 byte storage and retrieval
+- Raw source byte slices preserved and retrievable for CP437, PETSCII, and UTF-8 samples
+- Encoding tag values remain consistent with the stored raw bytes
+- Encoding tag enumeration covers CP437, PETSCII, UTF-8, and placeholder slots for future code pages
 - Unicode codepoint storage and retrieval
 - Wide character handling (spacer cells)
 - Grapheme cluster management
@@ -277,12 +295,13 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - Store embedded font data
 - Validate font dimensions
 
-### Integration Tests
+### Integration Tests (T7–T9)
 
 **T7**: Format Round-Trips
 - ANSI → IR → ANSI (lossless)
 - XBin → IR → XBin (preserve fonts)
 - UTF8ANSI → IR → UTF8ANSI (preserve Unicode)
+- Ansimation → IR → Ansimation (preserve frame order, timing, and loop semantics)
 
 **T8**: Cross-Format Conversion
 - Classic BBS → IR → Modern terminal
@@ -294,7 +313,7 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - Validate cell structure compatibility
 - Verify color format conversion
 
-### Property-Based Tests
+### Property-Based Tests (T10–T12)
 
 **T10**: Fuzz testing for parsers writing to IR
 - Random byte sequences
@@ -306,17 +325,27 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - No out-of-bounds access
 - Memory allocation balanced with deallocation
 
-### Performance Tests
+**T12**: Ansimation timeline fuzzing
+- Randomized frame counts, delays, and loop flags
+- Delta-only frames mixed with full snapshots
+- Boundary values for zero-duration and maximum-duration frames
 
-**T12**: Benchmark typical operations
+### Performance Tests (T13–T15)
+
+**T13**: Benchmark typical operations
 - Create IR from 1KB, 10KB, 100KB files
 - Cell access patterns (sequential, random)
 - Serialization and deserialization
 
-**T13**: Memory usage profiling
+**T14**: Memory usage profiling
 - Typical file overhead
 - Peak memory during parsing
 - Memory pooling effectiveness
+
+**T15**: Ansimation playback benchmarking
+- Measure frame-application throughput with varying frame counts
+- Evaluate timing metadata parsing overhead
+- Validate loop and repeat handling under sustained playback
 
 ## Example EARS Requirements (Reference)
 
