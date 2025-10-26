@@ -41,6 +41,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const parsers_mod = b.addModule("parsers", .{
+        .root_source_file = b.path("src/parsers/lib.zig"),
+        .target = target,
+    });
+
+    mod.addImport("parsers", parsers_mod);
+    parsers_mod.addImport("ansilust", mod);
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -79,6 +87,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "ansilust", .module = mod },
+                .{ .name = "parsers", .module = parsers_mod },
             },
         }),
     });
@@ -125,6 +134,11 @@ pub fn build(b: *std.Build) void {
     // A run step that will run the test executable.
     const run_mod_tests = b.addRunArtifact(mod_tests);
 
+    const parsers_tests = b.addTest(.{
+        .root_module = parsers_mod,
+    });
+    const run_parsers_tests = b.addRunArtifact(parsers_tests);
+
     // Creates an executable that will run `test` blocks from the executable's
     // root module. Note that test executables only test one module at a time,
     // hence why we have to create two separate ones.
@@ -141,6 +155,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+    test_step.dependOn(&run_parsers_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //

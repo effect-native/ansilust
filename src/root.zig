@@ -29,6 +29,7 @@ const std = @import("std");
 
 /// Intermediate representation module
 pub const ir = @import("ir/lib.zig");
+pub const parsers = @import("parsers");
 
 // === Convenience Re-exports ===
 
