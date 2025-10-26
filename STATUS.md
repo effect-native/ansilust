@@ -119,10 +119,9 @@ Coverage:
 No parsers implemented yet. Need:
 
 - [ ] **ANSI Parser** ← START HERE
-  - Parse ANSI escape sequences
-  - Extract SAUCE metadata
-  - Handle CP437 encoding
-  - Populate IR structure
+  - Status: Skeleton in `src/parsers/ansi.zig` writes plain text, limited SGR (0/1/5/7, 30-37, 40-47), and detects SAUCE metadata.
+  - Blockers: Fails to build because `Ir.Document.init` is called without width/height and relies on a non-existent `Ir.Color.fromAnsi` helper.
+  - Next: Implement cursor addressing, erase commands, CP437-to-Unicode decoding, scrolling, extended SGR, and SAUCE hint application.
   - Reference: `reference/libansilove/libansilove/src/loaders/ansi.c`
 
 - [ ] **Binary Parser**
@@ -377,6 +376,7 @@ bash scripts/analyze_corpus.sh
 ## 🐛 Known Issues & Limitations
 
 - Parsers not yet implemented (main blocker for Phase 5)
+- ANSI parser skeleton currently fails to compile: adjust `Document.init` usage and replace placeholder color helpers before extending features.
 - Renderers not yet implemented (main blocker for Phase 5)
 - Serialization stubs need implementation
 - Integration tests pending (need parsers first)
@@ -397,6 +397,7 @@ bash scripts/analyze_corpus.sh
    - Round-trip tests
 
 3. **ANSI Parser** (first parser)
+   - Fix skeleton compile issues (pass width/height to `Document.init`, add palette helpers instead of `Color.fromAnsi`).
    - CSI sequence parsing
    - CP437 decoding
    - SAUCE extraction
