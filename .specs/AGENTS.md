@@ -69,24 +69,41 @@ This workflow is **ONLY** for substantial new features. For other types of work:
 - Create `.specs/[feature-name]/` directory
 - Create `instructions.md` with:
   - Overview and User Story
-  - Core Requirements
+  - Core Requirements (written in EARS notation when applicable)
   - Technical Specifications
-  - Acceptance Criteria
+  - Acceptance Criteria (using EARS patterns)
   - Out of Scope items
   - Success Metrics
   - Future Considerations
   - Testing Requirements
+
+**EARS Notation Introduction**:
+Begin using EARS (Easy Approach to Requirements Syntax) patterns for clarity:
+- **Ubiquitous**: "The system shall [requirement]"
+- **Event-driven**: "WHEN [trigger/event] the system shall [requirement]"
+- **State-driven**: "WHILE [in state] the system shall [requirement]"
+- **Unwanted**: "IF [condition] THEN the system shall [requirement]"
+- **Optional**: "WHERE [feature included] the system shall [requirement]"
+
+**Example EARS Requirements**:
+```
+The component shall validate all input parameters.
+WHEN an error condition occurs the system shall log diagnostic information.
+WHILE in processing mode the system shall maintain state consistency.
+IF invalid input is detected THEN the component shall return an appropriate error.
+WHERE feature X is enabled the system shall apply additional validation.
+```
 
 **🔒 AUTHORIZATION GATE**: Present instructions.md and request user approval to proceed to Requirements Phase
 
 ---
 
 #### Phase 2: Requirements Phase
-**Objective**: Structured analysis and formal specifications
+**Objective**: Structured analysis and formal specifications using EARS notation
 
 **Deliverables**:
-- Create `requirements.md` with hierarchical numbering:
-  - **FR1.x**: Functional Requirements
+- Create `requirements.md` with hierarchical numbering and EARS notation:
+  - **FR1.x**: Functional Requirements (EARS notation MANDATORY)
   - **NFR2.x**: Non-Functional Requirements (performance, memory usage)
   - **TC3.x**: Technical Constraints (Zig version, dependencies)
   - **DR4.x**: Data Requirements (structures, formats)
@@ -94,7 +111,100 @@ This workflow is **ONLY** for substantial new features. For other types of work:
   - **DEP6.x**: Dependencies
   - **SC7.x**: Success Criteria
 
-**🔒 AUTHORIZATION GATE**: Present requirements.md and request user approval to proceed to Design Phase
+**🚨 MANDATORY EARS Notation Guidelines**:
+
+All functional requirements (FR1.x) **MUST** use EARS patterns. Choose the appropriate pattern:
+
+**1. Ubiquitous Requirements** (always active, no preconditions):
+```
+FR1.1: The component shall validate input parameters before processing.
+FR1.2: The system shall provide a public API for all core operations.
+FR1.3: The module shall support the required data types and structures.
+```
+
+**2. Event-Driven Requirements** (triggered by specific events):
+```
+FR1.4: WHEN the component detects specific input conditions the system shall handle them appropriately.
+FR1.5: WHEN an allocation fails the system shall return error.OutOfMemory.
+FR1.6: WHEN processing completes the system shall invoke registered callbacks.
+```
+
+**3. State-Driven Requirements** (active during specific states):
+```
+FR1.7: WHILE in special mode the system shall apply mode-specific behavior.
+FR1.8: WHILE processing specific data types the system shall use appropriate algorithms.
+FR1.9: WHILE the allocator is active the system shall track all allocations.
+```
+
+**4. Unwanted Behavior Requirements** (error/exception handling):
+```
+FR1.10: IF input contains invalid UTF-8 THEN the parser shall return error.InvalidEncoding.
+FR1.11: IF buffer overflow is detected THEN the system shall abort with error.BufferTooSmall.
+FR1.12: IF a required dependency is missing THEN initialization shall fail with error.MissingDependency.
+```
+
+**5. Optional Feature Requirements** (conditional on feature flags):
+```
+FR1.13: WHERE feature X is enabled the component shall provide extended functionality.
+FR1.14: WHERE advanced mode is supported the system shall maintain required state.
+FR1.15: WHERE debug mode is active the system shall emit detailed trace logs.
+```
+
+**EARS Anti-Patterns to Avoid**:
+- ❌ Vague: "The system should handle errors properly"
+- ❌ Ambiguous: "The component may support feature X"
+- ❌ Implementation: "The system shall use a HashMap for storage"
+- ❌ Combined: "The system shall process and output data"
+
+**EARS Best Practices**:
+- ✅ One requirement per statement
+- ✅ Use "shall" (mandatory), never "should" or "may"
+- ✅ Be specific and measurable
+- ✅ Focus on WHAT, not HOW (save implementation for design phase)
+- ✅ Make preconditions explicit (WHEN/WHILE/IF/WHERE)
+- ✅ Define observable behavior, not internal implementation
+
+**Example Complete Requirements Section**:
+```markdown
+## FR1: Functional Requirements
+
+### FR1.1: Input Handling
+FR1.1.1: The component shall accept required input types.
+FR1.1.2: WHEN input size exceeds defined limits the component shall return an appropriate error.
+FR1.1.3: The component shall validate input according to specifications.
+
+### FR1.2: Core Processing
+FR1.2.1: WHEN specific conditions are met the system shall perform required operations.
+FR1.2.2: The component shall validate data integrity during processing.
+FR1.2.3: IF validation fails THEN the component shall handle the error gracefully.
+
+### FR1.3: Error Handling
+FR1.3.1: IF memory allocation fails THEN the system shall return error.OutOfMemory.
+FR1.3.2: The system shall release all resources on error paths.
+FR1.3.3: WHEN an error occurs the system shall provide context in the error message.
+```
+
+**Non-Functional Requirements** (NFR2.x) should specify measurable criteria:
+```markdown
+## NFR2: Non-Functional Requirements
+
+NFR2.1: The component shall complete typical operations within defined time constraints.
+NFR2.2: The system shall maintain reasonable memory usage relative to input size.
+NFR2.3: The component shall produce output within acceptable size bounds.
+NFR2.4: All public APIs shall have doc comment coverage of 100%.
+```
+
+**Technical Constraints** (TC3.x) should define boundaries:
+```markdown
+## TC3: Technical Constraints
+
+TC3.1: The system shall compile with Zig version 0.11.0 or later.
+TC3.2: The system shall have zero external dependencies beyond Zig std.
+TC3.3: The system shall not use global mutable state.
+TC3.4: The system shall pass with -Doptimize=ReleaseSafe.
+```
+
+**🔒 AUTHORIZATION GATE**: Present requirements.md with EARS notation and request user approval to proceed to Design Phase
 
 ---
 
@@ -191,32 +301,33 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 
 /// Public API struct with comprehensive documentation
-pub const Parser = struct {
+pub const Component = struct {
     allocator: Allocator,
+    state: State,
     
-    /// Initialize a new parser
+    /// Initialize a new component
     /// 
     /// # Arguments
-    /// - `allocator`: Memory allocator for parser operations
+    /// - `allocator`: Memory allocator for component operations
     /// 
     /// # Returns
-    /// A new Parser instance
-    pub fn init(allocator: Allocator) Parser {
-        return .{ .allocator = allocator };
+    /// A new Component instance
+    pub fn init(allocator: Allocator) Component {
+        return .{ .allocator = allocator, .state = .{} };
     }
     
-    /// Parse input with explicit error handling
+    /// Process input with explicit error handling
     /// 
     /// # Arguments
-    /// - `input`: Input data to parse
+    /// - `input`: Input data to process
     /// 
     /// # Returns
-    /// Parsed result or error
+    /// Processing result or error
     /// 
     /// # Errors
-    /// - `InvalidFormat`: Input format is invalid
+    /// - `InvalidInput`: Input validation failed
     /// - `OutOfMemory`: Allocation failed
-    pub fn parse(self: *Parser, input: []const u8) !Result {
+    pub fn process(self: *Component, input: []const u8) !Result {
         // Implementation
     }
 };
@@ -233,30 +344,30 @@ pub const Parser = struct {
 ```zig
 const std = @import("std");
 const testing = std.testing;
-const Parser = @import("parser.zig").Parser;
+const Component = @import("component.zig").Component;
 
-test "Parser.parse handles valid input" {
-    var parser = Parser.init(testing.allocator);
+test "Component.process handles valid input" {
+    var component = Component.init(testing.allocator);
     const input = "valid data";
     
-    const result = try parser.parse(input);
+    const result = try component.process(input);
     defer result.deinit();
     
     try testing.expectEqual(expected_value, result.value);
 }
 
-test "Parser.parse returns error on invalid input" {
-    var parser = Parser.init(testing.allocator);
+test "Component.process returns error on invalid input" {
+    var component = Component.init(testing.allocator);
     const input = "invalid data";
     
-    try testing.expectError(error.InvalidFormat, parser.parse(input));
+    try testing.expectError(error.InvalidInput, component.process(input));
 }
 
-test "Parser.parse does not leak memory" {
-    var parser = Parser.init(testing.allocator);
+test "Component.process does not leak memory" {
+    var component = Component.init(testing.allocator);
     const input = "test data";
     
-    const result = try parser.parse(input);
+    const result = try component.process(input);
     defer result.deinit();
     
     // testing.allocator will detect leaks automatically
@@ -589,3 +700,282 @@ Ensure all completion criteria are met:
 - Use appropriate data structures for the use case
 
 This workflow ensures systematic, high-quality feature development that maintains the ansilust project's standards for memory safety, type safety, and Zig best practices.
+
+---
+
+## EARS Notation Reference
+
+### Overview
+
+EARS (Easy Approach to Requirements Syntax) provides structured patterns for writing clear, unambiguous requirements. All functional requirements in ansilust specifications **MUST** use EARS notation.
+
+### The Five EARS Patterns
+
+#### 1. Ubiquitous Requirements
+**Pattern**: "The [subject] shall [requirement]"
+
+**When to use**: Requirements that are always active with no preconditions.
+
+**Examples**:
+```
+The component shall validate input parameters.
+The module shall support required data types.
+The system shall provide a public API.
+The allocator shall be passed explicitly to all functions.
+```
+
+**Key characteristics**:
+- No trigger conditions
+- Always enforced
+- System-wide behavior
+
+---
+
+#### 2. Event-Driven Requirements
+**Pattern**: "WHEN [trigger/event] the [subject] shall [requirement]"
+
+**When to use**: Requirements triggered by specific events or conditions.
+
+**Examples**:
+```
+WHEN specific metadata is detected the component shall extract all relevant fields.
+WHEN an allocation fails the system shall return error.OutOfMemory.
+WHEN processing completes the system shall invoke the completion callback.
+WHEN input exceeds buffer size the component shall return error.BufferTooSmall.
+```
+
+**Key characteristics**:
+- Specific triggering event
+- Clearly defined system response
+- Temporal relationship
+
+---
+
+#### 3. State-Driven Requirements
+**Pattern**: "WHILE [in state] the [subject] shall [requirement]"
+
+**When to use**: Requirements active during specific system states.
+
+**Examples**:
+```
+WHILE in special mode the component shall apply mode-specific processing rules.
+WHILE handling specific format the component shall use format-appropriate defaults.
+WHILE processing legacy data the system shall use appropriate encoding mappings.
+WHILE the debug flag is set the system shall emit trace information.
+```
+
+**Key characteristics**:
+- Duration-based activation
+- State-dependent behavior
+- Remains active until state changes
+
+---
+
+#### 4. Unwanted Behavior Requirements
+**Pattern**: "IF [unwanted condition] THEN the [subject] shall [requirement]"
+
+**When to use**: Error handling, exception cases, and fault tolerance.
+
+**Examples**:
+```
+IF input contains invalid encoding THEN the component shall return error.InvalidEncoding.
+IF buffer overflow is detected THEN the system shall return error.BufferTooSmall.
+IF a required dependency is missing THEN initialization shall fail with error.MissingDependency.
+IF memory allocation fails THEN the system shall clean up partial state.
+```
+
+**Key characteristics**:
+- Error conditions
+- Exception handling
+- Defensive requirements
+
+---
+
+#### 5. Optional Feature Requirements
+**Pattern**: "WHERE [feature/configuration] the [subject] shall [requirement]"
+
+**When to use**: Conditional features, build configurations, or optional capabilities.
+
+**Examples**:
+```
+WHERE feature X is enabled the component shall provide extended functionality.
+WHERE advanced mode is supported the component shall maintain required state.
+WHERE debug mode is active the system shall emit detailed diagnostics.
+WHERE the feature flag is set the system shall enable experimental features.
+```
+
+**Key characteristics**:
+- Feature flags
+- Configuration-dependent
+- Optional capabilities
+
+---
+
+### EARS Best Practices
+
+#### Writing Quality Requirements
+
+**DO**:
+- ✅ Use "shall" for mandatory requirements (never "should", "may", or "might")
+- ✅ Write one requirement per statement
+- ✅ Be specific and measurable
+- ✅ Focus on observable behavior
+- ✅ Make preconditions explicit
+- ✅ Use consistent terminology
+- ✅ Define clear success criteria
+
+**DON'T**:
+- ❌ Mix multiple requirements in one statement
+- ❌ Use vague language ("properly", "adequately", "reasonable")
+- ❌ Specify implementation details (save for design phase)
+- ❌ Use passive voice or unclear subjects
+- ❌ Omit error conditions
+- ❌ Create untestable requirements
+
+---
+
+### EARS Anti-Patterns
+
+#### Vague Requirements
+❌ **Bad**: "The system should handle errors properly"
+✅ **Good**: "IF parsing fails THEN the system shall return error.ParseError with context"
+
+#### Ambiguous Modality
+❌ **Bad**: "The component may support feature X"
+✅ **Good**: "The component shall support required feature X"
+
+#### Implementation Details
+❌ **Bad**: "The system shall use a HashMap for symbol storage"
+✅ **Good**: "The system shall provide O(1) symbol lookup"
+
+#### Combined Requirements
+❌ **Bad**: "The system shall parse and render text art"
+✅ **Good**: 
+- "The component shall process input and produce output"
+- "The system shall convert data from format A to format B"
+
+#### Missing Preconditions
+❌ **Bad**: "The system shall use special processing"
+✅ **Good**: "WHERE compatibility mode is enabled the component shall apply special processing rules"
+
+---
+
+### EARS Validation Checklist
+
+Use this checklist when reviewing requirements:
+
+#### Structure
+- [ ] Every functional requirement uses one of the five EARS patterns
+- [ ] Each requirement has a unique identifier (FR1.x format)
+- [ ] Requirements are hierarchically organized
+- [ ] All requirements use "shall" (not "should" or "may")
+
+#### Clarity
+- [ ] Each requirement states exactly one obligation
+- [ ] Preconditions are explicit (WHEN/WHILE/IF/WHERE when needed)
+- [ ] Subject and action are clearly identified
+- [ ] No ambiguous terms ("properly", "reasonable", "adequate")
+- [ ] Terminology is consistent throughout
+
+#### Completeness
+- [ ] Normal operating conditions covered (Ubiquitous, Event-driven, State-driven)
+- [ ] Error conditions covered (Unwanted)
+- [ ] Optional features covered (Optional)
+- [ ] All inputs have defined handling
+- [ ] All outputs have defined format
+- [ ] All error cases have defined responses
+
+#### Testability
+- [ ] Each requirement is verifiable through testing
+- [ ] Success criteria are measurable
+- [ ] Expected behavior is observable
+- [ ] Test conditions can be created
+- [ ] Pass/fail criteria are clear
+
+#### Zig-Specific Requirements
+- [ ] Memory allocation requirements explicit
+- [ ] Error handling requirements complete
+- [ ] Ownership and lifetime requirements clear
+- [ ] Thread safety requirements specified (if applicable)
+- [ ] Performance requirements measurable
+
+---
+
+### Example: Complete Feature Requirements
+
+```markdown
+# Feature: Data Processor
+
+## FR1: Functional Requirements
+
+### FR1.1: Input Handling
+FR1.1.1: The component shall accept byte arrays as input.
+FR1.1.2: The component shall accept an allocator parameter for all allocations.
+FR1.1.3: WHEN input size exceeds configured limits the component shall return error.InputTooLarge.
+
+### FR1.2: Data Validation
+FR1.2.1: The component shall validate input format before processing.
+FR1.2.2: The component shall check all required fields are present.
+FR1.2.3: IF validation fails THEN the component shall return error.InvalidInput with details.
+
+### FR1.3: Metadata Extraction
+FR1.3.1: WHEN metadata is present the component shall extract all relevant fields.
+FR1.3.2: The component shall validate metadata structure.
+FR1.3.3: IF metadata validation fails THEN the component shall use default values.
+FR1.3.4: WHEN metadata contains hints the component shall apply them during processing.
+
+### FR1.4: Data Encoding
+FR1.4.1: WHILE processing legacy format the component shall use appropriate decoding.
+FR1.4.2: WHERE modern encoding is enabled the component shall support extended character sets.
+FR1.4.3: IF invalid encoding is detected THEN the component shall return error.InvalidEncoding.
+
+### FR1.5: Output Generation
+FR1.5.1: The component shall produce a valid output structure.
+FR1.5.2: The component shall preserve all relevant information.
+FR1.5.3: WHEN processing completes the component shall return ownership to caller.
+
+### FR1.6: Resource Management
+FR1.6.1: The component shall release all allocated resources on success.
+FR1.6.2: IF an error occurs THEN the component shall release all allocated resources.
+FR1.6.3: The component shall not leak memory under any circumstances.
+
+## NFR2: Non-Functional Requirements
+
+NFR2.1: The component shall process typical workloads within performance targets.
+NFR2.2: The component shall use reasonable memory relative to input size.
+NFR2.3: The component shall compile with -Doptimize=ReleaseSafe with zero warnings.
+
+## TC3: Technical Constraints
+
+TC3.1: The component shall require Zig 0.11.0 or later.
+TC3.2: The parser shall have zero dependencies beyond Zig std library.
+TC3.3: The parser shall not use global mutable state.
+```
+
+---
+
+## EARS Integration with Development Workflow
+
+### During Instructions Phase (Phase 1)
+- Introduce EARS patterns in Core Requirements section
+- Use EARS for Acceptance Criteria
+- Begin thinking in EARS patterns
+
+### During Requirements Phase (Phase 2)
+- **MANDATORY**: All FR1.x requirements use EARS notation
+- Apply EARS validation checklist
+- Review for completeness using all five patterns
+- Ensure error conditions covered (Unwanted pattern)
+
+### During Design Phase (Phase 3)
+- Map EARS requirements to implementation approach
+- Ensure design addresses all EARS requirements
+- Document how each requirement will be verified
+
+### During Implementation Phase (Phase 5)
+- Trace code back to specific EARS requirements
+- Ensure test coverage for each EARS requirement
+- Verify error handling matches Unwanted requirements
+
+### During Completion Validation
+- [ ] All
