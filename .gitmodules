@@ -10,3 +10,6 @@
 [submodule "reference/opentui/opentui"]
 	path = reference/opentui/opentui
 	url = https://github.com/sst/opentui.git
+[submodule "reference/effect-smol"]
+	path = reference/effect-smol
+	url = https://github.com/Effect-TS/effect-smol.git
