@@ -13,3 +13,6 @@
 [submodule "reference/effect-smol"]
 	path = reference/effect-smol
 	url = https://github.com/Effect-TS/effect-smol.git
+[submodule "reference/bun"]
+	path = reference/bun
+	url = https://github.com/oven-sh/bun.git
