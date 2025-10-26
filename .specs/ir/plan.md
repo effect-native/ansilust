@@ -100,6 +100,8 @@ This plan operationalizes the requirements and design specifications for the Ans
 - [ ] Property-based tests and fuzzers (T10–T12) plus performance benchmarks (T13–T15) using representative fixtures.
 - [ ] Documentation polishing: ensure `docs/ir.md` up to date, README/STATUS updates, release notes.
 
+**ANSI Parser Review (2024):** Skeleton in `src/parsers/ansi.zig` writes plain text with limited SGR (0/1/5/7, palette colors 30–37 and 40–47) and detects SAUCE metadata. Current blockers: `Ir.Document.init` is invoked without dimensions and the code references a non-existent `Ir.Color.fromAnsi`. Next steps: supply width and height when creating the document, introduce palette helpers for default colors, then implement cursor control, erase commands, CP437 decoding, scrolling, and extended SGR coverage.
+
 **Validation (per acceptance gate)**
 - `zig fmt`
 - `zig build -Doptimize=Debug`

@@ -295,6 +295,8 @@ pub fn resize(ir: *IR, width: usize, height: usize) !void
 - Store embedded font data
 - Validate font dimensions
 
+
+
 ### Integration Tests (T7–T9)
 
 **T7**: Format Round-Trips

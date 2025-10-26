@@ -477,6 +477,7 @@ Update project documentation to reflect completed work:
 
 **Update Specifications**:
 - [ ] Mark completed tasks in `.specs/[feature-name]/plan.md` with ✅
+- [ ] Capture review feedback and status updates directly in `.specs/[feature-name]/plan.md`
 - [ ] Add implementation summary to plan.md
 - [ ] Document any architectural decisions made
 - [ ] Note any deviations from original design with rationale
