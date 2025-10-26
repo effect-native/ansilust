@@ -2,11 +2,17 @@
 
 ## 1. Roadmap Overview
 
-This plan operationalizes the requirements and design specifications for the Ansilust Intermediate Representation. Execution is structured into five sequential phases with explicit checklists, validation gates, and ownership boundaries. Progression to each subsequent phase requires all exit criteria (including validation steps) to be satisfied.
+This plan operationalizes the requirements and design specifications for the Ansilust Intermediate Representation. Execution is structured into five sequential phases with explicit checklists, validation gates, and ownership boundaries. We alternate between a Builder role (hypothesize and implement) and a Challenger role (test and falsify), echoing Kent Beck’s Explore/Expand/Extract cadence, GAN-style adversarial collaboration, and scientific-method/OODA feedback loops so each iteration builds on validated functionality. Progression to each subsequent phase requires all exit criteria (including validation steps) to be satisfied.
 
 ---
 
 ## 2. Phase Breakdown
+
+### Dual-Role Iteration Cadence
+- **Role Alternation:** Each micro-iteration splits responsibilities into Builder (B) and Challenger (C); collaborators swap roles every loop to maintain healthy adversarial pressure.
+- **Scientific Method Loop:** The Builder forms a hypothesis and implements the minimal slice; the Challenger designs falsification tests against the requirements before integration.
+- **OODA Integration:** After every B/C pass, run an Observe–Orient–Decide–Act checkpoint, log outcomes in `STATUS.md`, and re-orient backlog priorities before the next loop.
+- **Validation Sources:** Challengers curate regression suites from `reference/sixteencolors` alongside previously green cases, ensuring expansions rest on proven foundations.
 
 ### Phase 1 – Project Scaffolding & Infrastructure
 - [ ] Instantiate module skeletons (`document`, `document_builder`, `cell_grid`, `encoding`, `color`, `attributes`, `animation`, `sauce`, `hyperlink`, `event_log`, `serialize`, `ghostty`, `opentui`, `errors`).
@@ -90,7 +96,7 @@ This plan operationalizes the requirements and design specifications for the Ans
 - [ ] Implement binary serializer/deserializer (`ANSILUSTIR\0` header, versioning, section layout).
 - [ ] Add `toGhosttyStream` helper honoring wrap flags, color None semantics, hyperlinks, and event replay.
 - [ ] Add OpenTUI `OptimizedBuffer` conversion (satisfy AC7, RQ-Ghostty-1 alignment).
-- [ ] Complete integration tests: format round-trips (ANSI, XBin, UTF8ANSI, ansimation), Ghostty golden tests, OpenTUI conversion (T7–T9).
+- [ ] Complete integration tests: format round-trips (ANSI, XBin, UTF8ANSI, ansimation) using fixtures curated from `reference/sixteencolors`, alongside Ghostty golden tests and OpenTUI conversion (T7–T9).
 - [ ] Property-based tests and fuzzers (T10–T12) plus performance benchmarks (T13–T15) using representative fixtures.
 - [ ] Documentation polishing: ensure `docs/ir.md` up to date, README/STATUS updates, release notes.
 
