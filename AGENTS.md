@@ -1,3 +1,5 @@
+current date: 2025-10-26
+
 # Ansilust Project
 
 Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules. Keep `.specs/ir/prior-art-notes.md` close; it lists the exact files from Ghostty, Bun, and ansilove to re-read before refreshing IR decisions.
