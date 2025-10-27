@@ -120,12 +120,12 @@ const expect = std.testing.expect;
 test "ansi: plain text rendering" {
     var doc = try ir.Document.init(std.testing.allocator, 80, 25);
     defer doc.deinit();
-    
+
     const input = "Hello, World!";
     const parser = try ansi.Parser.init(std.testing.allocator, input, &doc);
     defer parser.deinit();
     try parser.parse();
-    
+
     var cell = try doc.getCell(0, 0);
     try expect(cell.contents.scalar == 'H');
 }
@@ -133,15 +133,15 @@ test "ansi: plain text rendering" {
 test "ansi: newline handling" {
     var doc = try ir.Document.init(std.testing.allocator, 80, 25);
     defer doc.deinit();
-    
+
     const input = "Line1\nLine2";
     const parser = try ansi.Parser.init(std.testing.allocator, input, &doc);
     defer parser.deinit();
     try parser.parse();
-    
+
     var cell = try doc.getCell(0, 0);
     try expect(cell.contents.scalar == 'L');
-    
+
     cell = try doc.getCell(0, 1);
     try expect(cell.contents.scalar == 'L');
 }
@@ -149,12 +149,12 @@ test "ansi: newline handling" {
 test "ansi: carriage return" {
     var doc = try ir.Document.init(std.testing.allocator, 80, 25);
     defer doc.deinit();
-    
+
     const input = "AB\rC";
     const parser = try ansi.Parser.init(std.testing.allocator, input, &doc);
     defer parser.deinit();
     try parser.parse();
-    
+
     var cell = try doc.getCell(1, 0);
     try expect(cell.contents.scalar == 'C');  // C overwrote B
 }
@@ -162,12 +162,12 @@ test "ansi: carriage return" {
 test "ansi: tab character handling" {
     var doc = try ir.Document.init(std.testing.allocator, 80, 25);
     defer doc.deinit();
-    
+
     const input = "AB\tC";
     const parser = try ansi.Parser.init(std.testing.allocator, input, &doc);
     defer parser.deinit();
     try parser.parse();
-    
+
     var cell = try doc.getCell(8, 0);
     try expect(cell.contents.scalar == 'C');  // Tab advances to column 8
 }
@@ -175,7 +175,7 @@ test "ansi: tab character handling" {
 test "ansi: SUB termination" {
     var doc = try ir.Document.init(std.testing.allocator, 80, 25);
     defer doc.deinit();
-    
+
     var buf = try std.testing.allocator.alloc(u8, 5);
     defer std.testing.allocator.free(buf);
     buf[0] = 'A';
@@ -183,14 +183,14 @@ test "ansi: SUB termination" {
     buf[2] = 0x1A;  // SUB
     buf[3] = 'C';
     buf[4] = 'D';
-    
+
     const parser = try ansi.Parser.init(std.testing.allocator, buf, &doc);
     defer parser.deinit();
     try parser.parse();
-    
+
     var cell = try doc.getCell(0, 0);
     try expect(cell.contents.scalar == 'A');
-    
+
     cell = try doc.getCell(2, 0);
     try expect(cell.contents.scalar == 0);  // C never written
 }
@@ -239,7 +239,7 @@ pub const Parser = struct {
     pos: usize = 0,
     row: u16 = 0,
     col: u16 = 0,
-    
+
     pub fn init(allocator: std.mem.Allocator, input: []const u8, doc: *ir.Document) !Parser {
         return Parser{
             .allocator = allocator,
@@ -247,15 +247,15 @@ pub const Parser = struct {
             .document = doc,
         };
     }
-    
+
     pub fn deinit(self: *Parser) void {
         _ = self;
     }
-    
+
     pub fn parse(self: *Parser) !void {
         while (self.pos < self.input.len) {
             const byte = self.input[self.pos];
-            
+
             switch (byte) {
                 '\n' => {
                     self.row += 1;
@@ -283,7 +283,7 @@ pub const Parser = struct {
                     self.col += 1;
                 },
             }
-            
+
             self.pos += 1;
         }
     }
@@ -342,7 +342,7 @@ pub const Parser = struct {
     pos: usize = 0,
     row: u16 = 0,
     col: u16 = 0,
-    
+
     pub fn init(allocator: std.mem.Allocator, input: []const u8, doc: *ir.Document) !Parser {
         return Parser{
             .allocator = allocator,
@@ -350,11 +350,11 @@ pub const Parser = struct {
             .document = doc,
         };
     }
-    
+
     pub fn deinit(self: *Parser) void {
         _ = self;
     }
-    
+
     pub fn parse(self: *Parser) !void {
         while (self.pos < self.input.len) {
             const byte = self.input[self.pos];
@@ -362,7 +362,7 @@ pub const Parser = struct {
             self.pos += 1;
         }
     }
-    
+
     fn parseCharacter(self: *Parser, byte: u8) !void {
         switch (byte) {
             '\n' => self.handleNewline(),
@@ -372,16 +372,16 @@ pub const Parser = struct {
             else => try self.writeCharacter(byte),
         }
     }
-    
+
     fn handleNewline(self: *Parser) void {
         self.row += 1;
         self.col = 0;
     }
-    
+
     fn handleCarriageReturn(self: *Parser) void {
         self.col = 0;
     }
-    
+
     fn handleTab(self: *Parser) void {
         self.col = (self.col + 8) & ~@as(u16, 7);
         if (self.col >= self.document.width) {
@@ -389,11 +389,11 @@ pub const Parser = struct {
             self.col = 0;
         }
     }
-    
+
     fn stopParsing(self: *Parser) void {
         self.pos = self.input.len;
     }
-    
+
     fn writeCharacter(self: *Parser, byte: u8) !void {
         if (self.col >= self.document.width) {
             self.row += 1;
@@ -519,22 +519,22 @@ Track progress in `STATUS.md`:
 
 ## Common Questions
 
-**Q: "I'm in the middle of a cycle. Should I commit?"**  
+**Q: "I'm in the middle of a cycle. Should I commit?"**
 A: Yes, always commit at cycle boundaries (after RED, after GREEN, after REFACTOR). Don't commit in the middle.
 
-**Q: "What if I find a bug while refactoring?"**  
+**Q: "What if I find a bug while refactoring?"**
 A: Don't fix it during REFACTOR. Create a new RED phase test that catches it, then implement a fix.
 
-**Q: "Can I combine RED and GREEN?"**  
+**Q: "Can I combine RED and GREEN?"**
 A: No. RED must have only the test. GREEN must have only the minimal implementation. This discipline ensures we stay test-driven.
 
-**Q: "What if the test is wrong?"**  
+**Q: "What if the test is wrong?"**
 A: Fix the test first (it's still in RED phase), then implement. Tests should define the spec.
 
-**Q: "Should I test everything?"**  
+**Q: "Should I test everything?"**
 A: Test the important cases. Aim for 70-80% coverage. Perfect coverage requires diminishing effort.
 
-**Q: "Can I skip REFACTOR if code is already clean?"**  
+**Q: "Can I skip REFACTOR if code is already clean?"**
 A: Even if code looks clean, there's often value in extracting helpers, improving variable names, or adding comments.
 
 ---
@@ -569,7 +569,7 @@ Let's build Phase 5 with discipline and confidence!
 
 ---
 
-**Last Updated**: 2024
+**Last Updated**: 2025-10-26
 **Status**: ✅ Ready for Phase 5A implementation
 **Methodology**: Extreme Programming (XP) Test-Driven Development (TDD)
 **Commit Strategy**: Atomic commits after every cycle boundary
