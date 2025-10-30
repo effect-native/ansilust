@@ -42,7 +42,7 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 
 ### Progress Snapshot (2025-10-26)
 - [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
-- [ ] Cycle 2 – SGR parsing and color attributes *(RED tests added in `src/parsers/ansi_test.zig` on 2025-10-26; parser work still pending)*
+- [x] Cycle 2 – SGR parsing and color attributes (RED→GREEN→REFACTOR complete; full SGR support with 8/bright/256/truecolor; all 51 tests pass)
 - [ ] Cycle 3 – Cursor positioning, save/restore, bounds clamping
 - [ ] Cycle 4 – SAUCE metadata integration
 - [ ] Cycle 5 – Wrapping, scrolling, and bounds handling
@@ -148,9 +148,37 @@ src/parsers/tests/
 
 **Next Step**: Begin A3 – write RED tests for SGR parsing.
 
-### A3: Red Phase 2 — SGR and Colors
+### A3: Red Phase 2 — SGR and Colors ✅ (completed 2025-10-26)
 
-**Pending**: (no code/tests yet)
+**Completed**: Full XP cycle (RED→GREEN→REFACTOR)
+
+**RED Phase**:
+- Added `expectCellStyle` helper to validate fg/bg/attributes
+- Tests for SGR reset (0), explicit defaults (39, 49)
+- Tests for bright colors (90-97, 100-107)
+- Tests for 256-color sequences (38;5;n, 48;5;n)
+- Tests for truecolor RGB (38;2;r;g;b, 48;2;r;g;b)
+- Test for malformed SGR handling
+
+**GREEN Phase**:
+- Added style state (fg_color, bg_color, attributes) to Parser
+- Implemented ESC [ CSI sequence detection
+- Implemented CSI parameter parsing (up to 16 params)
+- Full SGR handler with:
+  * Attributes: bold, faint, italic, underline, blink, reverse, invisible, strikethrough
+  * Reset/unset codes (0, 22-29)
+  * 8-color palette (30-37, 40-47)
+  * Bright colors (90-97, 100-107)
+  * Default resets (39, 49)
+  * 256-color palette with xterm standard lookup
+  * Truecolor RGB support
+- Apply current style to cells during writeScalar
+
+**REFACTOR Phase**:
+- Extracted DEFAULT_FG_COLOR and DEFAULT_BG_COLOR constants
+- All 51 tests pass
+
+**Next Step**: Begin A4 – Cursor positioning tests
 
 ---
 
@@ -158,7 +186,7 @@ src/parsers/tests/
 ```
 | Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Integration |
 |---------|-------|--------|--------|--------|--------|--------|-------------|
-| ANSI    | 5A    | ✅     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| ANSI    | 5A    | ✅     | ✅     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |

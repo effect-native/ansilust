@@ -1,6 +1,10 @@
 const std = @import("std");
 const ir = @import("ansilust").ir;
 
+// Default ANSI colors
+const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // White
+const DEFAULT_BG_COLOR: ir.Color = .{ .palette = 0 }; // Black
+
 pub const Parser = struct {
     allocator: std.mem.Allocator,
     input: []const u8,
@@ -10,8 +14,8 @@ pub const Parser = struct {
     cursor_y: u32 = 0,
 
     // Current style state
-    fg_color: ir.Color = .{ .palette = 7 }, // Default white
-    bg_color: ir.Color = .{ .palette = 0 }, // Default black
+    fg_color: ir.Color = DEFAULT_FG_COLOR,
+    bg_color: ir.Color = DEFAULT_BG_COLOR,
     attributes: ir.AttributeFlags = ir.AttributeFlags.none(),
 
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
@@ -204,10 +208,10 @@ pub const Parser = struct {
                 40...47 => self.bg_color = .{ .palette = @intCast(param - 40) },
 
                 // Default foreground
-                39 => self.fg_color = .{ .palette = 7 },
+                39 => self.fg_color = DEFAULT_FG_COLOR,
 
                 // Default background
-                49 => self.bg_color = .{ .palette = 0 },
+                49 => self.bg_color = DEFAULT_BG_COLOR,
 
                 // Bright foreground colors (90-97)
                 90...97 => self.fg_color = .{ .palette = @intCast(param - 90 + 8) },
@@ -253,8 +257,8 @@ pub const Parser = struct {
     }
 
     fn resetStyle(self: *Parser) void {
-        self.fg_color = .{ .palette = 7 };
-        self.bg_color = .{ .palette = 0 };
+        self.fg_color = DEFAULT_FG_COLOR;
+        self.bg_color = DEFAULT_BG_COLOR;
         self.attributes = ir.AttributeFlags.none();
     }
 };
