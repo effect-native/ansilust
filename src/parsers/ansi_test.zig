@@ -551,3 +551,42 @@ test "ansi: invalid SAUCE record is ignored" {
     try expectEqual(@as(u8, 8), doc.letter_spacing);
     try expectEqual(@as(?f32, null), doc.aspect_ratio);
 }
+
+test "ansi: SAUCE dimensions auto-resize document" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Verify initial dimensions
+    const initial_dims = doc.getDimensions();
+    try expectEqual(@as(u32, 80), initial_dims.width);
+    try expectEqual(@as(u32, 25), initial_dims.height);
+
+    // Create SAUCE with custom dimensions (100 cols × 50 lines)
+    var sauce_record: [128]u8 = undefined;
+    @memset(&sauce_record, 0);
+    @memcpy(sauce_record[0..5], "SAUCE");
+    @memcpy(sauce_record[5..7], "00");
+
+    // File type: character (1), data type: ansi (1)
+    sauce_record[94] = 1;
+    sauce_record[95] = 1;
+
+    // tinfo1 (columns) = 100, tinfo2 (lines) = 50 (little-endian u16)
+    std.mem.writeInt(u16, sauce_record[96..98], 100, .little);
+    std.mem.writeInt(u16, sauce_record[98..100], 50, .little);
+
+    var input_buffer: [130]u8 = undefined;
+    input_buffer[0] = 'A';
+    input_buffer[1] = 0x1A;
+    @memcpy(input_buffer[2..], &sauce_record);
+
+    try parseIntoDoc(&doc, &input_buffer);
+
+    // Verify SAUCE was detected
+    try expect(doc.sauce_record != null);
+
+    // Verify document was auto-resized to SAUCE dimensions
+    const new_dims = doc.getDimensions();
+    try expectEqual(@as(u32, 100), new_dims.width);
+    try expectEqual(@as(u32, 50), new_dims.height);
+}

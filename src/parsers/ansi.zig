@@ -420,6 +420,13 @@ pub const Parser = struct {
 
         self.document.setSauce(sauce_record);
         self.document.applySauceHints();
+
+        // Auto-resize document if SAUCE specifies dimensions
+        if (sauce_record.getColumns()) |cols| {
+            if (sauce_record.getLines()) |lines| {
+                try self.document.resize(cols, lines);
+            }
+        }
     }
 };
 
