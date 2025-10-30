@@ -199,6 +199,8 @@ Based on research, our IR must support:
 
 ## Development Approach
 
+- **Testing discipline**: Never delete or down-scope unit tests enumerated in `.specs/ir/plan.md` or STATUS. When refactoring APIs, port the existing tests to the new interface instead of removing them. If a test must change, update plan/STATUS to reflect the new coverage before modifying the code.
+
 1. **Study complete** ✓
    - Classic text art format specifications (libansilove loaders)
    - Modern terminal escape sequence handling (Ghostty parser)

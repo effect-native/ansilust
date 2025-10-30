@@ -40,6 +40,14 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 
 ## Phase 5A: ANSI Parser (XP TDD Cycles)
 
+### Progress Snapshot (2025-10-26)
+- [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
+- [ ] Cycle 2 – SGR parsing and color attributes
+- [ ] Cycle 3 – Cursor positioning, save/restore, bounds clamping
+- [ ] Cycle 4 – SAUCE metadata integration
+- [ ] Cycle 5 – Wrapping, scrolling, and bounds handling
+- [ ] Integration – Golden corpus regression tests
+
 ### A1: Test Case Extraction (Red Phase Setup)
 
 **Source**: `reference/libansilove/libansilove/src/loaders/ansi.c` + PabloDraw's `Types/Ansi.cs`
@@ -117,4 +125,46 @@ src/parsers/tests/
 ├── ansi_fixtures/
 │   ├── red_phase_minimal/       (1-2 files per test case)
 │   │   ├── simple_text.ans
-```}
+│   │   ├── sgr_reset.ans
+│   │   ├── cursor_move.ans
+│   │   ├── tab_wrap.ans
+│   │   ├── cp437_chars.ans
+│   │   ├── rgb_color.ans
+│   │   ├── wide_chars.ans
+│   │   └── sauce_metadata.ans
+│   ├── green_phase_extended/    (more comprehensive files)
+│   └── refactor_phase_real/     (files from sixteencolors corpus)
+└── ansi_integration_test.zig    (round-trip tests)
+```
+
+### A2: Red Phase 1 — Simple Text Parsing ✅ (completed 2025-10-26)
+
+**Goal**: Parse plain ASCII text without any escape sequences.
+
+**Scope Status**:
+- Tests cover sequential ASCII writes, newline handling, carriage returns, tab stops, SUB termination, CP437 conversion, and document metadata marking. (`src/parsers/ansi_test.zig`)
+- Implementation in `src/parsers/ansi.zig` passes all tests; CP437 extended table verified.
+- Verified via `zig build test`.
+
+**Next Step**: Begin A3 – write RED tests for SGR parsing.
+
+### A3: Red Phase 2 — SGR and Colors
+
+**Pending**: (no code/tests yet)
+
+---
+
+### Phase 5 Tracking Table
+```
+| Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Integration |
+|---------|-------|--------|--------|--------|--------|--------|-------------|
+| ANSI    | 5A    | ✅     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| XBin    | 5E    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| ArtWorx | 5F    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| PCBoard | 5G    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+```
+
+(remaining sections unchanged...)
