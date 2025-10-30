@@ -329,12 +329,12 @@ test "ansi: CSI K clears from cursor to end of line" {
     var doc = try initDocument();
     defer doc.deinit();
 
-    try parseIntoDoc(&doc, "ABCDEFG\x1B[1;4HK");
+    try parseIntoDoc(&doc, "ABCDEFG\x1B[1;4H\x1B[KX");
 
     try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
     try expectEqual(@as(u21, 'B'), (try doc.getCell(1, 0)).contents.scalar);
     try expectEqual(@as(u21, 'C'), (try doc.getCell(2, 0)).contents.scalar);
-    try expectEqual(@as(u21, ' '), (try doc.getCell(3, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'X'), (try doc.getCell(3, 0)).contents.scalar);
     try expectEqual(@as(u21, ' '), (try doc.getCell(4, 0)).contents.scalar);
 }
 

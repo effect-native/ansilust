@@ -259,6 +259,8 @@ pub const Parser = struct {
                         'D' => self.handleCursorBack(params[0..param_count]),
                         's' => self.handleSaveCursor(),
                         'u' => self.handleRestoreCursor(),
+                        'J' => try self.handleEraseDisplay(params[0..param_count]),
+                        'K' => try self.handleEraseLine(params[0..param_count]),
                         else => {}, // Ignore unknown sequences
                     }
                     return;
@@ -318,6 +320,71 @@ pub const Parser = struct {
     fn handleRestoreCursor(self: *Parser) void {
         self.cursor_x = self.saved_cursor_x;
         self.cursor_y = self.saved_cursor_y;
+    }
+
+    fn handleEraseDisplay(self: *Parser, params: []const u16) !void {
+        const mode = if (params.len > 0) params[0] else 0;
+        const width = self.document.grid.width;
+        const height = self.document.grid.height;
+
+        const saved_y = self.cursor_y;
+
+        switch (mode) {
+            0 => {
+                // Erase from cursor to end of display
+                var x = self.cursor_x;
+                while (x < width) : (x += 1) {
+                    try self.clearCell(x, self.cursor_y);
+                }
+
+                var y = self.cursor_y + 1;
+                while (y < height) : (y += 1) {
+                    x = 0;
+                    while (x < width) : (x += 1) {
+                        try self.clearCell(x, y);
+                    }
+                }
+            },
+            2 => {
+                // Erase entire display
+                var y: u32 = 0;
+                while (y < height) : (y += 1) {
+                    var x: u32 = 0;
+                    while (x < width) : (x += 1) {
+                        try self.clearCell(x, y);
+                    }
+                }
+            },
+            else => {},
+        }
+
+        self.cursor_y = saved_y;
+    }
+
+    fn handleEraseLine(self: *Parser, params: []const u16) !void {
+        const mode = if (params.len > 0) params[0] else 0;
+        const width = self.document.grid.width;
+
+        switch (mode) {
+            0 => {
+                // Erase from cursor to end of line
+                var x = self.cursor_x;
+                while (x < width) : (x += 1) {
+                    try self.clearCell(x, self.cursor_y);
+                }
+            },
+            else => {},
+        }
+    }
+
+    fn clearCell(self: *Parser, x: u32, y: u32) !void {
+        try self.document.setCell(x, y, .{
+            .contents = ir.CellContents{ .scalar = ' ' },
+            .source_encoding = ir.SourceEncoding.cp437,
+            .fg_color = DEFAULT_FG_COLOR,
+            .bg_color = DEFAULT_BG_COLOR,
+            .attr_flags = ir.AttributeFlags.none(),
+        });
     }
 };
 
