@@ -590,3 +590,33 @@ test "ansi: SAUCE dimensions auto-resize document" {
     try expectEqual(@as(u32, 100), new_dims.width);
     try expectEqual(@as(u32, 50), new_dims.height);
 }
+
+test "ansi: grid auto-expands when content exceeds bounds" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Initial grid is 80x25
+    const initial_dims = doc.getDimensions();
+    try expectEqual(@as(u32, 80), initial_dims.width);
+    try expectEqual(@as(u32, 25), initial_dims.height);
+
+    // Write 30 lines of content (exceeds 25 line default)
+    var input = std.ArrayList(u8).empty;
+    defer input.deinit(std.testing.allocator);
+
+    var line: usize = 1;
+    while (line <= 30) : (line += 1) {
+        try input.writer(std.testing.allocator).print("Line {d}\n", .{line});
+    }
+
+    try parseIntoDoc(&doc, input.items);
+
+    // Grid should have auto-expanded to accommodate all 30 lines
+    const new_dims = doc.getDimensions();
+    try expectEqual(@as(u32, 80), new_dims.width); // Width unchanged
+    try expect(new_dims.height >= 30); // Height expanded to fit content
+
+    // Verify line 30 was written (at row 29, 0-indexed)
+    const cell_29 = try doc.getCell(0, 29);
+    try expect(cell_29.contents.scalar == 'L'); // "Line 30" starts with 'L'
+}

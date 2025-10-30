@@ -173,12 +173,15 @@ pub const Parser = struct {
 
     fn writeScalar(self: *Parser, byte: u8) !void {
         const width = self.document.grid.width;
-        const height = self.document.grid.height;
+        var height = self.document.grid.height;
 
         if (width == 0 or height == 0) return;
 
+        // Auto-expand grid if cursor is beyond current bounds
         if (self.cursor_y >= height) {
-            self.cursor_y = height - 1;
+            const new_height = self.cursor_y + 25;
+            try self.document.resize(width, new_height);
+            height = new_height;
         }
 
         if (self.cursor_x >= width) {
@@ -205,14 +208,8 @@ pub const Parser = struct {
     }
 
     fn advanceRow(self: *Parser) void {
-        const height = self.document.grid.height;
-        if (height == 0) return;
-
-        if (self.cursor_y + 1 < height) {
-            self.cursor_y += 1;
-        } else {
-            self.cursor_y = height - 1;
-        }
+        // Always advance cursor; writeScalar() will auto-expand if needed
+        self.cursor_y += 1;
     }
 
     fn handleEscape(self: *Parser) !void {
