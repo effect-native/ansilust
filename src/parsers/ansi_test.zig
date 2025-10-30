@@ -302,6 +302,42 @@ test "ansi: cursor movement clamps within document bounds" {
     try expectEqual(@as(u21, '!'), (try doc.getCell(0, 0)).contents.scalar);
 }
 
+test "ansi: CSI J clears from cursor to end of display" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "AAAA\nBBBB\nCCCC\x1B[2;2H\x1B[J");
+
+    try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try doc.getCell(0, 1)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(2, 1)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(0, 2)).contents.scalar);
+}
+
+test "ansi: CSI 2J clears entire display" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "AAAA\nBBBB\nCCCC\x1B[2J");
+
+    try expectEqual(@as(u21, ' '), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(0, 1)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(0, 2)).contents.scalar);
+}
+
+test "ansi: CSI K clears from cursor to end of line" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "ABCDEFG\x1B[1;4HK");
+
+    try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try doc.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'C'), (try doc.getCell(2, 0)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(3, 0)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(4, 0)).contents.scalar);
+}
+
 test "ansi: SUB (0x1A) terminates parsing" {
     var doc = try initDocument();
     defer doc.deinit();

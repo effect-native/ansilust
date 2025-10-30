@@ -43,9 +43,9 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 ### Progress Snapshot (2025-10-26)
 - [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
 - [x] Cycle 2 – SGR parsing and color attributes (RED→GREEN→REFACTOR complete; full SGR support with 8/bright/256/truecolor; all 51 tests pass)
-- [ ] Cycle 3 – Cursor positioning, save/restore, bounds clamping
+- [x] Cycle 3 – Cursor positioning, save/restore, bounds clamping (RED→GREEN→REFACTOR complete; CSI H/A/B/C/D/s/u; all 55 tests pass)
 - [ ] Cycle 4 – SAUCE metadata integration
-- [ ] Cycle 5 – Wrapping, scrolling, and bounds handling
+- [ ] Cycle 5 – Erase operations (CSI J, CSI K)
 - [ ] Integration – Golden corpus regression tests
 
 ### A1: Test Case Extraction (Red Phase Setup)
@@ -179,7 +179,29 @@ src/parsers/tests/
 - Encapsulated ANSI style tracking in `StyleState` to centralize SGR handling
 - All 51 tests pass (`zig build test` before commit)
 
-**Next Step**: Begin A4 – Cursor positioning tests (start with RED failing cases for cursor moves/save/restore)
+### A4: Cursor Positioning ✅ (completed 2025-10-26)
+
+**Completed**: Full XP cycle (RED→GREEN→REFACTOR)
+
+**RED Phase**:
+- Tests for CSI H (CUP) 1-based coordinate positioning
+- Tests for CSI C/D horizontal movement
+- Tests for CSI s/u save/restore cursor
+- Tests for bounds clamping (999;999 wraps to max bounds)
+
+**GREEN Phase**:
+- Added saved_cursor_x, saved_cursor_y to Parser
+- Implemented handleCursorPosition (CSI H) with 1-based→0-based conversion
+- Implemented handleCursorUp/Down/Forward/Back (CSI A/B/C/D)
+- Implemented handleSaveCursor/RestoreCursor (CSI s/u)
+- All cursor movements clamp to document bounds
+- All 55 tests pass
+
+**REFACTOR Phase**:
+- Simplified cursor movement conditionals with ternary expressions
+- All 55 tests still pass
+
+**Next Step**: Begin A5 – Erase operations (CSI J for clear screen, CSI K for clear line)
 
 ---
 
@@ -187,7 +209,7 @@ src/parsers/tests/
 ```
 | Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Integration |
 |---------|-------|--------|--------|--------|--------|--------|-------------|
-| ANSI    | 5A    | ✅     | ✅     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| ANSI    | 5A    | ✅     | ✅     | ✅     | ⬜️     | ⬜️     | ⬜️          |
 | UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
