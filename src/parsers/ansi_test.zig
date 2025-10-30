@@ -1,9 +1,18 @@
 const std = @import("std");
 const ir = @import("../ir/lib.zig");
 const ansi = @import("ansi.zig");
+const sauce = @import("../ir/sauce.zig");
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
+const expectEqualStrings = std.testing.expectEqualStrings;
+const expectApproxEqRel = std.testing.expectApproxEqRel;
+const expectError = std.testing.expectError;
+
+const SauceExpectError = error{
+    MissingSauce,
+    MissingSauceAspect,
+};
 
 fn initDocument() !ir.Document {
     return try ir.Document.init(std.testing.allocator, 80, 25);
@@ -13,6 +22,106 @@ fn parseIntoDoc(doc: *ir.Document, input: []const u8) !void {
     var parser = ansi.Parser.init(std.testing.allocator, input, doc);
     defer parser.deinit();
     try parser.parse();
+}
+
+fn appendCommentLine(list: *std.ArrayList(u8), text: []const u8) !void {
+    var line: [sauce.SAUCE_COMMENT_LINE_SIZE]u8 = undefined;
+    @memset(&line, 0);
+    const copy_len = @min(text.len, line.len);
+    @memcpy(line[0..copy_len], text[0..copy_len]);
+    try list.appendSlice(&line);
+}
+
+fn requireSauce(doc: *const ir.Document) SauceExpectError!*const ir.SauceRecord {
+    if (doc.sauce_record) |*record| return record;
+    return SauceExpectError.MissingSauce;
+}
+
+fn sauceDamagedRecord() [sauce.SAUCE_RECORD_SIZE]u8 {
+    var record = buildSauceRecord();
+    record[0] = 'X';
+    return record;
+}
+
+fn sauceFixtureBody() []const u8 {
+    return "Hello with SAUCE!\r\n";
+}
+
+fn sauceFixtureComments() []const []const u8 {
+    return &[_][]const u8{ "Rendered with ansilust", "Visit ansilust.dev" };
+}
+
+fn buildSauceFixture(allocator: std.mem.Allocator, record: [sauce.SAUCE_RECORD_SIZE]u8) SauceExpectError![]u8 {
+    var data = std.ArrayList(u8).init(allocator);
+    errdefer data.deinit();
+
+    try data.appendSlice(sauceFixtureBody());
+
+    // SAUCE comment block (COMNT + 2 lines)
+    try data.appendSlice(sauce.COMNT_ID);
+    for (sauceFixtureComments()) |line| {
+        try appendCommentLine(&data, line);
+    }
+
+    try data.appendSlice(&record);
+
+    return data.toOwnedSlice();
+}
+
+fn buildSauceRecord() [sauce.SAUCE_RECORD_SIZE]u8 {
+    var record: [sauce.SAUCE_RECORD_SIZE]u8 = undefined;
+    @memset(&record, 0);
+
+    // Magic "SAUCE"
+    @memcpy(record[0..5], sauce.SAUCE_ID);
+    // Version "00"
+    @memcpy(record[5..7], sauce.SAUCE_VERSION);
+
+    // Title "Demo ANSI"
+    const title = "Demo ANSI";
+    @memcpy(record[7 .. 7 + title.len], title);
+
+    // Author "Tom"
+    const author = "Tom";
+    @memcpy(record[42 .. 42 + author.len], author);
+
+    // Group "Ansilust"
+    const group = "Ansilust";
+    @memcpy(record[62 .. 62 + group.len], group);
+
+    // Date "20251026"
+    const date = "20251026";
+    @memcpy(record[82 .. 82 + date.len], date);
+
+    // File size (little-endian u32)
+    std.mem.writeInt(u32, record[90..94], @as(u32, 1024), .little);
+
+    // File type: character (1)
+    record[94] = @intFromEnum(sauce.FileType.character);
+    // Data type: ANSI (1)
+    record[95] = @intFromEnum(sauce.CharacterDataType.ansi);
+
+    // tinfo1 (columns) = 80, tinfo2 (lines) = 25
+    std.mem.writeInt(u16, record[96..98], 80, .little);
+    std.mem.writeInt(u16, record[98..100], 25, .little);
+    std.mem.writeInt(u16, record[100..102], 0, .little);
+    std.mem.writeInt(u16, record[102..104], 0, .little);
+
+    // Comment lines count
+    record[104] = 2;
+
+    // Flags: ice_colors=true, letter_spacing=9-pixel, aspect_ratio=legacy
+    var flags: sauce.SauceFlags = .{};
+    flags.ice_colors = true;
+    flags.letter_spacing = 1;
+    flags.aspect_ratio = 1;
+    record[105] = @bitCast(flags);
+
+    // Font name "IBM VGA"
+    const font_name = "IBM VGA";
+    @memcpy(record[106 .. 106 + font_name.len], font_name);
+
+    return record;
 }
 
 test "ansi: plain text rendering writes sequential characters" {
@@ -247,6 +356,38 @@ test "ansi: cursor positioning with CSI H" {
     try expectEqual(@as(u21, '*'), (try doc.getCell(0, 0)).contents.scalar);
 }
 
+fn expectSauceDocDefaults(doc: *const ir.Document) SauceExpectError!void {
+    const record = try requireSauce(doc);
+    try expectEqualStrings("Demo ANSI", record.title);
+    try expectEqualStrings("Tom", record.author);
+    try expectEqualStrings("Ansilust", record.group);
+    try expectEqualStrings("20251026", record.date);
+    try expectEqual(@as(u16, 80), record.tinfo1);
+    try expectEqual(@as(u16, 25), record.tinfo2);
+    try expectEqual(@as(u32, 1024), record.file_size);
+    try expectEqual(@intFromEnum(sauce.FileType.character), @intFromEnum(record.file_type));
+    try expectEqual(@as(u8, @intFromEnum(sauce.CharacterDataType.ansi)), record.data_type);
+
+    try expect(record.flags.ice_colors);
+    try expectEqual(@as(u8, 9), record.flags.getLetterSpacing());
+    try expectApproxEqRel(@as(f32, 1.35), record.flags.getAspectRatio().?, 0.0001);
+    try expectEqualStrings("IBM VGA", record.font_name);
+
+    try expectEqual(@as(u8, 2), record.comment_lines);
+    try expectEqual(@as(usize, 2), record.comments.len);
+
+    const comments = sauceFixtureComments();
+    var i: usize = 0;
+    while (i < comments.len) : (i += 1) {
+        try expectEqualStrings(comments[i], record.comments[i]);
+    }
+
+    try expectEqual(ir.SourceFormat.ansi, doc.source_format);
+    try expectEqual(@as(u8, 9), doc.letter_spacing);
+    try expectApproxEqRel(@as(f32, 1.35), doc.aspect_ratio orelse return SauceExpectError.MissingSauceAspect, 0.0001);
+    try expect(doc.ice_colors);
+}
+
 test "ansi: tab (HT) advances cursor to next multiple of 8" {
     var doc = try initDocument();
     defer doc.deinit();
@@ -346,4 +487,30 @@ test "ansi: SUB (0x1A) terminates parsing" {
 
     try expectEqual(@as(u21, 'e'), (try doc.getCell(5, 0)).contents.scalar);
     try expectEqual(@as(u21, ' '), (try doc.getCell(6, 0)).contents.scalar);
+}
+
+test "ansi: SAUCE metadata is parsed and applied" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    const record = buildSauceRecord();
+    const data = try buildSauceFixture(std.testing.allocator, record);
+    defer std.testing.allocator.free(data);
+
+    try parseIntoDoc(&doc, data);
+
+    try expectSauceDocDefaults(&doc);
+}
+
+test "ansi: invalid SAUCE record is ignored" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    const record = sauceDamagedRecord();
+    const data = try buildSauceFixture(std.testing.allocator, record);
+    defer std.testing.allocator.free(data);
+
+    try parseIntoDoc(&doc, data);
+
+    try expectError(SauceExpectError.MissingSauce, expectSauceDocDefaults(&doc));
 }

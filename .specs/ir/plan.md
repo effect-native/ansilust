@@ -45,7 +45,7 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 - [x] Cycle 2 – SGR parsing and color attributes (RED→GREEN→REFACTOR complete; full SGR support with 8/bright/256/truecolor; all 51 tests pass)
 - [x] Cycle 3 – Cursor positioning, save/restore, bounds clamping (RED→GREEN→REFACTOR complete; CSI H/A/B/C/D/s/u; all 55 tests pass)
 - [x] Cycle 4 – Erase operations (RED→GREEN→REFACTOR complete; CSI J/K for display/line clearing; all 58 tests pass)
-- [ ] Cycle 5 – SAUCE metadata integration
+- [ ] Cycle 5 – SAUCE metadata integration (RED in progress: SAUCE parsing tests added, failing pending implementation)
 - [ ] Integration – Golden corpus regression tests
 
 ### A1: Test Case Extraction (Red Phase Setup)
