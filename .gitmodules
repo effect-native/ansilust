@@ -19,3 +19,9 @@
 [submodule "reference/pablodraw/pablodraw"]
 	path = reference/pablodraw/pablodraw
 	url = https://github.com/cwensley/pablodraw.git
+[submodule "reference/durdraw"]
+	path = reference/durdraw
+	url = https://github.com/cmang/durdraw.git
+[submodule "reference/darkdraw"]
+	path = reference/darkdraw
+	url = https://github.com/devottys/darkdraw.git
