@@ -494,17 +494,36 @@ test "ansi: SUB (0x1A) terminates parsing" {
     try expectEqual(@as(u21, ' '), (try doc.getCell(6, 0)).contents.scalar);
 }
 
-test "ansi: SAUCE metadata is parsed and applied" {
+test "ansi: SAUCE flags applied to document" {
     var doc = try initDocument();
     defer doc.deinit();
 
-    const record = buildSauceRecord();
-    const data = try buildSauceFixture(std.testing.allocator, record);
-    defer std.testing.allocator.free(data);
+    // Minimal test: SAUCE with flags, no comments
+    var sauce_record: [128]u8 = undefined;
+    @memset(&sauce_record, 0);
 
-    try parseIntoDoc(&doc, data);
+    // SAUCE magic
+    @memcpy(sauce_record[0..5], "SAUCE");
+    @memcpy(sauce_record[5..7], "00");
 
-    try expectSauceDocDefaults(&doc);
+    // Flags at offset 105: ice_colors=true, letter_spacing=9-pixel, aspect_ratio=legacy
+    // Bit layout: [7:5]=reserved, [4:3]=aspect_ratio, [2:1]=letter_spacing, [0]=ice_colors
+    sauce_record[105] = 0b00001011; // ice=1, spacing=1 (9px), aspect=1 (1.35)
+
+    var input_buffer: [130]u8 = undefined;
+    input_buffer[0] = 'X';
+    input_buffer[1] = 0x1A;
+    @memcpy(input_buffer[2..], &sauce_record);
+
+    try parseIntoDoc(&doc, &input_buffer);
+
+    // Verify SAUCE was detected and parsed
+    try expect(doc.sauce_record != null);
+
+    // Verify flags were applied
+    try expectEqual(true, doc.ice_colors);
+    try expectEqual(@as(u8, 9), doc.letter_spacing);
+    try expectEqual(@as(f32, 1.35), doc.aspect_ratio);
 }
 
 test "ansi: invalid SAUCE record is ignored" {
