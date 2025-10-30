@@ -62,4 +62,12 @@ These areas still require explicit sign-off because no reference project gives u
 - [D14](decisions.md#d14-api-surface-scope) — public API breadth (Ghostty/Bun keep comparable APIs internal).  
 - Vendor-band encoding additions beyond the documented set in [D3](decisions.md#d3-source-encoding-tag) — every new charset must cite an archival spec before we assign IDs.
 
+### Future Spec: Durdraw & Darkdraw
+
+Once the core IR phases are complete, consult `../durdraw-darkdraw/instructions.md` for the Phase 1 plan covering Durdraw/Darkdraw ingestion and round-trip fidelity. References of note:
+
+- Durdraw file format documentation (`reference/durdraw/durformat.md`) and color migration helpers in `durdraw_movie.py`.
+- Durdraw SAUCE, ANSI, and HTML export routines (`durdraw_file.py`, `durdraw_ansiparse.py`).
+- Darkdraw VisiData plugin implementation (`reference/darkdraw/darkdraw/`), especially `drawing.py`, `save_ans.py`, and `loader_scr.py` for palette masks and attribute encoding.
+
 Keep this document updated as we learn more or when those open issues get resolved.
