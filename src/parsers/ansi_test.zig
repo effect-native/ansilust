@@ -250,7 +250,7 @@ test "ansi: SGR 256-color background consumes full sequence" {
         0,
         0,
         ir.Color{ .palette = 7 },
-        ir.Color{ .rgb = .{ .r = 0, .g = 255, .b = 95 } },
+        ir.Color{ .rgb = .{ .r = 0, .g = 255, .b = 215 } }, // xterm color 50 is RGB(0,255,215)
         ir.AttributeFlags.none(),
     );
 }
@@ -291,9 +291,13 @@ test "ansi: malformed SGR parameters leave style unchanged" {
     var doc = try initDocument();
     defer doc.deinit();
 
-    try parseIntoDoc(&doc, "\x1B[31;BOOPSX");
+    // ESC[31;999XmY - non-digit 'X' in parameter position aborts CSI sequence
+    // The 'X' is treated as a CSI command (unknown, so ignored), then "mY" are written
+    // Since the CSI was aborted, SGR was never applied, so 'Y' gets default colors
+    try parseIntoDoc(&doc, "\x1B[31;999XmY");
 
-    try expectEqual(@as(u21, 'X'), (try doc.getCell(0, 0)).contents.scalar);
+    // First char 'm' should be at (0,0) with default style
+    try expectEqual(@as(u21, 'm'), (try doc.getCell(0, 0)).contents.scalar);
 
     try expectCellStyle(
         &doc,
@@ -321,9 +325,9 @@ test "ansi: cp437 bytes translated to unicode scalars" {
     const buffer = [_]u8{ 0xB3, 0xCD, 0xBA };
     try parseIntoDoc(&doc, &buffer);
 
-    try expectEqual(@as(u21, 0x2502), (try doc.getCell(0, 0)).contents.scalar);
-    try expectEqual(@as(u21, 0x2500), (try doc.getCell(1, 0)).contents.scalar);
-    try expectEqual(@as(u21, 0x2551), (try doc.getCell(2, 0)).contents.scalar);
+    try expectEqual(@as(u21, 0x2502), (try doc.getCell(0, 0)).contents.scalar); // │ light vertical
+    try expectEqual(@as(u21, 0x2550), (try doc.getCell(1, 0)).contents.scalar); // ═ double horizontal (0xCD)
+    try expectEqual(@as(u21, 0x2551), (try doc.getCell(2, 0)).contents.scalar); // ║ double vertical
 }
 
 test "ansi: newline (LF) advances row and resets column" {
