@@ -1,5 +1,6 @@
 const std = @import("std");
 const ir = @import("ansilust").ir;
+const sauce = ir.sauce;
 
 // Default ANSI colors
 const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // White
@@ -136,10 +137,15 @@ pub const Parser = struct {
                 0x0A => self.handleNewline(),
                 0x0D => self.handleCarriageReturn(),
                 0x09 => self.handleTab(),
-                0x1A => return,
+                0x1A => {
+                    try self.parseSauce();
+                    return;
+                },
                 else => try self.writeScalar(byte),
             }
         }
+
+        try self.parseSauce();
     }
 
     fn handleNewline(self: *Parser) void {
@@ -235,18 +241,27 @@ pub const Parser = struct {
                     current_param = current_param * 10 + (byte - '0');
                 },
                 ';' => {
-                    if (param_count < params.len) {
-                        params[param_count] = current_param;
-                        param_count += 1;
+                    if (!has_digit) {
+                        if (param_count < params.len) {
+                            params[param_count] = current_param;
+                            param_count += 1;
+                        }
+                        current_param = 0;
                     }
-                    current_param = 0;
                     has_digit = false;
                 },
                 'A'...'Z', 'a'...'z' => {
                     // Final byte
-                    if (has_digit and param_count < params.len) {
-                        params[param_count] = current_param;
-                        param_count += 1;
+                    if (has_digit) {
+                        if (param_count < params.len) {
+                            params[param_count] = current_param;
+                            param_count += 1;
+                        }
+                    }
+
+                    if (param_count == 0) {
+                        params[0] = 0;
+                        param_count = 1;
                     }
 
                     // Handle CSI command
@@ -385,6 +400,25 @@ pub const Parser = struct {
             .bg_color = DEFAULT_BG_COLOR,
             .attr_flags = ir.AttributeFlags.none(),
         });
+    }
+
+    fn parseSauce(self: *Parser) !void {
+        const sauce_offset = sauce.detectSauce(self.input) orelse return;
+
+        var sauce_record = sauce.SauceRecord.parse(self.allocator, self.input[sauce_offset..]) catch {
+            return;
+        };
+
+        if (sauce_record.comment_lines > 0) {
+            if (sauce.detectComments(self.input, sauce_record.comment_lines, sauce_offset)) |comment_offset| {
+                sauce_record.parseComments(self.input[comment_offset..]) catch {
+                    // Ignore comment parse errors but keep SAUCE record
+                };
+            }
+        }
+
+        self.document.setSauce(sauce_record);
+        self.document.applySauceHints();
     }
 };
 
