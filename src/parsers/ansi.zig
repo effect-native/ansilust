@@ -1,5 +1,6 @@
 const std = @import("std");
 const ir = @import("ansilust").ir;
+const sauce = ir.sauce;
 
 // Default ANSI colors
 const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // White
@@ -127,6 +128,7 @@ pub const Parser = struct {
     }
 
     pub fn parse(self: *Parser) !void {
+        // First pass: parse ANSI content until we hit end or SUB (0x1A)
         while (self.pos < self.input.len) {
             const byte = self.input[self.pos];
             self.pos += 1;
@@ -136,10 +138,17 @@ pub const Parser = struct {
                 0x0A => self.handleNewline(),
                 0x0D => self.handleCarriageReturn(),
                 0x09 => self.handleTab(),
-                0x1A => return,
+                0x1A => {
+                    // SUB (0x1A) terminates ANSI content; check for SAUCE after it
+                    try self.parseSauce();
+                    return;
+                },
                 else => try self.writeScalar(byte),
             }
         }
+
+        // Second pass: check for SAUCE at end of input
+        try self.parseSauce();
     }
 
     fn handleNewline(self: *Parser) void {
@@ -385,6 +394,30 @@ pub const Parser = struct {
             .bg_color = DEFAULT_BG_COLOR,
             .attr_flags = ir.AttributeFlags.none(),
         });
+    }
+
+    fn parseSauce(self: *Parser) !void {
+        // Detect SAUCE record at end of input
+        const sauce_offset = sauce.detectSauce(self.input) orelse return;
+
+        // Parse the SAUCE record
+        var sauce_record = sauce.SauceRecord.parse(self.allocator, self.input[sauce_offset..]) catch {
+            // Invalid SAUCE - silently ignore
+            return;
+        };
+
+        // If there are comments, try to parse them
+        if (sauce_record.comment_lines > 0) {
+            if (sauce.detectComments(self.input, sauce_record.comment_lines, sauce_offset)) |comment_offset| {
+                sauce_record.parseComments(self.input[comment_offset..]) catch {
+                    // If comment parsing fails, still keep the SAUCE record
+                };
+            }
+        }
+
+        // Store SAUCE in document and apply hints
+        self.document.setSauce(sauce_record);
+        self.document.applySauceHints();
     }
 };
 
