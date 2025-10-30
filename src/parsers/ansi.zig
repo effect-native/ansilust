@@ -9,6 +9,11 @@ pub const Parser = struct {
     cursor_x: u32 = 0,
     cursor_y: u32 = 0,
 
+    // Current style state
+    fg_color: ir.Color = .{ .palette = 7 }, // Default white
+    bg_color: ir.Color = .{ .palette = 0 }, // Default black
+    attributes: ir.AttributeFlags = ir.AttributeFlags.none(),
+
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
         document.source_format = .ansi;
         document.default_encoding = .cp437;
@@ -29,6 +34,7 @@ pub const Parser = struct {
             self.pos += 1;
 
             switch (byte) {
+                0x1B => try self.handleEscape(),
                 0x0A => self.handleNewline(),
                 0x0D => self.handleCarriageReturn(),
                 0x09 => self.handleTab(),
@@ -82,6 +88,9 @@ pub const Parser = struct {
         try self.document.setCell(self.cursor_x, self.cursor_y, .{
             .contents = ir.CellContents{ .scalar = scalar },
             .source_encoding = ir.SourceEncoding.cp437,
+            .fg_color = self.fg_color,
+            .bg_color = self.bg_color,
+            .attr_flags = self.attributes,
         });
 
         self.cursor_x += 1;
@@ -100,6 +109,153 @@ pub const Parser = struct {
         } else {
             self.cursor_y = height - 1;
         }
+    }
+
+    fn handleEscape(self: *Parser) !void {
+        if (self.pos >= self.input.len) return;
+
+        const next_byte = self.input[self.pos];
+        if (next_byte == '[') {
+            self.pos += 1;
+            try self.handleCSI();
+        }
+    }
+
+    fn handleCSI(self: *Parser) !void {
+        var params: [16]u16 = undefined;
+        var param_count: usize = 0;
+        var current_param: u16 = 0;
+        var has_digit = false;
+
+        while (self.pos < self.input.len) {
+            const byte = self.input[self.pos];
+            self.pos += 1;
+
+            switch (byte) {
+                '0'...'9' => {
+                    has_digit = true;
+                    current_param = current_param * 10 + (byte - '0');
+                },
+                ';' => {
+                    if (param_count < params.len) {
+                        params[param_count] = current_param;
+                        param_count += 1;
+                    }
+                    current_param = 0;
+                    has_digit = false;
+                },
+                'A'...'Z', 'a'...'z' => {
+                    // Final byte
+                    if (has_digit and param_count < params.len) {
+                        params[param_count] = current_param;
+                        param_count += 1;
+                    }
+
+                    // Handle CSI command
+                    switch (byte) {
+                        'm' => try self.handleSGR(params[0..param_count]),
+                        else => {}, // Ignore unknown sequences
+                    }
+                    return;
+                },
+                else => {
+                    // Malformed - abort sequence
+                    return;
+                },
+            }
+        }
+    }
+
+    fn handleSGR(self: *Parser, params: []const u16) !void {
+        if (params.len == 0) {
+            // SGR 0 (reset)
+            self.resetStyle();
+            return;
+        }
+
+        var i: usize = 0;
+        while (i < params.len) : (i += 1) {
+            const param = params[i];
+
+            switch (param) {
+                0 => self.resetStyle(),
+                1 => self.attributes = self.attributes.setBold(true),
+                2 => self.attributes = self.attributes.setFaint(true),
+                3 => self.attributes = self.attributes.setItalic(true),
+                4 => self.attributes = self.attributes.setUnderline(.single),
+                5 => self.attributes = self.attributes.setBlink(true),
+                7 => self.attributes = self.attributes.setReverse(true),
+                8 => self.attributes = self.attributes.setInvisible(true),
+                9 => self.attributes = self.attributes.setStrikethrough(true),
+                22 => {
+                    self.attributes = self.attributes.setBold(false);
+                    self.attributes = self.attributes.setFaint(false);
+                },
+                24 => self.attributes = self.attributes.setUnderline(.none),
+                25 => self.attributes = self.attributes.setBlink(false),
+                27 => self.attributes = self.attributes.setReverse(false),
+                28 => self.attributes = self.attributes.setInvisible(false),
+                29 => self.attributes = self.attributes.setStrikethrough(false),
+
+                // Foreground colors (30-37)
+                30...37 => self.fg_color = .{ .palette = @intCast(param - 30) },
+
+                // Background colors (40-47)
+                40...47 => self.bg_color = .{ .palette = @intCast(param - 40) },
+
+                // Default foreground
+                39 => self.fg_color = .{ .palette = 7 },
+
+                // Default background
+                49 => self.bg_color = .{ .palette = 0 },
+
+                // Bright foreground colors (90-97)
+                90...97 => self.fg_color = .{ .palette = @intCast(param - 90 + 8) },
+
+                // Bright background colors (100-107)
+                100...107 => self.bg_color = .{ .palette = @intCast(param - 100 + 8) },
+
+                // 256-color foreground (38;5;n)
+                38 => {
+                    if (i + 2 < params.len and params[i + 1] == 5) {
+                        const color_index = params[i + 2];
+                        self.fg_color = palette256ToRGB(color_index);
+                        i += 2;
+                    } else if (i + 4 < params.len and params[i + 1] == 2) {
+                        // Truecolor foreground (38;2;r;g;b)
+                        const r: u8 = @intCast(@min(params[i + 2], 255));
+                        const g: u8 = @intCast(@min(params[i + 3], 255));
+                        const b: u8 = @intCast(@min(params[i + 4], 255));
+                        self.fg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
+                        i += 4;
+                    }
+                },
+
+                // 256-color background (48;5;n)
+                48 => {
+                    if (i + 2 < params.len and params[i + 1] == 5) {
+                        const color_index = params[i + 2];
+                        self.bg_color = palette256ToRGB(color_index);
+                        i += 2;
+                    } else if (i + 4 < params.len and params[i + 1] == 2) {
+                        // Truecolor background (48;2;r;g;b)
+                        const r: u8 = @intCast(@min(params[i + 2], 255));
+                        const g: u8 = @intCast(@min(params[i + 3], 255));
+                        const b: u8 = @intCast(@min(params[i + 4], 255));
+                        self.bg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
+                        i += 4;
+                    }
+                },
+
+                else => {}, // Ignore unknown SGR codes
+            }
+        }
+    }
+
+    fn resetStyle(self: *Parser) void {
+        self.fg_color = .{ .palette = 7 };
+        self.bg_color = .{ .palette = 0 };
+        self.attributes = ir.AttributeFlags.none();
     }
 };
 
@@ -141,3 +297,31 @@ const CP437_EXTENDED = [_]u21{
     0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
     0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
 };
+
+// Convert 256-color palette index to RGB
+// Uses xterm 256-color palette standard
+fn palette256ToRGB(index: u16) ir.Color {
+    if (index < 16) {
+        // Standard ANSI colors (0-15) - use palette
+        return .{ .palette = @intCast(index) };
+    } else if (index >= 16 and index < 232) {
+        // 216-color RGB cube (6x6x6)
+        // Each component: 0, 95, 135, 175, 215, 255
+        const COLOR_LEVELS = [6]u8{ 0, 95, 135, 175, 215, 255 };
+
+        const offset = index - 16;
+        const r_idx: usize = @intCast(offset / 36);
+        const g_idx: usize = @intCast((offset % 36) / 6);
+        const b_idx: usize = @intCast(offset % 6);
+
+        return .{ .rgb = .{ .r = COLOR_LEVELS[r_idx], .g = COLOR_LEVELS[g_idx], .b = COLOR_LEVELS[b_idx] } };
+    } else if (index >= 232 and index < 256) {
+        // Grayscale ramp (24 values)
+        const gray_idx = index - 232;
+        const gray: u8 = @intCast(8 + gray_idx * 10);
+        return .{ .rgb = .{ .r = gray, .g = gray, .b = gray } };
+    } else {
+        // Out of range - return white
+        return .{ .palette = 7 };
+    }
+}
