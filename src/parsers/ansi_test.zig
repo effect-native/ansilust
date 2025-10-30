@@ -29,6 +29,172 @@ test "ansi: plain text rendering writes sequential characters" {
     try expectEqual(@as(u21, '!'), (try doc.getCell(12, 0)).contents.scalar);
 }
 
+fn expectCellStyle(
+    doc: *const ir.Document,
+    x: u32,
+    y: u32,
+    expected_fg: ir.Color,
+    expected_bg: ir.Color,
+    expected_attrs: ir.AttributeFlags,
+) !void {
+    const cell = try doc.getCell(x, y);
+    try expectEqual(expected_fg, cell.fg_color);
+    try expectEqual(expected_bg, cell.bg_color);
+    try expectEqual(expected_attrs.toRaw(), cell.attr_flags.toRaw());
+}
+test "ansi: SGR resets attributes and colors" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[31;44;1mA\x1B[0mB");
+
+    try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try doc.getCell(1, 0)).contents.scalar);
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 1 },
+        ir.Color{ .palette = 4 },
+        ir.AttributeFlags.withBold(),
+    );
+    try expectCellStyle(
+        &doc,
+        1,
+        0,
+        ir.Color{ .palette = 7 },
+        ir.Color{ .palette = 0 },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR explicit defaults clear colors" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[31;44mA\x1B[39;49mB");
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 1 },
+        ir.Color{ .palette = 4 },
+        ir.AttributeFlags.none(),
+    );
+    try expectCellStyle(
+        &doc,
+        1,
+        0,
+        ir.Color{ .palette = 7 },
+        ir.Color{ .palette = 0 },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR bright colors map to high palettes" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[93;104mX");
+
+    try expectEqual(@as(u21, 'X'), (try doc.getCell(0, 0)).contents.scalar);
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 11 },
+        ir.Color{ .palette = 12 },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR 256-color foreground consumes full sequence" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[38;5;196mR");
+
+    try expectEqual(@as(u21, 'R'), (try doc.getCell(0, 0)).contents.scalar);
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .rgb = .{ .r = 255, .g = 0, .b = 0 } },
+        ir.Color{ .palette = 0 },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR 256-color background consumes full sequence" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[48;5;50mG");
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 7 },
+        ir.Color{ .rgb = .{ .r = 0, .g = 255, .b = 95 } },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR truecolor foreground applies RGB" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[38;2;12;34;56mC");
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .rgb = .{ .r = 12, .g = 34, .b = 56 } },
+        ir.Color{ .palette = 0 },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: SGR truecolor background applies RGB" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[48;2;200;150;100mD");
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 7 },
+        ir.Color{ .rgb = .{ .r = 200, .g = 150, .b = 100 } },
+        ir.AttributeFlags.none(),
+    );
+}
+
+test "ansi: malformed SGR parameters leave style unchanged" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[31;BOOPSX");
+
+    try expectEqual(@as(u21, 'X'), (try doc.getCell(0, 0)).contents.scalar);
+
+    try expectCellStyle(
+        &doc,
+        0,
+        0,
+        ir.Color{ .palette = 7 },
+        ir.Color{ .palette = 0 },
+        ir.AttributeFlags.none(),
+    );
+}
+
 test "ansi: document source format flagged as ansi" {
     var doc = try initDocument();
     defer doc.deinit();

@@ -42,7 +42,7 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 
 ### Progress Snapshot (2025-10-26)
 - [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
-- [ ] Cycle 2 – SGR parsing and color attributes
+- [ ] Cycle 2 – SGR parsing and color attributes *(RED tests added in `src/parsers/ansi_test.zig` on 2025-10-26; parser work still pending)*
 - [ ] Cycle 3 – Cursor positioning, save/restore, bounds clamping
 - [ ] Cycle 4 – SAUCE metadata integration
 - [ ] Cycle 5 – Wrapping, scrolling, and bounds handling
