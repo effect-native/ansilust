@@ -280,18 +280,13 @@ pub const Parser = struct {
         const row = if (params.len > 0 and params[0] > 0) params[0] - 1 else 0;
         const col = if (params.len > 1 and params[1] > 0) params[1] - 1 else 0;
 
-        // Clamp to document bounds
         self.cursor_y = @min(row, height - 1);
         self.cursor_x = @min(col, width - 1);
     }
 
     fn handleCursorUp(self: *Parser, params: []const u16) void {
         const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
-        if (self.cursor_y >= n) {
-            self.cursor_y -= n;
-        } else {
-            self.cursor_y = 0;
-        }
+        self.cursor_y = if (self.cursor_y >= n) self.cursor_y - n else 0;
     }
 
     fn handleCursorDown(self: *Parser, params: []const u16) void {
@@ -312,11 +307,7 @@ pub const Parser = struct {
 
     fn handleCursorBack(self: *Parser, params: []const u16) void {
         const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
-        if (self.cursor_x >= n) {
-            self.cursor_x -= n;
-        } else {
-            self.cursor_x = 0;
-        }
+        self.cursor_x = if (self.cursor_x >= n) self.cursor_x - n else 0;
     }
 
     fn handleSaveCursor(self: *Parser) void {
