@@ -44,8 +44,8 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 - [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
 - [x] Cycle 2 – SGR parsing and color attributes (RED→GREEN→REFACTOR complete; full SGR support with 8/bright/256/truecolor; all 51 tests pass)
 - [x] Cycle 3 – Cursor positioning, save/restore, bounds clamping (RED→GREEN→REFACTOR complete; CSI H/A/B/C/D/s/u; all 55 tests pass)
-- [ ] Cycle 4 – SAUCE metadata integration
-- [ ] Cycle 5 – Erase operations (CSI J, CSI K)
+- [x] Cycle 4 – Erase operations (RED→GREEN→REFACTOR complete; CSI J/K for display/line clearing; all 58 tests pass)
+- [ ] Cycle 5 – SAUCE metadata integration
 - [ ] Integration – Golden corpus regression tests
 
 ### A1: Test Case Extraction (Red Phase Setup)
@@ -201,7 +201,25 @@ src/parsers/tests/
 - Simplified cursor movement conditionals with ternary expressions
 - All 55 tests still pass
 
-**Next Step**: Begin A5 – Erase operations (CSI J for clear screen, CSI K for clear line)
+### A5: Erase Operations ✅ (completed 2025-10-26)
+
+**Completed**: Full XP cycle (RED→GREEN→REFACTOR)
+
+**RED Phase**:
+- Tests for CSI J (erase from cursor to end of display, mode 0)
+- Tests for CSI 2J (erase entire display)
+- Tests for CSI K (erase from cursor to end of line)
+
+**GREEN Phase**:
+- Implemented handleEraseDisplay with mode 0 (cursor→end) and mode 2 (entire screen)
+- Implemented handleEraseLine with mode 0 (cursor→end of line)
+- Added clearCell helper to set cells to space with default colors
+- All 58 tests pass
+
+**REFACTOR Phase**:
+- Code already clean, no refactor needed
+
+**Next Step**: Begin A6 – SAUCE metadata integration (parse 128-byte SAUCE record from end of file)
 
 ---
 
@@ -209,7 +227,7 @@ src/parsers/tests/
 ```
 | Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Integration |
 |---------|-------|--------|--------|--------|--------|--------|-------------|
-| ANSI    | 5A    | ✅     | ✅     | ✅     | ⬜️     | ⬜️     | ⬜️          |
+| ANSI    | 5A    | ✅     | ✅     | ✅     | ✅     | ⬜️     | ⬜️          |
 | UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
