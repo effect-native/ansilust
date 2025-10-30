@@ -46,6 +46,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    parsers_mod.addImport("ansilust", mod);
     mod.addImport("parsers", parsers_mod);
 
     // Here we define an executable. An executable needs to have a root module

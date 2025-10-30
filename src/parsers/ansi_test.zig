@@ -1,7 +1,8 @@
 const std = @import("std");
-const ir = @import("../ir/lib.zig");
+const ansilust = @import("ansilust");
+const ir = ansilust.ir;
+const sauce = ir.sauce;
 const ansi = @import("ansi.zig");
-const sauce = @import("../ir/sauce.zig");
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
@@ -24,12 +25,12 @@ fn parseIntoDoc(doc: *ir.Document, input: []const u8) !void {
     try parser.parse();
 }
 
-fn appendCommentLine(list: *std.ArrayList(u8), text: []const u8) !void {
+fn appendCommentLine(list: *std.ArrayList(u8), allocator: std.mem.Allocator, text: []const u8) !void {
     var line: [sauce.SAUCE_COMMENT_LINE_SIZE]u8 = undefined;
     @memset(&line, 0);
     const copy_len = @min(text.len, line.len);
     @memcpy(line[0..copy_len], text[0..copy_len]);
-    try list.appendSlice(&line);
+    try list.appendSlice(allocator, &line);
 }
 
 fn requireSauce(doc: *const ir.Document) SauceExpectError!*const ir.SauceRecord {
@@ -51,21 +52,21 @@ fn sauceFixtureComments() []const []const u8 {
     return &[_][]const u8{ "Rendered with ansilust", "Visit ansilust.dev" };
 }
 
-fn buildSauceFixture(allocator: std.mem.Allocator, record: [sauce.SAUCE_RECORD_SIZE]u8) SauceExpectError![]u8 {
-    var data = std.ArrayList(u8).init(allocator);
-    errdefer data.deinit();
+fn buildSauceFixture(allocator: std.mem.Allocator, record: [sauce.SAUCE_RECORD_SIZE]u8) ![]u8 {
+    var data = try std.ArrayList(u8).initCapacity(allocator, 256);
+    errdefer data.deinit(allocator);
 
-    try data.appendSlice(sauceFixtureBody());
+    try data.appendSlice(allocator, sauceFixtureBody());
 
     // SAUCE comment block (COMNT + 2 lines)
-    try data.appendSlice(sauce.COMNT_ID);
+    try data.appendSlice(allocator, sauce.COMNT_ID);
     for (sauceFixtureComments()) |line| {
-        try appendCommentLine(&data, line);
+        try appendCommentLine(&data, allocator, line);
     }
 
-    try data.appendSlice(&record);
+    try data.appendSlice(allocator, &record);
 
-    return data.toOwnedSlice();
+    return try data.toOwnedSlice(allocator);
 }
 
 fn buildSauceRecord() [sauce.SAUCE_RECORD_SIZE]u8 {
@@ -356,7 +357,7 @@ test "ansi: cursor positioning with CSI H" {
     try expectEqual(@as(u21, '*'), (try doc.getCell(0, 0)).contents.scalar);
 }
 
-fn expectSauceDocDefaults(doc: *const ir.Document) SauceExpectError!void {
+fn expectSauceDocDefaults(doc: *const ir.Document) !void {
     const record = try requireSauce(doc);
     try expectEqualStrings("Demo ANSI", record.title);
     try expectEqualStrings("Tom", record.author);
