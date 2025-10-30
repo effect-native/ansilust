@@ -176,9 +176,10 @@ src/parsers/tests/
 
 **REFACTOR Phase**:
 - Extracted DEFAULT_FG_COLOR and DEFAULT_BG_COLOR constants
-- All 51 tests pass
+- Encapsulated ANSI style tracking in `StyleState` to centralize SGR handling
+- All 51 tests pass (`zig build test` before commit)
 
-**Next Step**: Begin A4 – Cursor positioning tests
+**Next Step**: Begin A4 – Cursor positioning tests (start with RED failing cases for cursor moves/save/restore)
 
 ---
 

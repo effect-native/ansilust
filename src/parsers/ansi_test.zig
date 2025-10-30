@@ -237,6 +237,16 @@ test "ansi: carriage return (CR) resets column to zero" {
     try expectEqual(@as(u21, ' '), (try doc.getCell(2, 0)).contents.scalar);
 }
 
+test "ansi: cursor positioning with CSI H" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "Hello\x1B[3;5H!\x1B[1;1H*");
+
+    try expectEqual(@as(u21, '!'), (try doc.getCell(4, 2)).contents.scalar);
+    try expectEqual(@as(u21, '*'), (try doc.getCell(0, 0)).contents.scalar);
+}
+
 test "ansi: tab (HT) advances cursor to next multiple of 8" {
     var doc = try initDocument();
     defer doc.deinit();
@@ -246,6 +256,50 @@ test "ansi: tab (HT) advances cursor to next multiple of 8" {
     try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
     try expectEqual(@as(u21, 'B'), (try doc.getCell(8, 0)).contents.scalar);
     try expectEqual(@as(u21, 'C'), (try doc.getCell(16, 0)).contents.scalar);
+}
+
+test "ansi: CSI H positions cursor using 1-based coordinates" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "Hello\x1B[3;5H!\x1B[1;1H*");
+
+    try expectEqual(@as(u21, '*'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'e'), (try doc.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, '!'), (try doc.getCell(4, 2)).contents.scalar);
+}
+
+test "ansi: CSI C and D move cursor horizontally" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[10C?\x1B[5D!");
+
+    try expectEqual(@as(u21, '?'), (try doc.getCell(10, 0)).contents.scalar);
+    try expectEqual(@as(u21, '!'), (try doc.getCell(6, 0)).contents.scalar);
+    try expectEqual(@as(u21, ' '), (try doc.getCell(0, 0)).contents.scalar);
+}
+
+test "ansi: CSI s and u save and restore cursor" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "AB\x1B[sC\x1B[4;4H!\x1B[uD");
+
+    try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try doc.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'D'), (try doc.getCell(2, 0)).contents.scalar);
+    try expectEqual(@as(u21, '!'), (try doc.getCell(3, 3)).contents.scalar);
+}
+
+test "ansi: cursor movement clamps within document bounds" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    try parseIntoDoc(&doc, "\x1B[999;999H*\x1B[0;0H!");
+
+    try expectEqual(@as(u21, '*'), (try doc.getCell(doc.grid.width - 1, doc.grid.height - 1)).contents.scalar);
+    try expectEqual(@as(u21, '!'), (try doc.getCell(0, 0)).contents.scalar);
 }
 
 test "ansi: SUB (0x1A) terminates parsing" {

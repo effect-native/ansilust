@@ -109,6 +109,8 @@ pub const Parser = struct {
     cursor_y: u32 = 0,
 
     style: StyleState = .{},
+    saved_cursor_x: u32 = 0,
+    saved_cursor_y: u32 = 0,
 
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
         document.source_format = .ansi;
@@ -250,6 +252,13 @@ pub const Parser = struct {
                     // Handle CSI command
                     switch (byte) {
                         'm' => self.style.applySGR(params[0..param_count]),
+                        'H' => self.handleCursorPosition(params[0..param_count]),
+                        'A' => self.handleCursorUp(params[0..param_count]),
+                        'B' => self.handleCursorDown(params[0..param_count]),
+                        'C' => self.handleCursorForward(params[0..param_count]),
+                        'D' => self.handleCursorBack(params[0..param_count]),
+                        's' => self.handleSaveCursor(),
+                        'u' => self.handleRestoreCursor(),
                         else => {}, // Ignore unknown sequences
                     }
                     return;
@@ -260,6 +269,64 @@ pub const Parser = struct {
                 },
             }
         }
+    }
+
+    fn handleCursorPosition(self: *Parser, params: []const u16) void {
+        const width = self.document.grid.width;
+        const height = self.document.grid.height;
+        if (width == 0 or height == 0) return;
+
+        // CSI H uses 1-based coordinates; default is 1;1
+        const row = if (params.len > 0 and params[0] > 0) params[0] - 1 else 0;
+        const col = if (params.len > 1 and params[1] > 0) params[1] - 1 else 0;
+
+        // Clamp to document bounds
+        self.cursor_y = @min(row, height - 1);
+        self.cursor_x = @min(col, width - 1);
+    }
+
+    fn handleCursorUp(self: *Parser, params: []const u16) void {
+        const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
+        if (self.cursor_y >= n) {
+            self.cursor_y -= n;
+        } else {
+            self.cursor_y = 0;
+        }
+    }
+
+    fn handleCursorDown(self: *Parser, params: []const u16) void {
+        const height = self.document.grid.height;
+        if (height == 0) return;
+
+        const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
+        self.cursor_y = @min(self.cursor_y + n, height - 1);
+    }
+
+    fn handleCursorForward(self: *Parser, params: []const u16) void {
+        const width = self.document.grid.width;
+        if (width == 0) return;
+
+        const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
+        self.cursor_x = @min(self.cursor_x + n, width - 1);
+    }
+
+    fn handleCursorBack(self: *Parser, params: []const u16) void {
+        const n = if (params.len > 0 and params[0] > 0) params[0] else 1;
+        if (self.cursor_x >= n) {
+            self.cursor_x -= n;
+        } else {
+            self.cursor_x = 0;
+        }
+    }
+
+    fn handleSaveCursor(self: *Parser) void {
+        self.saved_cursor_x = self.cursor_x;
+        self.saved_cursor_y = self.cursor_y;
+    }
+
+    fn handleRestoreCursor(self: *Parser) void {
+        self.cursor_x = self.saved_cursor_x;
+        self.cursor_y = self.saved_cursor_y;
     }
 };
 
