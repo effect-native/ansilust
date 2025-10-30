@@ -530,11 +530,24 @@ test "ansi: invalid SAUCE record is ignored" {
     var doc = try initDocument();
     defer doc.deinit();
 
-    const record = sauceDamagedRecord();
-    const data = try buildSauceFixture(std.testing.allocator, record);
-    defer std.testing.allocator.free(data);
+    // Corrupted SAUCE magic - should be "SAUCE" but we use "XAUCE"
+    var bad_sauce: [128]u8 = undefined;
+    @memset(&bad_sauce, 0);
+    @memcpy(bad_sauce[0..5], "XAUCE"); // Bad magic
+    @memcpy(bad_sauce[5..7], "00");
 
-    try parseIntoDoc(&doc, data);
+    var input_buffer: [130]u8 = undefined;
+    input_buffer[0] = 'Y';
+    input_buffer[1] = 0x1A;
+    @memcpy(input_buffer[2..], &bad_sauce);
 
-    try expectError(SauceExpectError.MissingSauce, expectSauceDocDefaults(&doc));
+    try parseIntoDoc(&doc, &input_buffer);
+
+    // Invalid SAUCE should be ignored - no sauce_record set
+    try expect(doc.sauce_record == null);
+
+    // Defaults remain unchanged
+    try expectEqual(false, doc.ice_colors);
+    try expectEqual(@as(u8, 8), doc.letter_spacing);
+    try expectEqual(@as(?f32, null), doc.aspect_ratio);
 }
