@@ -238,16 +238,17 @@ pub const Parser = struct {
             switch (byte) {
                 '0'...'9' => {
                     has_digit = true;
-                    current_param = current_param * 10 + (byte - '0');
+                    const digit: u16 = byte - '0';
+                    // Guard against overflow: cap at max u16 value
+                    const new_value = @as(u32, current_param) * 10 + digit;
+                    current_param = if (new_value > 65535) 65535 else @intCast(new_value);
                 },
                 ';' => {
-                    if (!has_digit) {
-                        if (param_count < params.len) {
-                            params[param_count] = current_param;
-                            param_count += 1;
-                        }
-                        current_param = 0;
+                    if (param_count < params.len) {
+                        params[param_count] = current_param;
+                        param_count += 1;
                     }
+                    current_param = 0;
                     has_digit = false;
                 },
                 'A'...'Z', 'a'...'z' => {
