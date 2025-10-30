@@ -5,6 +5,101 @@ const ir = @import("ansilust").ir;
 const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // White
 const DEFAULT_BG_COLOR: ir.Color = .{ .palette = 0 }; // Black
 
+const StyleState = struct {
+    fg_color: ir.Color = DEFAULT_FG_COLOR,
+    bg_color: ir.Color = DEFAULT_BG_COLOR,
+    attributes: ir.AttributeFlags = ir.AttributeFlags.none(),
+
+    fn reset(self: *StyleState) void {
+        self.* = StyleState{};
+    }
+
+    fn applySGR(self: *StyleState, params: []const u16) void {
+        if (params.len == 0) {
+            self.reset();
+            return;
+        }
+
+        var i: usize = 0;
+        while (i < params.len) : (i += 1) {
+            const param = params[i];
+
+            switch (param) {
+                0 => self.reset(),
+                1 => self.attributes = self.attributes.setBold(true),
+                2 => self.attributes = self.attributes.setFaint(true),
+                3 => self.attributes = self.attributes.setItalic(true),
+                4 => self.attributes = self.attributes.setUnderline(.single),
+                5 => self.attributes = self.attributes.setBlink(true),
+                7 => self.attributes = self.attributes.setReverse(true),
+                8 => self.attributes = self.attributes.setInvisible(true),
+                9 => self.attributes = self.attributes.setStrikethrough(true),
+                22 => {
+                    self.attributes = self.attributes.setBold(false);
+                    self.attributes = self.attributes.setFaint(false);
+                },
+                24 => self.attributes = self.attributes.setUnderline(.none),
+                25 => self.attributes = self.attributes.setBlink(false),
+                27 => self.attributes = self.attributes.setReverse(false),
+                28 => self.attributes = self.attributes.setInvisible(false),
+                29 => self.attributes = self.attributes.setStrikethrough(false),
+
+                // Foreground colors (30-37)
+                30...37 => self.fg_color = .{ .palette = @intCast(param - 30) },
+
+                // Background colors (40-47)
+                40...47 => self.bg_color = .{ .palette = @intCast(param - 40) },
+
+                // Default foreground
+                39 => self.fg_color = DEFAULT_FG_COLOR,
+
+                // Default background
+                49 => self.bg_color = DEFAULT_BG_COLOR,
+
+                // Bright foreground colors (90-97)
+                90...97 => self.fg_color = .{ .palette = @intCast(param - 90 + 8) },
+
+                // Bright background colors (100-107)
+                100...107 => self.bg_color = .{ .palette = @intCast(param - 100 + 8) },
+
+                // 256-color foreground (38;5;n)
+                38 => {
+                    if (i + 2 < params.len and params[i + 1] == 5) {
+                        const color_index = params[i + 2];
+                        self.fg_color = palette256ToRGB(color_index);
+                        i += 2;
+                    } else if (i + 4 < params.len and params[i + 1] == 2) {
+                        // Truecolor foreground (38;2;r;g;b)
+                        const r: u8 = @intCast(@min(params[i + 2], 255));
+                        const g: u8 = @intCast(@min(params[i + 3], 255));
+                        const b: u8 = @intCast(@min(params[i + 4], 255));
+                        self.fg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
+                        i += 4;
+                    }
+                },
+
+                // 256-color background (48;5;n)
+                48 => {
+                    if (i + 2 < params.len and params[i + 1] == 5) {
+                        const color_index = params[i + 2];
+                        self.bg_color = palette256ToRGB(color_index);
+                        i += 2;
+                    } else if (i + 4 < params.len and params[i + 1] == 2) {
+                        // Truecolor background (48;2;r;g;b)
+                        const r: u8 = @intCast(@min(params[i + 2], 255));
+                        const g: u8 = @intCast(@min(params[i + 3], 255));
+                        const b: u8 = @intCast(@min(params[i + 4], 255));
+                        self.bg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
+                        i += 4;
+                    }
+                },
+
+                else => {}, // Ignore unknown SGR codes
+            }
+        }
+    }
+};
+
 pub const Parser = struct {
     allocator: std.mem.Allocator,
     input: []const u8,
@@ -13,10 +108,7 @@ pub const Parser = struct {
     cursor_x: u32 = 0,
     cursor_y: u32 = 0,
 
-    // Current style state
-    fg_color: ir.Color = DEFAULT_FG_COLOR,
-    bg_color: ir.Color = DEFAULT_BG_COLOR,
-    attributes: ir.AttributeFlags = ir.AttributeFlags.none(),
+    style: StyleState = .{},
 
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
         document.source_format = .ansi;
@@ -92,9 +184,9 @@ pub const Parser = struct {
         try self.document.setCell(self.cursor_x, self.cursor_y, .{
             .contents = ir.CellContents{ .scalar = scalar },
             .source_encoding = ir.SourceEncoding.cp437,
-            .fg_color = self.fg_color,
-            .bg_color = self.bg_color,
-            .attr_flags = self.attributes,
+            .fg_color = self.style.fg_color,
+            .bg_color = self.style.bg_color,
+            .attr_flags = self.style.attributes,
         });
 
         self.cursor_x += 1;
@@ -157,7 +249,7 @@ pub const Parser = struct {
 
                     // Handle CSI command
                     switch (byte) {
-                        'm' => try self.handleSGR(params[0..param_count]),
+                        'm' => self.style.applySGR(params[0..param_count]),
                         else => {}, // Ignore unknown sequences
                     }
                     return;
@@ -168,98 +260,6 @@ pub const Parser = struct {
                 },
             }
         }
-    }
-
-    fn handleSGR(self: *Parser, params: []const u16) !void {
-        if (params.len == 0) {
-            // SGR 0 (reset)
-            self.resetStyle();
-            return;
-        }
-
-        var i: usize = 0;
-        while (i < params.len) : (i += 1) {
-            const param = params[i];
-
-            switch (param) {
-                0 => self.resetStyle(),
-                1 => self.attributes = self.attributes.setBold(true),
-                2 => self.attributes = self.attributes.setFaint(true),
-                3 => self.attributes = self.attributes.setItalic(true),
-                4 => self.attributes = self.attributes.setUnderline(.single),
-                5 => self.attributes = self.attributes.setBlink(true),
-                7 => self.attributes = self.attributes.setReverse(true),
-                8 => self.attributes = self.attributes.setInvisible(true),
-                9 => self.attributes = self.attributes.setStrikethrough(true),
-                22 => {
-                    self.attributes = self.attributes.setBold(false);
-                    self.attributes = self.attributes.setFaint(false);
-                },
-                24 => self.attributes = self.attributes.setUnderline(.none),
-                25 => self.attributes = self.attributes.setBlink(false),
-                27 => self.attributes = self.attributes.setReverse(false),
-                28 => self.attributes = self.attributes.setInvisible(false),
-                29 => self.attributes = self.attributes.setStrikethrough(false),
-
-                // Foreground colors (30-37)
-                30...37 => self.fg_color = .{ .palette = @intCast(param - 30) },
-
-                // Background colors (40-47)
-                40...47 => self.bg_color = .{ .palette = @intCast(param - 40) },
-
-                // Default foreground
-                39 => self.fg_color = DEFAULT_FG_COLOR,
-
-                // Default background
-                49 => self.bg_color = DEFAULT_BG_COLOR,
-
-                // Bright foreground colors (90-97)
-                90...97 => self.fg_color = .{ .palette = @intCast(param - 90 + 8) },
-
-                // Bright background colors (100-107)
-                100...107 => self.bg_color = .{ .palette = @intCast(param - 100 + 8) },
-
-                // 256-color foreground (38;5;n)
-                38 => {
-                    if (i + 2 < params.len and params[i + 1] == 5) {
-                        const color_index = params[i + 2];
-                        self.fg_color = palette256ToRGB(color_index);
-                        i += 2;
-                    } else if (i + 4 < params.len and params[i + 1] == 2) {
-                        // Truecolor foreground (38;2;r;g;b)
-                        const r: u8 = @intCast(@min(params[i + 2], 255));
-                        const g: u8 = @intCast(@min(params[i + 3], 255));
-                        const b: u8 = @intCast(@min(params[i + 4], 255));
-                        self.fg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
-                        i += 4;
-                    }
-                },
-
-                // 256-color background (48;5;n)
-                48 => {
-                    if (i + 2 < params.len and params[i + 1] == 5) {
-                        const color_index = params[i + 2];
-                        self.bg_color = palette256ToRGB(color_index);
-                        i += 2;
-                    } else if (i + 4 < params.len and params[i + 1] == 2) {
-                        // Truecolor background (48;2;r;g;b)
-                        const r: u8 = @intCast(@min(params[i + 2], 255));
-                        const g: u8 = @intCast(@min(params[i + 3], 255));
-                        const b: u8 = @intCast(@min(params[i + 4], 255));
-                        self.bg_color = .{ .rgb = .{ .r = r, .g = g, .b = b } };
-                        i += 4;
-                    }
-                },
-
-                else => {}, // Ignore unknown SGR codes
-            }
-        }
-    }
-
-    fn resetStyle(self: *Parser) void {
-        self.fg_color = DEFAULT_FG_COLOR;
-        self.bg_color = DEFAULT_BG_COLOR;
-        self.attributes = ir.AttributeFlags.none();
     }
 };
 
