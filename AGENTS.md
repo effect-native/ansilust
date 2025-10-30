@@ -200,7 +200,7 @@ Based on research, our IR must support:
 ## Development Approach
 
 - **Testing discipline**: Never delete or down-scope unit tests enumerated in `.specs/ir/plan.md` or STATUS. When refactoring APIs, port the existing tests to the new interface instead of removing them. If a test must change, update plan/STATUS to reflect the new coverage before modifying the code.
-- **Commit discipline**: Capture every XP stage with a dedicated git commit—Red (failing tests added), Green (tests passing), and Refactor (cleanup)—and repeat at each phase and micro-phase boundary once validations succeed.
+- **Commit discipline**: Capture every XP stage with a dedicated git commit—Red (failing tests added), Green (tests passing), and Refactor (cleanup)—and repeat at each phase and micro-phase boundary once validations succeed. Always rerun the relevant test suite (e.g. `zig build test`) immediately before committing.
 
 1. **Study complete** ✓
    - Classic text art format specifications (libansilove loaders)
