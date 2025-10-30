@@ -46,7 +46,8 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 - [x] Cycle 3 – Cursor positioning, save/restore, bounds clamping (RED→GREEN→REFACTOR complete; CSI H/A/B/C/D/s/u; all 55 tests pass)
 - [x] Cycle 4 – Erase operations (RED→GREEN→REFACTOR complete; CSI J/K for display/line clearing; all 58 tests pass)
 - [x] Cycle 5 – Bug fixes & test corrections (overflow guards, xterm palette, CP437 validation; 76/77 tests pass)
-- [x] Cycle 6 – SAUCE metadata integration (RED→GREEN→REFACTOR complete in 2 micro-cycles; 77/77 tests pass)
+- [x] Cycle 6 – SAUCE metadata integration (RED→GREEN→REFACTOR complete in 3 micro-cycles; 78/78 tests pass)
+- [x] Cycle 7 – SAUCE dimension auto-resize (RED→GREEN→REFACTOR; SO-PG1.ANS validates 80×159; 78/78 tests pass)
 - [ ] Integration – Golden corpus regression tests
 
 ### A1: Test Case Extraction (Red Phase Setup)
@@ -253,7 +254,7 @@ src/parsers/tests/
 
 ### A7: SAUCE Metadata Integration ✅ (completed 2025-10-30)
 
-**Completed**: Two micro-cycles following Kent Beck TDD discipline
+**Completed**: Three micro-cycles following Kent Beck TDD discipline
 
 **Micro-Cycle 1** (SAUCE flags):
 - **RED**: Added test "SAUCE flags applied to document" for ice_colors, letter_spacing, aspect_ratio
@@ -265,15 +266,25 @@ src/parsers/tests/
 - **GREEN**: Existing error handling already gracefully ignores invalid SAUCE
 - **REFACTOR**: Code already clean, no changes needed
 
+**Micro-Cycle 3** (Dimension auto-resize):
+- **RED**: Added test "SAUCE dimensions auto-resize document" for 100×50 grid
+- **GREEN**: Implemented auto-resize in parseSauce() using getColumns()/getLines()
+- **REFACTOR**: Code already minimal and clear, no changes needed
+
 **Implementation Details**:
 - parseSauce() detects SAUCE at EOF or after SUB (0x1A) using sauce.detectSauce()
 - Parses record with sauce.SauceRecord.parse(), catching errors silently
 - Optional comment parsing when comment_lines > 0
 - Calls document.setSauce() and document.applySauceHints() to apply metadata
+- Auto-resizes document to tinfo1 (columns) × tinfo2 (lines) when present
 - Invalid SAUCE gracefully ignored (no crash, no partial state)
 
 **Test Results**:
-- All 77/77 tests pass (26/26 in ansi_test suite, including 2 SAUCE tests)
+- All 78/78 tests pass (27/27 in ansi_test suite, including 3 SAUCE tests)
+
+**Real-World Validation**:
+- SO-PG1.ANS: BEFORE 80×25 → AFTER 80×159 ✓ (matches SAUCE metadata)
+- The PowerGrid by Somms now parses at full dimensions
 
 **Next Cycle**: Begin A8 – Integration testing with golden corpus from sixteencolors-archive
 
@@ -283,7 +294,7 @@ src/parsers/tests/
 ```
 | Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Cycle6 | Cycle7 | Integration |
 |---------|-------|--------|--------|--------|--------|--------|--------|--------|-------------|
-| ANSI    | 5A    | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ⬜️     | ⬜️          |
+| ANSI    | 5A    | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ⬜️          |
 | UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
 | Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
