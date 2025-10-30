@@ -216,7 +216,8 @@ pub const SauceRecord = struct {
         record.font_name = try allocAndTrim(allocator, data[106..128]);
 
         // Initialize empty comments (caller must use parseComments separately)
-        record.comments = &[_][]u8{};
+        // Allocate empty slice so deinit() can safely call allocator.free()
+        record.comments = try allocator.alloc([]u8, 0);
 
         return record;
     }
