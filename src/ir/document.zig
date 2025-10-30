@@ -236,7 +236,7 @@ pub const Document = struct {
     /// Add SAUCE metadata.
     pub fn setSauce(self: *Document, sauce_record: sauce.SauceRecord) void {
         if (self.sauce_record) |*old| {
-            old.deinit();
+            old.deinit(self.allocator);
         }
         self.sauce_record = sauce_record;
     }
