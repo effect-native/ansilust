@@ -80,36 +80,39 @@ pub const TerminalGuard = struct {
 };
 
 /// Render IR document to UTF8ANSI terminal output.
+///
+/// Converts an ansilust IR document to modern terminal-compatible ANSI sequences.
+/// Output is suitable for direct terminal display or saving to .utf8ansi files.
 pub fn render(
     allocator: std.mem.Allocator,
     doc: *const ir.Document,
     writer: std.io.AnyWriter,
     options: RenderOptions,
 ) !void {
-    // Initialize terminal guard
     var guard = try TerminalGuard.init(allocator, writer, options.is_tty);
     defer guard.deinit();
 
     const dims = doc.getDimensions();
 
-    // Render each row
     var y: u32 = 0;
     while (y < dims.height) : (y += 1) {
-        // Emit cursor positioning (1-indexed)
-        try writer.print("\x1b[{d};1H", .{y + 1});
+        try renderRow(doc, writer, y, dims.width);
+    }
+}
 
-        // Emit cells in this row (raw scalars for now, no style/color)
-        var x: u32 = 0;
-        while (x < dims.width) : (x += 1) {
-            const cell = try doc.getCell(x, y);
-            const scalar = cell.contents.scalar;
+/// Render a single row at the given y coordinate.
+fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
+    try writer.print("\x1b[{d};1H", .{y + 1});
 
-            // For now, just emit raw scalar as ASCII (will add CP437 mapping in Cycle 3)
-            if (scalar < 128) {
-                try writer.writeByte(@intCast(scalar));
-            } else {
-                try writer.writeByte('?'); // Placeholder for non-ASCII
-            }
+    var x: u32 = 0;
+    while (x < width) : (x += 1) {
+        const cell = try doc.getCell(x, y);
+        const scalar = cell.contents.scalar;
+
+        if (scalar < 128) {
+            try writer.writeByte(@intCast(scalar));
+        } else {
+            try writer.writeByte('?');
         }
     }
 }
