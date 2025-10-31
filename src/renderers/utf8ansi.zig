@@ -20,24 +20,24 @@ pub const RenderOptions = struct {
 /// ANSI 256-color indices 0-15. Instead, we map to the "xterm 256-color"
 /// palette which provides better visual fidelity.
 ///
-/// Reference: libansilove/src/output.c dos_to_ansi_256_map
+/// Reference: https://github.com/effect-native/libansilove/blob/utf8ansi-terminal/src/dos_colors.h
 const DOS_TO_ANSI_256: [16]u8 = .{
-    16, // 0: Black       → ANSI 16
-    19, // 1: Blue        → ANSI 19
-    34, // 2: Green       → ANSI 34
-    37, // 3: Cyan        → ANSI 37
-    124, // 4: Red         → ANSI 124
-    127, // 5: Magenta     → ANSI 127
-    130, // 6: Brown       → ANSI 130
-    250, // 7: Light Gray  → ANSI 250
-    240, // 8: Dark Gray   → ANSI 240
-    63, // 9: Light Blue  → ANSI 63
-    83, // 10: Light Green → ANSI 83
-    87, // 11: Light Cyan  → ANSI 87
-    196, // 12: Light Red   → ANSI 196
-    201, // 13: Light Magenta → ANSI 201
-    227, // 14: Yellow      → ANSI 227
-    231, // 15: White       → ANSI 231
+    16, // 0: Black       #000000 → ANSI 16
+    19, // 1: Blue        #0000AA → ANSI 19
+    34, // 2: Green       #00AA00 → ANSI 34
+    37, // 3: Cyan        #00AAAA → ANSI 37
+    124, // 4: Red         #AA0000 → ANSI 124
+    127, // 5: Magenta     #AA00AA → ANSI 127
+    136, // 6: Brown       #AA5500 → ANSI 136
+    248, // 7: Light Gray  #AAAAAA → ANSI 248
+    240, // 8: Dark Gray   #555555 → ANSI 240
+    105, // 9: Light Blue  #5555FF → ANSI 105
+    120, // 10: Light Green #55FF55 → ANSI 120
+    123, // 11: Light Cyan #55FFFF → ANSI 123
+    210, // 12: Light Red  #FF5555 → ANSI 210
+    213, // 13: Light Mag. #FF55FF → ANSI 213
+    228, // 14: Yellow     #FFFF55 → ANSI 228
+    231, // 15: White      #FFFFFF → ANSI 231
 };
 
 /// CP437 (DOS) to Unicode codepoint mapping table (256 entries).
@@ -289,8 +289,19 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
 
     var state = RenderState.init();
 
+    // Find the rightmost non-blank cell to avoid drawing trailing blanks
+    var rightmost: u32 = 0;
     var x: u32 = 0;
     while (x < width) : (x += 1) {
+        const cell = try doc.getCell(x, y);
+        if (!isBlankCell(cell)) {
+            rightmost = x;
+        }
+    }
+
+    // Render cells up to rightmost non-blank (inclusive)
+    x = 0;
+    while (x <= rightmost) : (x += 1) {
         const cell = try doc.getCell(x, y);
 
         // Apply style (batches if unchanged)
@@ -299,6 +310,25 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
         // Emit the glyph
         try encodeGlyph(writer, cell.contents.scalar);
     }
+
+    // Reset SGR to clear background color at right edge
+    try writer.writeAll("\x1b[0m");
+}
+
+/// Check if a cell is blank (space with default colors).
+fn isBlankCell(cell: ir.CellView) bool {
+    const is_space = cell.contents.scalar == ' ';
+    const is_default_fg = switch (cell.fg_color) {
+        .none => true,
+        .palette => |idx| idx == 7, // Light gray is default DOS text color
+        else => false,
+    };
+    const is_default_bg = switch (cell.bg_color) {
+        .none => true,
+        .palette => |idx| idx == 0, // Black is default DOS background
+        else => false,
+    };
+    return is_space and is_default_fg and is_default_bg;
 }
 
 /// Encode a scalar value to UTF-8 and write to output.
