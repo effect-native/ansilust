@@ -14,6 +14,32 @@ pub const RenderOptions = struct {
     is_tty: bool = true,
 };
 
+/// DOS/VGA palette (16 colors) to ANSI 256-color mapping.
+///
+/// The DOS palette uses indices 0-15, but these don't map directly to
+/// ANSI 256-color indices 0-15. Instead, we map to the "xterm 256-color"
+/// palette which provides better visual fidelity.
+///
+/// Reference: libansilove/src/output.c dos_to_ansi_256_map
+const DOS_TO_ANSI_256: [16]u8 = .{
+    16, // 0: Black       → ANSI 16
+    19, // 1: Blue        → ANSI 19
+    34, // 2: Green       → ANSI 34
+    37, // 3: Cyan        → ANSI 37
+    124, // 4: Red         → ANSI 124
+    127, // 5: Magenta     → ANSI 127
+    130, // 6: Brown       → ANSI 130
+    250, // 7: Light Gray  → ANSI 250
+    240, // 8: Dark Gray   → ANSI 240
+    63, // 9: Light Blue  → ANSI 63
+    83, // 10: Light Green → ANSI 83
+    87, // 11: Light Cyan  → ANSI 87
+    196, // 12: Light Red   → ANSI 196
+    201, // 13: Light Magenta → ANSI 201
+    227, // 14: Yellow      → ANSI 227
+    231, // 15: White       → ANSI 231
+};
+
 /// CP437 (DOS) to Unicode codepoint mapping table (256 entries).
 ///
 /// This table maps IBM Code Page 437 bytes (0-255) to Unicode codepoints.
@@ -201,6 +227,11 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
     var x: u32 = 0;
     while (x < width) : (x += 1) {
         const cell = try doc.getCell(x, y);
+
+        // Emit color codes for this cell
+        try emitColors(writer, cell.fg_color, cell.bg_color);
+
+        // Emit the glyph
         try encodeGlyph(writer, cell.contents.scalar);
     }
 }
@@ -236,6 +267,43 @@ fn encodeGlyph(writer: std.io.AnyWriter, scalar: u21) !void {
         return;
     };
     try writer.writeAll(buf[0..len]);
+}
+
+/// Emit SGR color codes for foreground and background.
+///
+/// Uses the DOS→ANSI 256 color mapping for palette colors.
+/// Emits SGR 39/49 for Color.none (terminal default).
+///
+/// Currently only implements 256-color mode. Truecolor (24-bit RGB)
+/// will be added in Cycle 7.
+fn emitColors(writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
+    // Emit foreground color
+    switch (fg) {
+        .none => try writer.writeAll("\x1b[39m"), // Default foreground
+        .palette => |idx| {
+            // Map DOS palette to ANSI 256-color
+            const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
+            try writer.print("\x1b[38;5;{d}m", .{ansi_idx});
+        },
+        .rgb => {
+            // Truecolor support in Cycle 7 - for now treat as default
+            try writer.writeAll("\x1b[39m");
+        },
+    }
+
+    // Emit background color
+    switch (bg) {
+        .none => try writer.writeAll("\x1b[49m"), // Default background
+        .palette => |idx| {
+            // Map DOS palette to ANSI 256-color
+            const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
+            try writer.print("\x1b[48;5;{d}m", .{ansi_idx});
+        },
+        .rgb => {
+            // Truecolor support in Cycle 7 - for now treat as default
+            try writer.writeAll("\x1b[49m");
+        },
+    }
 }
 
 // Common CP437 character constants for reference
