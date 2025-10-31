@@ -220,16 +220,64 @@ pub fn renderToBuffer(
     return output.toOwnedSlice(allocator);
 }
 
+/// Render state for tracking current style and optimizing SGR emissions.
+const RenderState = struct {
+    current_fg: ?ir.Color,
+    current_bg: ?ir.Color,
+
+    fn init() RenderState {
+        return .{
+            .current_fg = null,
+            .current_bg = null,
+        };
+    }
+
+    /// Apply style for a cell, emitting SGR codes only if style changed.
+    fn applyStyle(self: *RenderState, writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
+        const fg_changed = if (self.current_fg) |current| !colorsEqual(current, fg) else true;
+        const bg_changed = if (self.current_bg) |current| !colorsEqual(current, bg) else true;
+
+        if (fg_changed or bg_changed) {
+            // Style changed - emit reset first, then new colors
+            try writer.writeAll("\x1b[0m");
+            try emitColors(writer, fg, bg);
+            self.current_fg = fg;
+            self.current_bg = bg;
+        }
+        // else: style unchanged, no SGR emission needed
+    }
+};
+
+/// Compare two colors for equality.
+fn colorsEqual(a: ir.Color, b: ir.Color) bool {
+    return switch (a) {
+        .none => switch (b) {
+            .none => true,
+            else => false,
+        },
+        .palette => |a_idx| switch (b) {
+            .palette => |b_idx| a_idx == b_idx,
+            else => false,
+        },
+        .rgb => |a_rgb| switch (b) {
+            .rgb => |b_rgb| a_rgb.r == b_rgb.r and a_rgb.g == b_rgb.g and a_rgb.b == b_rgb.b,
+            else => false,
+        },
+    };
+}
+
 /// Render a single row at the given y coordinate.
 fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
     try writer.print("\x1b[{d};1H", .{y + 1});
+
+    var state = RenderState.init();
 
     var x: u32 = 0;
     while (x < width) : (x += 1) {
         const cell = try doc.getCell(x, y);
 
-        // Emit color codes for this cell
-        try emitColors(writer, cell.fg_color, cell.bg_color);
+        // Apply style (batches if unchanged)
+        try state.applyStyle(writer, cell.fg_color, cell.bg_color);
 
         // Emit the glyph
         try encodeGlyph(writer, cell.contents.scalar);
