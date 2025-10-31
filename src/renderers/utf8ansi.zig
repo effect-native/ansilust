@@ -166,6 +166,7 @@ pub const TerminalGuard = struct {
     /// Epilogue sequences:
     /// - Cursor show (TTY only): Make cursor visible again
     /// - DECAWM enable: Restore normal wrap behavior
+    /// - Newline (TTY only): Ensures scrollback captures output correctly
     ///
     /// Errors are ignored during cleanup to ensure deinit always succeeds.
     pub fn deinit(self: *TerminalGuard) void {
@@ -176,6 +177,12 @@ pub const TerminalGuard = struct {
 
         // DECAWM restore - return terminal to normal wrap behavior
         self.writer.writeAll(ESC_DECAWM_ENABLE) catch {};
+
+        // TTY-only: emit newline to ensure scrollback capture
+        // This prevents Ghostty/Alacritty from truncating previous output in scrollback
+        if (self.is_tty) {
+            self.writer.writeAll("\n") catch {};
+        }
     }
 };
 
