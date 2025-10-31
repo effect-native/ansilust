@@ -1,13 +1,40 @@
 const std = @import("std");
 
-/// TerminalGuard manages terminal state setup and cleanup.
-/// Emits DECAWM wrap control in both TTY and file modes.
-/// Emits cursor hide/clear only in TTY mode.
+// Terminal control escape sequences
+const ESC_DECAWM_DISABLE = "\x1b[?7l"; // Disable auto-wrap mode
+const ESC_DECAWM_ENABLE = "\x1b[?7h"; // Enable auto-wrap mode
+const ESC_CURSOR_HIDE = "\x1b[?25l"; // Hide cursor (DECTCEM)
+const ESC_CURSOR_SHOW = "\x1b[?25h"; // Show cursor (DECTCEM)
+const ESC_CLEAR_SCREEN = "\x1b[2J"; // Clear entire screen (ED)
+
+/// TerminalGuard manages terminal state setup and cleanup for rendering.
+///
+/// This guard establishes a safe rendering environment by:
+/// 1. Disabling auto-wrap (DECAWM) to prevent terminal-induced line breaks
+/// 2. Optionally hiding cursor and clearing screen in TTY mode
+///
+/// On deinit, it restores the terminal to its original state.
+///
+/// ## TTY vs File Mode
+///
+/// - **TTY mode** (is_tty=true): Emits cursor hide/clear for interactive display.
+///   Used when rendering directly to a terminal for viewing.
+///
+/// - **File mode** (is_tty=false): Omits cursor/clear sequences for replayable output.
+///   Used when piping output to a file (e.g., `ansilust art.ans > art.utf8ansi`).
+///
+/// Both modes emit DECAWM control to ensure layout preservation.
 pub const TerminalGuard = struct {
     allocator: std.mem.Allocator,
     writer: std.io.AnyWriter,
     is_tty: bool,
 
+    /// Initialize the terminal guard and emit prologue sequences.
+    ///
+    /// Prologue sequences:
+    /// - DECAWM disable: Prevents terminal from wrapping lines automatically
+    /// - Cursor hide (TTY only): Cleaner visual during rendering
+    /// - Clear screen (TTY only): Remove previous output
     pub fn init(allocator: std.mem.Allocator, writer: std.io.AnyWriter, is_tty: bool) !TerminalGuard {
         const guard = TerminalGuard{
             .allocator = allocator,
@@ -15,31 +42,32 @@ pub const TerminalGuard = struct {
             .is_tty = is_tty,
         };
 
-        // Emit prologue sequences
-        // DECAWM disable (wrap control) - always emit in both modes
-        try writer.writeAll("\x1b[?7l");
+        // DECAWM disable - critical for layout preservation in both modes
+        try writer.writeAll(ESC_DECAWM_DISABLE);
 
-        // TTY-only sequences
+        // TTY-only sequences for interactive display
         if (is_tty) {
-            // Hide cursor
-            try writer.writeAll("\x1b[?25l");
-            // Clear screen
-            try writer.writeAll("\x1b[2J");
+            try writer.writeAll(ESC_CURSOR_HIDE);
+            try writer.writeAll(ESC_CLEAR_SCREEN);
         }
 
         return guard;
     }
 
+    /// Restore terminal state and emit epilogue sequences.
+    ///
+    /// Epilogue sequences:
+    /// - Cursor show (TTY only): Make cursor visible again
+    /// - DECAWM enable: Restore normal wrap behavior
+    ///
+    /// Errors are ignored during cleanup to ensure deinit always succeeds.
     pub fn deinit(self: *TerminalGuard) void {
-        // Emit epilogue sequences (ignoring errors since we're in cleanup)
-
         // TTY-only sequences
         if (self.is_tty) {
-            // Show cursor
-            self.writer.writeAll("\x1b[?25h") catch {};
+            self.writer.writeAll(ESC_CURSOR_SHOW) catch {};
         }
 
-        // DECAWM restore (wrap control) - always emit in both modes
-        self.writer.writeAll("\x1b[?7h") catch {};
+        // DECAWM restore - return terminal to normal wrap behavior
+        self.writer.writeAll(ESC_DECAWM_ENABLE) catch {};
     }
 };
