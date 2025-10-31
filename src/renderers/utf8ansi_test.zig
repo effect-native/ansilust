@@ -356,3 +356,30 @@ test "RenderState emits SGR 0 when style changes" {
     // Should contain SGR 0 (reset) before style changes
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[0m") != null);
 }
+
+// === Cycle 7: Truecolor Support ===
+
+test "ColorMapper emits SGR 38;2;R;G;B in truecolor mode" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 2, 1);
+    defer doc.deinit();
+
+    // Set cells with RGB colors
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'R' },
+        .fg_color = .{ .rgb = .{ .r = 255, .g = 0, .b = 0 } }, // Pure red
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .bg_color = .{ .rgb = .{ .r = 0, .g = 0, .b = 255 } }, // Pure blue background
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain 24-bit truecolor SGR for foreground
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;255;0;0m") != null);
+    // Should contain 24-bit truecolor SGR for background
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[48;2;0;0;255m") != null);
+}
