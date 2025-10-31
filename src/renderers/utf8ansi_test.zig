@@ -139,3 +139,89 @@ test "render handles empty document" {
     try testing.expect(std.mem.indexOf(u8, result, "\x1b[?7l") != null);
     try testing.expect(std.mem.indexOf(u8, result, "\x1b[?7h") != null);
 }
+
+// === Cycle 3: CP437 Glyph Mapping ===
+
+test "GlyphMapper translates box-drawing chars" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    // Set CP437 box-drawing characters
+    // 0xDA = ┌ (box top-left)
+    // 0xC4 = ─ (box horizontal)
+    // 0xBF = ┐ (box top-right)
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0xDA } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0xC4 } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xBF } });
+
+    var output = std.ArrayList(u8).init(allocator);
+    defer output.deinit();
+
+    const options = Utf8Ansi.RenderOptions{ .is_tty = false };
+    try Utf8Ansi.render(allocator, &doc, output.writer().any(), options);
+
+    const result = output.items;
+
+    // Should contain Unicode box-drawing characters
+    try testing.expect(std.mem.indexOf(u8, result, "┌") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "─") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "┐") != null);
+}
+
+test "GlyphMapper translates shading chars" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 4, 1);
+    defer doc.deinit();
+
+    // Set CP437 shading characters
+    // 0xB0 = ░ (light shade)
+    // 0xB1 = ▒ (medium shade)
+    // 0xB2 = ▓ (dark shade)
+    // 0xDB = █ (full block)
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0xB0 } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0xB1 } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xB2 } });
+    try doc.setCell(3, 0, .{ .contents = .{ .scalar = 0xDB } });
+
+    var output = std.ArrayList(u8).init(allocator);
+    defer output.deinit();
+
+    const options = Utf8Ansi.RenderOptions{ .is_tty = false };
+    try Utf8Ansi.render(allocator, &doc, output.writer().any(), options);
+
+    const result = output.items;
+
+    // Should contain Unicode shading characters
+    try testing.expect(std.mem.indexOf(u8, result, "░") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "▒") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "▓") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "█") != null);
+}
+
+test "GlyphMapper handles ASCII passthrough" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 5, 1);
+    defer doc.deinit();
+
+    // Set ASCII characters (0-127)
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'H' } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'e' } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'l' } });
+    try doc.setCell(3, 0, .{ .contents = .{ .scalar = 'l' } });
+    try doc.setCell(4, 0, .{ .contents = .{ .scalar = 'o' } });
+
+    var output = std.ArrayList(u8).init(allocator);
+    defer output.deinit();
+
+    const options = Utf8Ansi.RenderOptions{ .is_tty = false };
+    try Utf8Ansi.render(allocator, &doc, output.writer().any(), options);
+
+    const result = output.items;
+
+    // Should contain ASCII passthrough
+    try testing.expect(std.mem.indexOf(u8, result, "Hello") != null);
+}
