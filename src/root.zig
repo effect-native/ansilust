@@ -63,6 +63,19 @@ pub const SourceEncoding = ir.SourceEncoding;
 /// Error type
 pub const Error = ir.Error;
 
+// === Renderers ===
+
+/// Render a document to a UTF8ANSI buffer.
+/// Caller must free the returned buffer.
+pub fn renderToUtf8Ansi(
+    allocator: std.mem.Allocator,
+    doc: *const Document,
+    is_tty: bool,
+) ![]u8 {
+    const Renderer = @import("renderers/utf8ansi.zig");
+    return Renderer.renderToBuffer(allocator, doc, is_tty);
+}
+
 // === Tests ===
 
 test {

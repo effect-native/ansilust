@@ -1,5 +1,5 @@
 const std = @import("std");
-const ir = @import("../ir.zig");
+const ir = @import("../ir/lib.zig");
 
 // Terminal control escape sequences
 const ESC_DECAWM_DISABLE = "\x1b[?7l"; // Disable auto-wrap mode
@@ -185,13 +185,13 @@ pub fn renderToBuffer(
     doc: *const ir.Document,
     is_tty: bool,
 ) ![]u8 {
-    var output = std.ArrayList(u8).init(allocator);
-    errdefer output.deinit();
+    var output = std.ArrayListUnmanaged(u8){};
+    errdefer output.deinit(allocator);
 
     const options = RenderOptions{ .is_tty = is_tty };
-    try render(allocator, doc, output.writer().any(), options);
+    try render(allocator, doc, output.writer(allocator).any(), options);
 
-    return output.toOwnedSlice();
+    return output.toOwnedSlice(allocator);
 }
 
 /// Render a single row at the given y coordinate.
