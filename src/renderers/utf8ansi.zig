@@ -1,4 +1,5 @@
 const std = @import("std");
+const ir = @import("../ir.zig");
 
 // Terminal control escape sequences
 const ESC_DECAWM_DISABLE = "\x1b[?7l"; // Disable auto-wrap mode
@@ -6,6 +7,12 @@ const ESC_DECAWM_ENABLE = "\x1b[?7h"; // Enable auto-wrap mode
 const ESC_CURSOR_HIDE = "\x1b[?25l"; // Hide cursor (DECTCEM)
 const ESC_CURSOR_SHOW = "\x1b[?25h"; // Show cursor (DECTCEM)
 const ESC_CLEAR_SCREEN = "\x1b[2J"; // Clear entire screen (ED)
+
+/// Render options for UTF8ANSI output.
+pub const RenderOptions = struct {
+    /// Is output going to a TTY (vs file)?
+    is_tty: bool = true,
+};
 
 /// TerminalGuard manages terminal state setup and cleanup for rendering.
 ///
@@ -71,3 +78,17 @@ pub const TerminalGuard = struct {
         self.writer.writeAll(ESC_DECAWM_ENABLE) catch {};
     }
 };
+
+/// Render IR document to UTF8ANSI terminal output.
+pub fn render(
+    allocator: std.mem.Allocator,
+    doc: *const ir.Document,
+    writer: std.io.AnyWriter,
+    options: RenderOptions,
+) !void {
+    _ = allocator;
+    _ = doc;
+    _ = writer;
+    _ = options;
+    // TODO: Implement render
+}
