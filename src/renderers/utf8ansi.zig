@@ -15,12 +15,31 @@ pub const TerminalGuard = struct {
             .is_tty = is_tty,
         };
 
-        // TODO: Emit prologue sequences
+        // Emit prologue sequences
+        // DECAWM disable (wrap control) - always emit in both modes
+        try writer.writeAll("\x1b[?7l");
+
+        // TTY-only sequences
+        if (is_tty) {
+            // Hide cursor
+            try writer.writeAll("\x1b[?25l");
+            // Clear screen
+            try writer.writeAll("\x1b[2J");
+        }
+
         return guard;
     }
 
     pub fn deinit(self: *TerminalGuard) void {
-        // TODO: Emit epilogue sequences
-        _ = self;
+        // Emit epilogue sequences (ignoring errors since we're in cleanup)
+
+        // TTY-only sequences
+        if (self.is_tty) {
+            // Show cursor
+            self.writer.writeAll("\x1b[?25h") catch {};
+        }
+
+        // DECAWM restore (wrap control) - always emit in both modes
+        self.writer.writeAll("\x1b[?7h") catch {};
     }
 };
