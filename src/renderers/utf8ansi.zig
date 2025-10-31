@@ -15,8 +15,39 @@ pub const RenderOptions = struct {
 };
 
 /// CP437 (DOS) to Unicode codepoint mapping table (256 entries).
-/// Based on IBM Code Page 437 standard encoding.
-/// Indices 0-127 are ASCII (passthrough), 128-255 are extended characters.
+///
+/// This table maps IBM Code Page 437 bytes (0-255) to Unicode codepoints.
+/// CP437 was the original character set for IBM PC and MS-DOS, used extensively
+/// in BBS-era ANSI art (1980s-1990s).
+///
+/// ## Mapping Strategy
+///
+/// - **0x00-0x1F**: Control characters mapped to visible glyphs (smileys, suits, arrows)
+/// - **0x20-0x7E**: Standard ASCII (passthrough)
+/// - **0x7F**: House symbol (⌂) instead of DEL control character
+/// - **0x80-0xFF**: Extended characters (box drawing, accents, Greek letters, math symbols)
+///
+/// ## Box Drawing Characters (Critical for ANSI Art)
+///
+/// CP437 includes extensive box-drawing characters used for borders, frames, and UI elements:
+/// - Single-line: ─ │ ┌ ┐ └ ┘ ├ ┤ ┬ ┴ ┼
+/// - Double-line: ═ ║ ╔ ╗ ╚ ╝ ╠ ╣ ╦ ╩ ╬
+/// - Mixed combinations for complex borders
+///
+/// ## Shading Characters (Used for Gradients/Textures)
+///
+/// - 0xB0 (░): Light shade (25% fill)
+/// - 0xB1 (▒): Medium shade (50% fill)
+/// - 0xB2 (▓): Dark shade (75% fill)
+/// - 0xDB (█): Full block (100% fill)
+///
+/// ## Visual Alignment Note
+///
+/// This mapping prioritizes visual fidelity over strict encoding equivalence.
+/// Some glyphs may appear slightly different from original CRT displays, but
+/// modern terminal fonts (e.g., IBM Plex Mono, Cascadia Code) render them well.
+///
+/// Reference: https://en.wikipedia.org/wiki/Code_page_437
 const CP437_TO_UNICODE = [256]u21{
     // 0x00-0x1F: Control characters / special glyphs
     0x0000, 0x263A, 0x263B, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022,
@@ -154,22 +185,44 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
     }
 }
 
-/// Encode a scalar value (0-255 for CP437) as UTF-8.
+/// Encode a scalar value to UTF-8 and write to output.
 ///
-/// For CP437 bytes (0-255), uses the CP437_TO_UNICODE mapping table.
-/// For Unicode scalars (> 255), emits directly as UTF-8.
+/// ## CP437 Handling (scalars 0-255)
+///
+/// Uses the CP437_TO_UNICODE lookup table to translate DOS characters
+/// to their Unicode equivalents. This ensures box-drawing, shading, and
+/// special characters render correctly in modern terminals.
+///
+/// ## Unicode Passthrough (scalars > 255)
+///
+/// For values already in Unicode range, emits directly as UTF-8.
+/// This supports UTF8ANSI source documents with emoji, CJK, etc.
+///
+/// ## Error Handling
+///
+/// If UTF-8 encoding fails (invalid codepoint), emits Unicode replacement
+/// character (�) to avoid breaking the output stream.
 fn encodeGlyph(writer: std.io.AnyWriter, scalar: u21) !void {
     const codepoint = if (scalar <= 255)
         CP437_TO_UNICODE[scalar]
     else
         scalar; // Already Unicode
 
-    // Encode codepoint as UTF-8
+    // Encode codepoint as UTF-8 (1-4 bytes depending on codepoint value)
     var buf: [4]u8 = undefined;
     const len = std.unicode.utf8Encode(codepoint, &buf) catch {
-        // If encoding fails, emit replacement character
+        // Invalid codepoint - emit replacement character to avoid output corruption
         try writer.writeAll("�");
         return;
     };
     try writer.writeAll(buf[0..len]);
 }
+
+// Common CP437 character constants for reference
+const CP437_LIGHT_SHADE: u8 = 0xB0; // ░
+const CP437_MEDIUM_SHADE: u8 = 0xB1; // ▒
+const CP437_DARK_SHADE: u8 = 0xB2; // ▓
+const CP437_FULL_BLOCK: u8 = 0xDB; // █
+const CP437_BOX_TOP_LEFT: u8 = 0xDA; // ┌
+const CP437_BOX_HORIZONTAL: u8 = 0xC4; // ─
+const CP437_BOX_TOP_RIGHT: u8 = 0xBF; // ┐
