@@ -54,7 +54,7 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.5.1**: The renderer shall wrap the output with appropriate setup and teardown sequences when writing to an interactive TTY so the terminal is restored to its prior state after viewing.
 
-**FR1.5.2**: WHEN the renderer detects that stdout is not a TTY (e.g., redirected to a file) it shall omit cursor-hide and clear-screen sequences but still emit DECAWM wrap toggles (`CSI ?7l` / `CSI ?7h`) so replaying the saved `.utf8ansi` preserves layout.
+**FR1.5.2**: WHEN the renderer detects that stdout is not a TTY (e.g., redirected to a file) it shall omit cursor-hide and clear-screen sequences but still emit DECAWM wrap toggles and cursor positioning commands so replaying the saved `.utf8ansi` preserves layout exactly.
 
 **FR1.5.3**: WHEN an error occurs mid-render on a TTY the renderer shall still perform terminal cleanup before surfacing the failure.
 

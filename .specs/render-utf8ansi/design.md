@@ -2,12 +2,12 @@
 
 ## 1. Overview
 
-The UTF8ANSI renderer consumes a fully-populated Ansilust IR document and produces a buffered ANSI/UTF-8 byte stream. The renderer honors palette, glyph, and layout semantics conveyed in the IR while ensuring terminal safety (wrap management, cleanup on error). When stdout is an interactive TTY, it emits full prologue/epilogue control sequences; when stdout is redirected to a file, it still emits DECAWM toggles so replaying the `.utf8ansi` file with `cat` preserves layout, but it omits cursor-hide/clear-screen controls.
+The UTF8ANSI renderer consumes a fully-populated Ansilust IR document and produces a buffered ANSI/UTF-8 byte stream. The renderer honors palette, glyph, and layout semantics conveyed in the IR while ensuring terminal safety (wrap management, cleanup on error). Regardless of whether stdout is an interactive TTY or redirected to a file, the renderer emits DECAWM toggles and absolute cursor positioning sequences so the byte stream preserves the artwork’s layout exactly; TTY-specific niceties (cursor hide/show, clear screen) are emitted only when the render targets a live terminal.
 
 Key priorities:
 - Treat IR metadata as authoritative (palette, columns, ice colors) with CLI overrides baked in during parsing.
 - Preserve visual intent for CP437 and Unicode art.
-- Guarantee terminal cleanup on interactive TTYs; emit layout-preserving wrap toggles even for redirected output.
+- Guarantee terminal cleanup on interactive TTYs while still producing replayable streams when redirected.
 - Maintain extensible architecture that could support streaming or alternate renderers later.
 
 ## 2. Module Architecture
@@ -36,13 +36,14 @@ pub const Utf8Ansi = struct {
 };
 ```
 
-- `is_tty` passed from CLI (via `std.fs.isatty(stdout.handle)`).
-- Renderer always emits DECAWM disable/enable but only emits cursor/clear sequences when `is_tty` is true.
+- `is_tty` determined by CLI via `std.fs.isatty(stdout.handle)`.
+- Render always emits DECAWM disable/enable and `CSI {row};{col}H` positioning.
+- Cursor hide/show and screen clearing only occur when `is_tty` is true.
 
 ### 2.2 Internal Helpers
 
-- `State` struct: caches current fg/bg/attributes for batching decisions.
-- `AnsiWriter`: wrapper over `std.ArrayList(u8)` with helpers (`writeCsi`, `setColor`, `setAttributes`, `moveCursor`).
+- `State`: caches current fg/bg/attributes for batching decisions.
+- `AnsiWriter`: helper over `std.ArrayList(u8)` to append CSI sequences, glyphs, etc.
 - `GlyphEncoder`: translates IR cell glyphs to UTF-8 (CP437 table + overrides).
 - `ColorMapper`: maps palette indices to ANSI 256 codes or truecolor sequences.
 - `TerminalGuard`: RAII helper handling prologue/epilogue variations based on `is_tty`.
@@ -50,97 +51,97 @@ pub const Utf8Ansi = struct {
 ## 3. Rendering Pipeline
 
 1. **Initialization**
-   - Create `std.ArrayList(u8)` sized via heuristic.
-   - Instantiate `TerminalGuard` (always emits DECAWM toggles; only emits cursor/clear sequences when `is_tty`).
+   - Allocate `std.ArrayList(u8)` with capacity heuristic.
+   - Instantiate `TerminalGuard`
+     - Always writes `CSI ?7l` (DECAWM off).
+     - If `is_tty`, also write `CSI ?25l` (hide cursor) and `CSI 2J`/`CSI H` (clear/home).
    - Initialize `State` to defaults.
 
 2. **Palette Setup**
-   - Use IR custom palette if provided; otherwise fallback to VGA or other hints.
+   - Use IR custom palette if present; otherwise fallback to VGA/other hints.
    - Precompute palette index → ANSI mapping and truecolor usage per cell.
 
 3. **Row Iteration**
    - For each row `y`:
-     - If `is_tty`, emit absolute cursor move `CSI {y+1};1H`; else append newline separator (if not first row) to maintain full width in file playback.
-     - For each cell `x`:
-       - Skip `spacer_tail`.
-       - Determine `Style` from IR and emit SGR changes if needed.
+     - Emit absolute cursor move `CSI {y+1};1H` (always, so file playback respects layout).
+     - Iterate columns `x`:
+       - Skip cells marked `spacer_tail`.
+       - Determine `Style` (fg/bg/attrs) from IR; emit SGR changes when style differs from previous state.
        - Encode glyph to UTF-8 and append.
-   - After TTY-mode row completes, no extra newline (cursor move handles positioning); file-mode relies on explicit newline separators to maintain row boundaries.
+   - No explicit newline needed because positioning commands define layout; smoothing with newline optional when writing to file but redundant.
 
 4. **Finalization**
-   - `TerminalGuard` appends epilogue (DECAWM enable always, cursor show/SGR reset only in TTY mode).
-   - Return `ArrayList` buffer slice.
+   - `TerminalGuard` epilogue writes `CSI ?7h` (DECAWM on) in all modes; if `is_tty`, also writes `CSI 0m` (reset) and `CSI ?25h` (show cursor).
+   - Return buffer slice from `ArrayList`.
 
 ### 3.1 Style Batching
 
-- Compare `Style` struct (fg/bg/attrs) with previous state; emit resets only when changed.
-- Works identically for both output modes.
+- Styles stored in struct `{ fg: Color, bg: Color, attrs: Attributes }`.
+- Compare with previous style to avoid redundant `SGR` sequences.
+- `SGR 0` emitted when style changes drastically; subsequent attribute/color codes follow.
 
 ### 3.2 Color Emission
 
-- Palette vs truecolor logic unchanged.
-- File-mode output still contains full color sequences so replaying retains fidelity.
+- `ColorMapper` handles palette vs truecolor emission per cell.
+- `Color::None` uses `SGR 39` or `SGR 49`.
+- Works identically for TTY and file output.
 
 ### 3.3 Glyph Encoding
 
-- CP437 table + override map for Bramwell-driven adjustments.
-- Grapheme clusters handled using IR-provided storage.
+- CP437 → Unicode table (comptime constant) plus override map for adjustments.
+- Grapheme clusters fetched from IR’s shared storage.
+- Encoded to UTF-8 via `std.unicode.utf8Encode` or manual bitpacking.
 
 ## 4. Memory Management
 
-- Single `std.ArrayList(u8)` with `ensureTotalCapacity` heuristic to minimize reallocations.
-- No temporary allocations beyond optional override lookups.
-- `errdefer` ensures guard epilogue emitted even on error.
+- Single `std.ArrayList(u8)` tuned via `ensureTotalCapacity` to minimize reallocs.
+- No temporary allocations beyond override table lookups.
+- `errdefer` ensures guard epilogue emitted even if `render` fails mid-way.
 
 ## 5. Error Handling Strategy
 
-- Error set includes `error.InvalidInput`, `error.OutOfMemory`, `error.EncodingError`.
-- `try`/`errdefer` ensure partial TTY writes still culminate in cleanup sequences.
-- File-mode skip of cursor/clear sequences simplifies error cases (only DECAWM toggles remain).
+- Error union covers `error.InvalidInput`, `error.OutOfMemory`, `error.EncodingError`.
+- `try` used for all fallible operations; `errdefer` ensures cleanup sequences appended for TTY output.
+- File-mode simplicity: only DECAWM toggles require symmetry.
 
 ## 6. Terminal Safety Contract
 
-- Prologue (`is_tty` true):
-  - `CSI ?25l` (hide cursor)
-  - `CSI ?7l` (disable wrap)
-  - `CSI 2J` (clear screen)
-  - `CSI H` (home cursor)
-- Prologue (`is_tty` false):
-  - `CSI ?7l` only (~disable wrap to signal layout to replayers).
-- Epilogue (always): `CSI ?7h` (enable wrap).
-- Epilogue (`is_tty` true): additionally `CSI 0m`, `CSI ?25h`.
-- Guard ensures prologue/epilogue emitted exactly once in any mode.
+- Prologue (all modes): `CSI ?7l` (disable wrap).
+- Prologue (`is_tty` true): additional `CSI ?25l`, `CSI 2J`, `CSI H`.
+- Epilogue (all modes): `CSI ?7h` (enable wrap).
+- Epilogue (`is_tty` true): `CSI 0m`, `CSI ?25h`.
+- Absolute positioning commands maintain layout in both modes.
 
 ## 7. Testing Strategy
 
 ### 7.1 Unit Tests
-- Validate style batching, color mapping, glyph translation, guard behavior in both TTY and file modes.
+- Validate style batching, color mapping, glyph translation, guard variations.
 
 ### 7.2 Integration Tests
-- Render to string in TTY-mode and assert presence of cursor/clear sequences + DECAWM toggles.
-- Render in file-mode and assert only DECAWM toggles present (no cursor/clear codes).
-- Replay saved `.utf8ansi` via `cat` in test harness to ensure width preserved (verify screenshot or diff vs reference string).
+- Render to string with `is_tty = true` and ensure prologue/epilogue + positioning present.
+- Render with `is_tty = false`; assert presence of DECAWM/positioning sequences but absence of cursor hide/clear-screen codes.
+- Round-trip test: parse ANSI → render to file → `cat` the bytes and compare to TTY-mode render.
 
 ### 7.3 Experiment Outcomes
-- Wrap behavior experiment informs guard: DECAWM toggles always emitted, consistent with test findings.
-- Palette tests ensure custom palettes survive when saving + replaying files.
+- Wrap experiment ensures DECAWM toggles necessary; tests verify presence.
+- Palette tests confirm custom palettes persist in output stream.
 
 ## 8. Extensibility Considerations
 
-- **Streaming**: Future API could stream rows after IR parsed; guard design keeps logic stateless per row.
-- **Alternate Renderers**: Shared modules (glyph encoder, color mapper) reusable.
-- **Replay Tooling**: Future CLI (`ansilust --replay art.utf8ansi`) can reuse guard to interpret DECAWM toggles when outputting to TTY.
+- **Streaming**: Renderer design remains stateless per row to support future streaming once IR is available.
+- **Alternate Renderers**: Glyph/color helpers reusable.
+- **Replay Tooling**: Future CLI command could reuse same renderer with `is_tty = true` to display saved `.utf8ansi` files interactively.
 
 ## 9. Implementation Plan Snapshot
 
-1. Add `renderers/utf8ansi.zig` with options for `is_tty`.
-2. Implement `TerminalGuard` with dual-mode prologue/epilogue.
-3. Implement style batching + color mapping helpers.
-4. Integrate glyph encoding + override mechanism.
-5. Update CLI to determine `isatty` and pass options; still support redirection.
-6. Add regression tests and golden fixtures for both output modes.
-7. Validate manual flows (`ansilust art.ans > art.utf8ansi`; `cat art.utf8ansi`).
+1. Create `renderers/utf8ansi.zig` with options/guard.
+2. Implement `TerminalGuard` dual-mode prologue/epilogue.
+3. Add style batching + color mapping helpers.
+4. Wire in glyph encoder + overrides.
+5. Update CLI to determine `isatty` and pass options.
+6. Add tests/golden fixtures for both output modes.
+7. Manual verification: `ansilust art.ans > art.utf8ansi`; `cat art.utf8ansi` (no cropping, correct layout); interactive run ensures cleanup.
 
 ---
 
-This design ensures the renderer emits layout-preserving sequences regardless of output destination while keeping interactive terminals clean and ready for continued use.
+This design ensures the renderer produces a layout-faithful byte stream for both interactive viewing and offline replay, while keeping terminal safety intact.
