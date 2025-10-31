@@ -174,6 +174,26 @@ pub fn render(
     }
 }
 
+/// Render IR document to an owned buffer.
+///
+/// This is a convenience wrapper around `render()` that allocates and returns
+/// an owned byte slice. Caller must free the returned buffer.
+///
+/// Useful for CLI integration where you need to write to stdout after rendering.
+pub fn renderToBuffer(
+    allocator: std.mem.Allocator,
+    doc: *const ir.Document,
+    is_tty: bool,
+) ![]u8 {
+    var output = std.ArrayList(u8).init(allocator);
+    errdefer output.deinit();
+
+    const options = RenderOptions{ .is_tty = is_tty };
+    try render(allocator, doc, output.writer().any(), options);
+
+    return output.toOwnedSlice();
+}
+
 /// Render a single row at the given y coordinate.
 fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
     try writer.print("\x1b[{d};1H", .{y + 1});

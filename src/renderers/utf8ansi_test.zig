@@ -225,3 +225,26 @@ test "GlyphMapper handles ASCII passthrough" {
     // Should contain ASCII passthrough
     try testing.expect(std.mem.indexOf(u8, result, "Hello") != null);
 }
+
+// === CLI Integration Helper ===
+
+test "renderToBuffer returns bytes suitable for stdout" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' } });
+
+    // Render to buffer
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain DECAWM sequences
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[?7l") != null);
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[?7h") != null);
+    // Should contain content
+    try testing.expect(std.mem.indexOf(u8, buffer, "ABC") != null);
+}
