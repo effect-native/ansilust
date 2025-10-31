@@ -333,9 +333,9 @@ fn emitColors(writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
             const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
             try writer.print("\x1b[38;5;{d}m", .{ansi_idx});
         },
-        .rgb => {
-            // Truecolor support in Cycle 7 - for now treat as default
-            try writer.writeAll("\x1b[39m");
+        .rgb => |rgb| {
+            // Truecolor (24-bit RGB) - SGR 38;2;R;G;B
+            try writer.print("\x1b[38;2;{d};{d};{d}m", .{ rgb.r, rgb.g, rgb.b });
         },
     }
 
@@ -347,9 +347,9 @@ fn emitColors(writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
             const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
             try writer.print("\x1b[48;5;{d}m", .{ansi_idx});
         },
-        .rgb => {
-            // Truecolor support in Cycle 7 - for now treat as default
-            try writer.writeAll("\x1b[49m");
+        .rgb => |rgb| {
+            // Truecolor (24-bit RGB) - SGR 48;2;R;G;B
+            try writer.print("\x1b[48;2;{d};{d};{d}m", .{ rgb.r, rgb.g, rgb.b });
         },
     }
 }
