@@ -178,10 +178,11 @@ pub const TerminalGuard = struct {
         // DECAWM restore - return terminal to normal wrap behavior
         self.writer.writeAll(ESC_DECAWM_ENABLE) catch {};
 
-        // TTY-only: emit newline to ensure scrollback capture
-        // This prevents Ghostty/Alacritty from truncating previous output in scrollback
+        // TTY-only: emit newlines to "commit" output to scrollback buffer
+        // This prevents Ghostty/Alacritty from truncating lines in scrollback
+        // when wrap was disabled during rendering
         if (self.is_tty) {
-            self.writer.writeAll("\n") catch {};
+            self.writer.writeAll("\n\n") catch {};
         }
     }
 };
@@ -204,6 +205,12 @@ pub fn render(
     var y: u32 = 0;
     while (y < dims.height) : (y += 1) {
         try renderRow(doc, writer, y, dims.width);
+    }
+
+    // TTY mode: move cursor past the rendered content
+    // This ensures the terminal scrollback captures the full output
+    if (options.is_tty and dims.height > 0) {
+        try writer.print("\x1b[{d};1H", .{dims.height + 1});
     }
 }
 
