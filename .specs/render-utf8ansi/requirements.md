@@ -32,11 +32,13 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 ### FR1.3: Character Fidelity
 
-**FR1.3.1**: The renderer shall translate CP437 glyphs (including box drawing, shading, suits, arrows, accented text) into visually equivalent Unicode codepoints, starting from the libansilove mapping and adjusting as needed to match the artist’s intent.
+**FR1.3.1**: The renderer shall translate CP437 glyphs (including box drawing, shading, suits, arrows, accented text) into visually equivalent Unicode codepoints, starting from the libansilove mapping and adjusting as needed to match the artist’s intent, baseline alignment, and weight.
 
 **FR1.3.2**: WHEN the IR already contains Unicode characters the renderer shall preserve them verbatim without re-mapping.
 
 **FR1.3.3**: IF the renderer encounters a codepoint it cannot map THEN it shall substitute a safe placeholder (e.g. space) and continue so the render never aborts mid-frame.
+
+**FR1.3.4**: The renderer-specific glyph mapping shall be maintained outside the IR so that the IR preserves semantic source data while the UTF8ANSI renderer applies visual substitutions tuned for its output medium.
 
 ### FR1.4: Layout & Flow
 

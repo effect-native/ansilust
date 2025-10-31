@@ -44,7 +44,7 @@ pub const Utf8Ansi = struct {
 
 - `State`: caches current fg/bg/attributes for batching decisions.
 - `AnsiWriter`: helper over `std.ArrayList(u8)` to append CSI sequences, glyphs, etc.
-- `GlyphEncoder`: translates IR cell glyphs to UTF-8 (CP437 table + overrides).
+- `GlyphEncoder`: renderer-owned CP437/Unicode mapping tables translating glyphs to UTF-8 (IR remains semantic source).
 - `ColorMapper`: maps palette indices to ANSI 256 codes or truecolor sequences.
 - `TerminalGuard`: RAII helper handling prologue/epilogue variations based on `is_tty`.
 
@@ -64,11 +64,12 @@ pub const Utf8Ansi = struct {
 3. **Row Iteration**
    - For each row `y`:
      - Emit absolute cursor move `CSI {y+1};1H` (always, so file playback respects layout).
-     - Iterate columns `x`:
-       - Skip cells marked `spacer_tail`.
-       - Determine `Style` (fg/bg/attrs) from IR; emit SGR changes when style differs from previous state.
-       - Encode glyph to UTF-8 and append.
-   - No explicit newline needed because positioning commands define layout; smoothing with newline optional when writing to file but redundant.
+      - Iterate columns `x`:
+        - Skip cells marked `spacer_tail`.
+        - Determine `Style` (fg/bg/attrs) from IR; emit SGR changes when style differs from previous state.
+        - Encode glyph to UTF-8 via renderer-owned mapping (ensuring visual alignment) and append.
+    - No explicit newline needed because positioning commands define layout; smoothing with newline optional when writing to file but redundant.
+
 
 4. **Finalization**
    - `TerminalGuard` epilogue writes `CSI ?7h` (DECAWM on) in all modes; if `is_tty`, also writes `CSI 0m` (reset) and `CSI ?25h` (show cursor).
@@ -88,9 +89,10 @@ pub const Utf8Ansi = struct {
 
 ### 3.3 Glyph Encoding
 
-- CP437 → Unicode table (comptime constant) plus override map for adjustments.
-- Grapheme clusters fetched from IR’s shared storage.
-- Encoded to UTF-8 via `std.unicode.utf8Encode` or manual bitpacking.
+- Renderer maintains CP437 → Unicode map tuned for visual fidelity (baseline alignment, weight) while IR retains raw CP437 bytes.
+- Override table stored within renderer module for quick adjustments as Bramwell feedback arrives.
+- Grapheme clusters fetched from IR’s shared storage and encoded to UTF-8 via `std.unicode.utf8Encode` or manual bitpacking.
+
 
 ## 4. Memory Management
 
