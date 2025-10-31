@@ -56,7 +56,9 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.5.3**: WHERE possible the renderer shall avoid terminal features that leave persistent side effects (palette mutation, alternate screen) during the Phase 1 baseline.
 
-**FR1.5.4**: IF the caller requests debugging output (e.g., `--no-cleanup`) THEN the renderer shall skip cleanup intentionally and warn the user about the altered behavior.
+**FR1.5.4**: The renderer shall disable terminal auto-wrap using DECAWM (`CSI ?7l`) before drawing and restore it (`CSI ?7h`) afterward so wide artwork is not reflowed by the terminal.
+
+**FR1.5.5**: IF the caller requests debugging output (e.g., `--no-cleanup`) THEN the renderer shall skip cleanup intentionally and warn the user about the altered behavior.
 
 ### FR1.6: User Controls & Options
 
