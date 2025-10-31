@@ -289,20 +289,11 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
 
     var state = RenderState.init();
 
-    // Find the rightmost cell with content or non-default background
-    // This preserves background colors that extend past the last character
-    var rightmost: u32 = 0;
+    // Render all cells across the full width of the artboard.
+    // BBS ANSI art uses fixed-width canvases (typically 80 columns),
+    // and background colors must extend to the edge even for trailing spaces.
     var x: u32 = 0;
     while (x < width) : (x += 1) {
-        const cell = try doc.getCell(x, y);
-        if (!isBlankCell(cell)) {
-            rightmost = x;
-        }
-    }
-
-    // Render cells up to rightmost non-blank (inclusive)
-    x = 0;
-    while (x <= rightmost) : (x += 1) {
         const cell = try doc.getCell(x, y);
 
         // Apply style (batches if unchanged)
@@ -314,25 +305,6 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
 
     // Reset SGR to clear background color at right edge
     try writer.writeAll("\x1b[0m");
-}
-
-/// Check if a cell is blank (space with default background).
-///
-/// A cell is considered blank if:
-/// 1. It contains a space character
-/// 2. It has the default black background (palette 0 or .none)
-///
-/// We don't check foreground color because colored spaces with default bg
-/// are still blank for rendering purposes. However, spaces with colored
-/// backgrounds must be rendered to preserve the background color bar.
-fn isBlankCell(cell: ir.CellView) bool {
-    const is_space = cell.contents.scalar == ' ';
-    const is_default_bg = switch (cell.bg_color) {
-        .none => true,
-        .palette => |idx| idx == 0, // Black is default DOS background
-        else => false,
-    };
-    return is_space and is_default_bg;
 }
 
 /// Encode a scalar value to UTF-8 and write to output.
