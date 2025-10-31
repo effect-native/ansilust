@@ -36,7 +36,7 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.3.2**: WHEN the IR already contains Unicode characters the renderer shall preserve them verbatim without re-mapping.
 
-**FR1.3.3**: IF the renderer encounters a codepoint it cannot map THEN it shall substitute a safe placeholder (space) and continue so the render never aborts mid-frame.
+**FR1.3.3**: IF the renderer encounters a codepoint it cannot map THEN it shall substitute a safe placeholder (e.g. space) and continue so the render never aborts mid-frame.
 
 ### FR1.4: Layout & Flow
 
