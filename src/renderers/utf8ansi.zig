@@ -205,16 +205,23 @@ pub fn render(
     // BBS art files often initialize documents with large heights (e.g., 25 rows),
     // but the actual art may only use the first 10-20 rows. Rendering all blank rows
     // creates large gaps in the output.
+    //
+    // Search backwards from the end for efficiency - stops at first non-blank row.
     var last_content_row: u32 = 0;
-    var y: u32 = 0;
-    while (y < dims.height) : (y += 1) {
-        if (try rowHasContent(doc, y, dims.width)) {
-            last_content_row = y;
+    if (dims.height > 0) {
+        var search_y: u32 = dims.height - 1;
+        while (true) {
+            if (try rowHasContent(doc, search_y, dims.width)) {
+                last_content_row = search_y;
+                break;
+            }
+            if (search_y == 0) break;
+            search_y -= 1;
         }
     }
 
     // Render rows up to the last row with content
-    y = 0;
+    var y: u32 = 0;
     while (y <= last_content_row) : (y += 1) {
         try renderRow(doc, writer, y, dims.width);
 

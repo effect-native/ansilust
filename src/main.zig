@@ -36,9 +36,6 @@ pub fn main() !void {
 
     var file_count: usize = 0;
     while (args.next()) |path| {
-        if (file_count > 0) {
-            std.debug.print("\n{s}\n\n", .{"=" ** 80});
-        }
         try processFile(allocator, path);
         file_count += 1;
     }
