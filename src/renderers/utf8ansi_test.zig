@@ -248,3 +248,51 @@ test "renderToBuffer returns bytes suitable for stdout" {
     // Should contain content
     try testing.expect(std.mem.indexOf(u8, buffer, "ABC") != null);
 }
+
+// === Cycle 4: Color Emission ===
+
+test "ColorMapper emits SGR 38;5;N for DOS palette indices" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 2, 1);
+    defer doc.deinit();
+
+    // Set cells with DOS palette colors (foreground)
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'R' },
+        .fg_color = .{ .palette = 4 }, // DOS red (index 4)
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .fg_color = .{ .palette = 1 }, // DOS blue (index 1)
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain 256-color SGR for red (DOS 4 → ANSI 256 code 196)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;196m") != null);
+    // Should contain 256-color SGR for blue (DOS 1 → ANSI 256 code 19)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;19m") != null);
+}
+
+test "ColorMapper emits SGR 39/49 for Color None" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 1, 1);
+    defer doc.deinit();
+
+    // Set cell with default/none colors
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'X' },
+        .fg_color = .none,
+        .bg_color = .none,
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain SGR 39 (default foreground) and SGR 49 (default background)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[39m") != null);
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[49m") != null);
+}
