@@ -32,11 +32,15 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 
 **R1.1**: The renderer shall emit 256-color SGR sequences (CSI 38;5;Nm / CSI 48;5;Nm) for all palette-indexed colors by default.
 
-**R1.2**: The renderer shall map 16-color VGA palette indices to their canonical RGB values:
-- 0: #000000, 1: #0000AA, 2: #00AA00, 3: #00AAAA
-- 4: #AA0000, 5: #AA00AA, 6: #AA5500, 7: #AAAAAA
-- 8: #555555, 9: #5555FF, 10: #55FF55, 11: #55FFFF
-- 12: #FF5555, 13: #FF55FF, 14: #FFFF55, 15: #FFFFFF
+**R1.1a**: WHEN emitting 256-color SGR for DOS palette indices (0-15) the renderer shall use the pre-calculated ANSI 256-color code mapping (not direct indices):
+- 0→16, 1→19, 2→34, 3→37, 4→124, 5→127, 6→136, 7→248
+- 8→240, 9→105, 10→120, 11→123, 12→210, 13→213, 14→228, 15→231
+
+**R1.2**: The renderer shall map 16-color DOS/VGA palette indices to their canonical RGB values (CGA/EGA standard):
+- 0: #000000 (Black), 1: #0000AA (Blue), 2: #00AA00 (Green), 3: #00AAAA (Cyan)
+- 4: #AA0000 (Red), 5: #AA00AA (Magenta), 6: #AA5500 (Brown), 7: #AAAAAA (Light Gray)
+- 8: #555555 (Dark Gray), 9: #5555FF (Light Blue), 10: #55FF55 (Light Green), 11: #55FFFF (Light Cyan)
+- 12: #FF5555 (Light Red), 13: #FF55FF (Light Magenta), 14: #FFFF55 (Yellow), 15: #FFFFFF (White)
 
 **R1.3**: WHERE `--truecolor` flag is provided the renderer shall emit 24-bit SGR sequences (CSI 38;2;R;G;Bm / CSI 48;2;R;G;Bm).
 
@@ -48,14 +52,18 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 
 **R2.1**: The renderer shall translate CP437 codepoints to visually-equivalent Unicode characters using a Phase 1 mapping table.
 
-**R2.2**: The Phase 1 CP437→Unicode mapping shall include:
-- Shades/Blocks: 0xB0→░, 0xB1→▒, 0xB2→▓, 0xDB→█, 0xDC→▄, 0xDF→▀, 0xDD→▌, 0xDE→▐, 0xFE→■
-- Single box: 0xC4→─, 0xB3→│, 0xDA→┌, 0xBF→┐, 0xC0→└, 0xD9→┘, 0xC3→├, 0xB4→┤, 0xC2→┬, 0xC1→┴, 0xC5→┼
-- Double box: 0xCD→═, 0xBA→║, 0xC9→╔, 0xBB→╗, 0xC8→╚, 0xBC→╝, 0xCC→╠, 0xB9→╣, 0xCB→╦, 0xCA→╩, 0xCE→╬
+**R2.2**: The renderer shall use the complete CP437→Unicode mapping table (all 256 codepoints) from libansilove reference implementation.
 
-**R2.3**: WHERE a CP437 codepoint is not in the Phase 1 mapping AND is printable ASCII (0x20–0x7E) the renderer shall emit the ASCII character directly.
+**R2.2a**: The CP437→Unicode mapping shall include (critical glyphs for BBS art):
+- **Shades/Blocks**: 0xB0→░ (2591), 0xB1→▒ (2592), 0xB2→▓ (2593), 0xDB→█ (2588), 0xDC→▄ (2584), 0xDF→▀ (2580), 0xDD→▌ (258C), 0xDE→▐ (2590), 0xFE→■ (25A0)
+- **Single box**: 0xC4→─ (2500), 0xB3→│ (2502), 0xDA→┌ (250C), 0xBF→┐ (2510), 0xC0→└ (2514), 0xD9→┘ (2518), 0xC3→├ (251C), 0xB4→┤ (2524), 0xC2→┬ (252C), 0xC1→┴ (2534), 0xC5→┼ (253C)
+- **Double box**: 0xCD→═ (2550), 0xBA→║ (2551), 0xC9→╔ (2554), 0xBB→╗ (2557), 0xC8→╚ (255A), 0xBC→╝ (255D), 0xCC→╠ (2560), 0xB9→╣ (2563), 0xCB→╦ (2566), 0xCA→╩ (2569), 0xCE→╬ (256C)
+- **Arrows**: 0x18→↑ (2191), 0x19→↓ (2193), 0x1A→→ (2192), 0x1B→← (2190)
+- **Card suits**: 0x03→♥ (2665), 0x04→♦ (2666), 0x05→♣ (2663), 0x06→♠ (2660)
+- **Smileys**: 0x01→☺ (263A), 0x02→☻ (263B)
+- **Extended ASCII**: 0x80-0xFF (accented characters, Greek letters, math symbols - see libansilove cp437_unicode.h)
 
-**R2.4**: WHERE a CP437 codepoint is not in the Phase 1 mapping AND is not printable ASCII the renderer shall emit U+0020 (space) as fallback.
+**R2.3**: WHEN emitting CP437 characters the renderer shall use the complete 256-entry lookup table (no fallback needed for valid CP437 input).
 
 **R2.5**: WHEN the IR contains Unicode codepoints (from UTF8ANSI source) the renderer shall emit them directly without translation.
 
@@ -104,7 +112,7 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 
 **R5.6**: WHEN SAUCE metadata contains column width (tinfo1) the renderer shall use that value for grid width.
 
-**R5.7**: WHERE SAUCE metadata is missing AND no --columns override is provided the renderer shall default to 80 columns.
+**R5.7**: WHERE SAUCE metadata is missing AND no --columns override is provided the renderer shall default to 80 columns (following libansilove convention).
 
 ### Wide Character Handling
 
@@ -118,20 +126,41 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 
 ### Data Structures
 
-**CP437 Translation Table**:
+**CP437 Translation Table** (complete 256-entry table from libansilove):
 ```zig
 pub const cp437_to_unicode: [256]u21 = .{
-    // Phase 1: shades, blocks, box-drawing (see R2.2)
-    // Fallback: ASCII passthrough or space
+    // Complete mapping based on effect-native/libansilove cp437_unicode.h
+    // Includes: control chars, ASCII, extended ASCII, box-drawing, Greek, math symbols
+    // See: https://raw.githubusercontent.com/effect-native/libansilove/refs/heads/utf8ansi-terminal/src/cp437_unicode.h
+    0x0000, 0x263A, 0x263B, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022,
+    // ... (full 256 entries)
 };
 ```
 
-**VGA Palette**:
+**DOS/VGA Palette** (CGA/EGA standard):
 ```zig
-pub const vga_palette: [16]struct { r: u8, g: u8, b: u8 } = .{
+pub const dos_palette: [16]struct { r: u8, g: u8, b: u8 } = .{
     .{ .r = 0x00, .g = 0x00, .b = 0x00 }, // 0: Black
     .{ .r = 0x00, .g = 0x00, .b = 0xAA }, // 1: Blue
-    // ... (see R1.2)
+    .{ .r = 0x00, .g = 0xAA, .b = 0x00 }, // 2: Green
+    .{ .r = 0x00, .g = 0xAA, .b = 0xAA }, // 3: Cyan
+    .{ .r = 0xAA, .g = 0x00, .b = 0x00 }, // 4: Red
+    .{ .r = 0xAA, .g = 0x00, .b = 0xAA }, // 5: Magenta
+    .{ .r = 0xAA, .g = 0x55, .b = 0x00 }, // 6: Brown
+    .{ .r = 0xAA, .g = 0xAA, .b = 0xAA }, // 7: Light Gray
+    .{ .r = 0x55, .g = 0x55, .b = 0x55 }, // 8: Dark Gray
+    .{ .r = 0x55, .g = 0x55, .b = 0xFF }, // 9: Light Blue
+    .{ .r = 0x55, .g = 0xFF, .b = 0x55 }, // 10: Light Green
+    .{ .r = 0x55, .g = 0xFF, .b = 0xFF }, // 11: Light Cyan
+    .{ .r = 0xFF, .g = 0x55, .b = 0x55 }, // 12: Light Red
+    .{ .r = 0xFF, .g = 0x55, .b = 0xFF }, // 13: Light Magenta
+    .{ .r = 0xFF, .g = 0xFF, .b = 0x55 }, // 14: Yellow
+    .{ .r = 0xFF, .g = 0xFF, .b = 0xFF }, // 15: White
+};
+
+pub const dos_to_ansi256: [16]u8 = .{
+    16, 19, 34, 37, 124, 127, 136, 248,
+    240, 105, 120, 123, 210, 213, 228, 231,
 };
 ```
 
@@ -273,20 +302,20 @@ try stdout.writeAll(output);
 
 **OS5**: Automatic terminal capability detection (explicit flags only)
 
-**OS6**: Complete CP437 mapping (only Phase 1 subset)
+**OS6**: Font rendering or bitmap font support (assumes terminal has suitable font)
 
-**OS7**: Font rendering or bitmap font support (assumes terminal has suitable font)
+**OS7**: Hyperlink support (OSC 8)
 
-**OS8**: Hyperlink support (OSC 8)
+**OS8**: Stdin input parsing (deferred to later phase or never)
 
 ## Testing Strategy
 
 ### Unit Tests
 
 **T1**: CP437 Translation Table
-- Verify all Phase 1 mappings (shades, blocks, single box, double box)
-- Verify ASCII passthrough (0x20–0x7E)
-- Verify fallback to space for unmapped codepoints
+- Verify all 256 mappings against libansilove reference table
+- Spot-check critical glyphs: shades, blocks, single/double box, arrows, card suits
+- Verify UTF-8 encoding correctness for multi-byte codepoints
 
 **T2**: VGA Palette Mapping
 - Verify all 16 colors map to correct RGB values
@@ -387,6 +416,12 @@ try stdout.writeAll(output);
 
 ## References
 
+**CP437 Mapping Reference**: [effect-native/libansilove cp437_unicode.h](https://raw.githubusercontent.com/effect-native/libansilove/refs/heads/utf8ansi-terminal/src/cp437_unicode.h)
+
+**DOS Color Palette Reference**: [effect-native/libansilove dos_colors.h](https://raw.githubusercontent.com/effect-native/libansilove/refs/heads/utf8ansi-terminal/src/dos_colors.h)
+
+**libansilove ANSI Parser**: `reference/libansilove/libansilove/src/loaders/ansi.c` (column default logic at line 110-111)
+
 **VGA Palette Source**: [Wikipedia - ANSI escape code](https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit)
 
 **CP437 Reference**: [Wikipedia - Code page 437](https://en.wikipedia.org/wiki/Code_page_437)
@@ -399,8 +434,6 @@ try stdout.writeAll(output);
 
 **Q1**: Should we support auto-detection of 24-bit color capability (e.g., check $COLORTERM)?
 
-**Q2**: Should Phase 1 include any arrow characters (←↑→↓) or defer to Phase 2?
-
 **Q3**: Should we add a `--verify` mode that parses output and compares to IR (round-trip test)?
 
 **Q4**: Should we support rendering to a file instead of stdout for testing?
@@ -411,6 +444,10 @@ try stdout.writeAll(output);
 
 **Q7**: Should we add telemetry (e.g., count of CP437 glyphs translated, SGR sequence count)?
 
-**Q8**: How should we detect column width when SAUCE is missing? Line length heuristic, or strict 80-column default?
+## Decisions Made (from prior art research)
 
-**Q9**: Should stdin input support incremental parsing, or require complete buffering?
+**Q2 (CP437 scope)**: ✅ Use complete 256-entry CP437→Unicode table from libansilove (includes arrows, card suits, smileys, Greek, math symbols).
+
+**Q8 (Missing SAUCE column width)**: ✅ Default to 80 columns (libansilove convention: `options->columns = options->columns ? options->columns : 80`).
+
+**Q9 (Stdin parsing)**: ⏸️ Deferred to later phase or never (not in MVP scope).
