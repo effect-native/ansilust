@@ -6,7 +6,6 @@ const ESC_DECAWM_DISABLE = "\x1b[?7l"; // Disable auto-wrap mode
 const ESC_DECAWM_ENABLE = "\x1b[?7h"; // Enable auto-wrap mode
 const ESC_CURSOR_HIDE = "\x1b[?25l"; // Hide cursor (DECTCEM)
 const ESC_CURSOR_SHOW = "\x1b[?25h"; // Show cursor (DECTCEM)
-const ESC_CLEAR_SCREEN = "\x1b[2J"; // Clear entire screen (ED)
 
 /// Render options for UTF8ANSI output.
 pub const RenderOptions = struct {
@@ -141,7 +140,6 @@ pub const TerminalGuard = struct {
     /// Prologue sequences:
     /// - DECAWM disable: Prevents terminal from wrapping lines automatically
     /// - Cursor hide (TTY only): Cleaner visual during rendering
-    /// - Clear screen (TTY only): Remove previous output
     pub fn init(allocator: std.mem.Allocator, writer: std.io.AnyWriter, is_tty: bool) !TerminalGuard {
         const guard = TerminalGuard{
             .allocator = allocator,
@@ -155,7 +153,8 @@ pub const TerminalGuard = struct {
         // TTY-only sequences for interactive display
         if (is_tty) {
             try writer.writeAll(ESC_CURSOR_HIDE);
-            try writer.writeAll(ESC_CLEAR_SCREEN);
+            // Note: We don't clear the screen automatically. Users can run 'clear' themselves.
+            // Auto-clearing erases previous output (like separators in loops), which is unexpected.
         }
 
         return guard;
@@ -202,12 +201,25 @@ pub fn render(
 
     const dims = doc.getDimensions();
 
+    // Find the last row with actual content to avoid rendering trailing blank rows.
+    // BBS art files often initialize documents with large heights (e.g., 25 rows),
+    // but the actual art may only use the first 10-20 rows. Rendering all blank rows
+    // creates large gaps in the output.
+    var last_content_row: u32 = 0;
     var y: u32 = 0;
     while (y < dims.height) : (y += 1) {
-        try renderRow(doc, writer, y, dims.width, options.is_tty);
+        if (try rowHasContent(doc, y, dims.width)) {
+            last_content_row = y;
+        }
+    }
 
-        // Emit newline after each row (except last in file mode)
-        if (y < dims.height - 1 or options.is_tty) {
+    // Render rows up to the last row with content
+    y = 0;
+    while (y <= last_content_row) : (y += 1) {
+        try renderRow(doc, writer, y, dims.width);
+
+        // Emit newline after each row
+        if (y < last_content_row) {
             try writer.writeAll("\n");
         }
     }
@@ -279,14 +291,39 @@ fn colorsEqual(a: ir.Color, b: ir.Color) bool {
     };
 }
 
-/// Render a single row at the given y coordinate.
-fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32, is_tty: bool) !void {
-    // TTY mode: just render cells naturally (cursor advances with content)
-    // File mode: still use absolute positioning for replayability
-    if (!is_tty) {
-        try writer.print("\x1b[{d};1H", .{y + 1});
+/// Check if a row has any content (non-space characters or non-default colors).
+fn rowHasContent(doc: *const ir.Document, y: u32, width: u32) !bool {
+    var x: u32 = 0;
+    while (x < width) : (x += 1) {
+        const cell = try doc.getCell(x, y);
+
+        // Check if cell has visible content
+        if (cell.contents.scalar != ' ') {
+            return true;
+        }
+
+        // Check if cell has non-default colors (colored backgrounds count as content)
+        const has_colored_fg = switch (cell.fg_color) {
+            .none => false,
+            .palette => |idx| idx != 7, // 7 is default light gray
+            .rgb => true,
+        };
+        const has_colored_bg = switch (cell.bg_color) {
+            .none => false,
+            .palette => |idx| idx != 0, // 0 is default black
+            .rgb => true,
+        };
+
+        if (has_colored_fg or has_colored_bg) {
+            return true;
+        }
     }
 
+    return false; // Row is entirely blank
+}
+
+/// Render a single row at the given y coordinate.
+fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
     var state = RenderState.init();
 
     // Render all cells across the full width of the artboard.
