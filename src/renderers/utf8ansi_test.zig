@@ -296,3 +296,63 @@ test "ColorMapper emits SGR 39/49 for Color None" {
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[39m") != null);
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[49m") != null);
 }
+
+// === Cycle 5: Style Batching ===
+
+test "RenderState batches consecutive cells with same style" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 5, 1);
+    defer doc.deinit();
+
+    // Set multiple cells with the SAME color
+    const red_on_black = .{
+        .fg_color = .{ .palette = 4 }, // DOS red
+        .bg_color = .{ .palette = 0 }, // Black
+    };
+
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Count occurrences of the red foreground code
+    var count: usize = 0;
+    var pos: usize = 0;
+    while (std.mem.indexOfPos(u8, buffer, pos, "\x1b[38;5;196m")) |found_pos| {
+        count += 1;
+        pos = found_pos + 1;
+    }
+
+    // Should emit color code only ONCE for consecutive cells (not 3 times)
+    try testing.expectEqual(@as(usize, 1), count);
+}
+
+test "RenderState emits SGR 0 when style changes" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    // Set cells with DIFFERENT colors
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'R' },
+        .fg_color = .{ .palette = 4 }, // Red
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'G' },
+        .fg_color = .{ .palette = 2 }, // Green
+    });
+    try doc.setCell(2, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .fg_color = .{ .palette = 1 }, // Blue
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain SGR 0 (reset) before style changes
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[0m") != null);
+}
