@@ -60,15 +60,13 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.5.5**: IF the caller requests debugging output (e.g., `--no-cleanup`) THEN the renderer shall skip cleanup intentionally and warn the user about the altered behavior.
 
-### FR1.6: User Controls & Options
+### FR1.6: IR Authority & Environment
 
-**FR1.6.1**: The renderer shall provide a command-line option to select the palette family (vga, ansi, workbench) so users can match artwork to its original platform.
+**FR1.6.1**: The renderer shall treat the IR metadata as the authoritative source for palette selection, ice colors, column width, and other rendering hints.
 
-**FR1.6.2**: WHEN the user passes `--truecolor` the renderer shall prefer 24-bit color emission for terminals that support it.
+**FR1.6.2**: WHERE CLI or application-level overrides are required, the parser shall encode those choices into the IR before rendering so the renderer does not reinterpret arguments.
 
-**FR1.6.3**: WHERE the user supplies `--columns` the renderer shall override SAUCE/default column width and render using the explicit size.
-
-**FR1.6.4**: WHEN the user enables `--ice` colors the renderer shall treat blink attributes as bright backgrounds regardless of SAUCE.
+**FR1.6.3**: WHEN the runtime environment cannot honor an IR directive (for example, lack of truecolor support) the renderer shall degrade gracefully and surface a warning while preserving overall layout.
 
 ### FR1.7: Error Handling & Messaging
 
@@ -92,7 +90,7 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **NFR2.2.1**: The renderer shall display a typical 80×200 ANSI in well under one second on modern hardware to preserve an interactive feel.
 
-**NFR2.2.2**: WHILE rendering large files the renderer shall stream output incrementally rather than waiting for the entire buffer to be generated in memory.
+**NFR2.2.2**: The renderer shall generate the full ANSI output in memory before emitting it so that terminal state changes (wrap disable/enable, cleanup) are applied exactly once.
 
 ### NFR2.3: Reliability & Safety
 
