@@ -204,13 +204,12 @@ pub fn render(
 
     var y: u32 = 0;
     while (y < dims.height) : (y += 1) {
-        try renderRow(doc, writer, y, dims.width);
-    }
+        try renderRow(doc, writer, y, dims.width, options.is_tty);
 
-    // TTY mode: move cursor past the rendered content
-    // This ensures the terminal scrollback captures the full output
-    if (options.is_tty and dims.height > 0) {
-        try writer.print("\x1b[{d};1H", .{dims.height + 1});
+        // Emit newline after each row (except last in file mode)
+        if (y < dims.height - 1 or options.is_tty) {
+            try writer.writeAll("\n");
+        }
     }
 }
 
@@ -281,8 +280,12 @@ fn colorsEqual(a: ir.Color, b: ir.Color) bool {
 }
 
 /// Render a single row at the given y coordinate.
-fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
-    try writer.print("\x1b[{d};1H", .{y + 1});
+fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32, is_tty: bool) !void {
+    // TTY mode: just render cells naturally (cursor advances with content)
+    // File mode: still use absolute positioning for replayability
+    if (!is_tty) {
+        try writer.print("\x1b[{d};1H", .{y + 1});
+    }
 
     var state = RenderState.init();
 

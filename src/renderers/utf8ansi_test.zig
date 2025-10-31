@@ -422,19 +422,22 @@ test "render in file mode still emits DECAWM toggles" {
 
 // === Bramwell Feedback: Scrollback Issue ===
 
-test "TTY mode emits newline after content for scrollback compatibility" {
+test "TTY mode uses relative positioning (no absolute CSI row;col H)" {
     const allocator = testing.allocator;
 
-    var doc = try ir.Document.init(allocator, 3, 1);
+    var doc = try ir.Document.init(allocator, 3, 2);
     defer doc.deinit();
 
     try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
-    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' } });
-    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' } });
+    try doc.setCell(0, 1, .{ .contents = .{ .scalar = 'B' } });
 
     const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, true); // is_tty = true
     defer allocator.free(buffer);
 
-    // Should end with newline after wrap restore to ensure scrollback capture
-    try testing.expect(std.mem.endsWith(u8, buffer, "\x1b[?7h\n"));
+    // Should NOT contain absolute cursor positioning (CSI row;col H)
+    // This ensures output appends where cursor is, not overwrites screen top
+    try testing.expect(std.mem.indexOf(u8, buffer, ";1H") == null);
+
+    // Should contain newlines for row separation
+    try testing.expect(std.mem.indexOf(u8, buffer, "\n") != null);
 }
