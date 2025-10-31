@@ -48,17 +48,21 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.4.4**: IF the IR specifies animation frames THEN the Phase 1 renderer shall render only the first frame (static baseline) and clearly document that limitation.
 
+**FR1.4.5**: The renderer shall preserve the full IR width in the emitted stream so redirected output (e.g., `ansilust art.ans > art.utf8ansi`) retains every column without cropping.
+
 ### FR1.5: Terminal Experience
 
-**FR1.5.1**: The renderer shall wrap the output with appropriate setup and teardown sequences so the terminal is restored to its prior state after viewing.
+**FR1.5.1**: The renderer shall wrap the output with appropriate setup and teardown sequences when writing to an interactive TTY so the terminal is restored to its prior state after viewing.
 
-**FR1.5.2**: WHEN an error occurs mid-render the renderer shall still perform terminal cleanup before surfacing the failure.
+**FR1.5.2**: WHEN the renderer detects that stdout is not a TTY (e.g., redirected to a file) it shall omit cursor-hide and clear-screen sequences but still emit DECAWM wrap toggles (`CSI ?7l` / `CSI ?7h`) so replaying the saved `.utf8ansi` preserves layout.
 
-**FR1.5.3**: WHERE possible the renderer shall avoid terminal features that leave persistent side effects (palette mutation, alternate screen) during the Phase 1 baseline.
+**FR1.5.3**: WHEN an error occurs mid-render on a TTY the renderer shall still perform terminal cleanup before surfacing the failure.
 
-**FR1.5.4**: The renderer shall disable terminal auto-wrap using DECAWM (`CSI ?7l`) before drawing and restore it (`CSI ?7h`) afterward so wide artwork is not reflowed by the terminal.
+**FR1.5.4**: WHERE possible the renderer shall avoid terminal features that leave persistent side effects (palette mutation, alternate screen) during the Phase 1 baseline.
 
-**FR1.5.5**: IF the caller requests debugging output (e.g., `--no-cleanup`) THEN the renderer shall skip cleanup intentionally and warn the user about the altered behavior.
+**FR1.5.5**: The renderer shall bracket every interactive render with DECAWM disable/enable so wide artwork is not reflowed by the terminal, regardless of whether output is live or redirected for later playback.
+
+**FR1.5.6**: IF the caller requests debugging output (e.g., `--no-cleanup`) THEN the renderer shall skip cleanup intentionally and warn the user about the altered behavior.
 
 ### FR1.6: IR Authority & Environment
 
