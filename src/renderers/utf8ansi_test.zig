@@ -383,3 +383,39 @@ test "ColorMapper emits SGR 38;2;R;G;B in truecolor mode" {
     // Should contain 24-bit truecolor SGR for background
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[48;2;0;0;255m") != null);
 }
+
+// === Cycle 8: File Mode Validation ===
+
+test "render in file mode omits cursor hide/clear" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false); // is_tty = false
+    defer allocator.free(buffer);
+
+    // Should NOT contain cursor hide
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[?25l") == null);
+    // Should NOT contain clear screen
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[2J") == null);
+}
+
+test "render in file mode still emits DECAWM toggles" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false); // is_tty = false
+    defer allocator.free(buffer);
+
+    // Should contain DECAWM disable
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[?7l") != null);
+    // Should contain DECAWM restore
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[?7h") != null);
+}
