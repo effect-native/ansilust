@@ -26,13 +26,13 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.2.2**: WHEN the user opts into 24-bit color the renderer shall emit colors using the exact RGB values defined by the selected palette.
 
-**FR1.2.3**: WHERE the IR encodes additional palette modes (e.g., Amiga Workbench) the renderer shall map those palettes to the closest available terminal colors.
+**FR1.2.3**: WHERE the IR provides a custom palette the renderer shall apply it automatically without requiring additional flags or permissions so the artwork honors the source specification.
 
 **FR1.2.4**: IF a color is unspecified (terminal default) THEN the renderer shall leave the terminal’s foreground or background unchanged to respect user themes.
 
 ### FR1.3: Character Fidelity
 
-**FR1.3.1**: The renderer shall translate CP437 glyphs (including box drawing, shading, suits, arrows, accented text) into their visually equivalent Unicode codepoints using the canonical mapping from libansilove.
+**FR1.3.1**: The renderer shall translate CP437 glyphs (including box drawing, shading, suits, arrows, accented text) into visually equivalent Unicode codepoints, starting from the libansilove mapping and adjusting as needed to match the artist’s intent.
 
 **FR1.3.2**: WHEN the IR already contains Unicode characters the renderer shall preserve them verbatim without re-mapping.
 
