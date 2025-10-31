@@ -2,9 +2,39 @@ const std = @import("std");
 const ir = @import("ansilust").ir;
 const sauce = ir.sauce;
 
-// Default ANSI colors
-const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // White
+// Default ANSI colors (in DOS palette order)
+const DEFAULT_FG_COLOR: ir.Color = .{ .palette = 7 }; // Light Gray
 const DEFAULT_BG_COLOR: ir.Color = .{ .palette = 0 }; // Black
+
+/// ANSI/VT SGR color order → DOS/CGA palette order mapping.
+///
+/// ANSI/VT (SGR 30-37) uses: Black, Red, Green, Yellow, Blue, Magenta, Cyan, White
+/// DOS/CGA palette uses:     Black, Blue, Green, Cyan, Red, Magenta, Brown, Light Gray
+///
+/// This table converts ANSI SGR indices (0-7) to DOS palette indices (0-7).
+/// Reference: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+const ANSI_TO_DOS_COLOR: [8]u8 = .{
+    0, // 0: Black   → DOS 0 (Black)
+    4, // 1: Red     → DOS 4 (Red)
+    2, // 2: Green   → DOS 2 (Green)
+    6, // 3: Yellow  → DOS 6 (Brown/Yellow)
+    1, // 4: Blue    → DOS 1 (Blue)
+    5, // 5: Magenta → DOS 5 (Magenta)
+    3, // 6: Cyan    → DOS 3 (Cyan)
+    7, // 7: White   → DOS 7 (Light Gray)
+};
+
+/// Bright ANSI/VT color order → DOS/CGA palette order mapping (indices 8-15).
+const ANSI_TO_DOS_BRIGHT_COLOR: [8]u8 = .{
+    8, // 0: Bright Black (Dark Gray)   → DOS 8
+    12, // 1: Bright Red                 → DOS 12
+    10, // 2: Bright Green               → DOS 10
+    14, // 3: Bright Yellow              → DOS 14
+    9, // 4: Bright Blue                → DOS 9
+    13, // 5: Bright Magenta             → DOS 13
+    11, // 6: Bright Cyan                → DOS 11
+    15, // 7: Bright White               → DOS 15
+};
 
 const StyleState = struct {
     fg_color: ir.Color = DEFAULT_FG_COLOR,
@@ -27,7 +57,11 @@ const StyleState = struct {
 
             switch (param) {
                 0 => self.reset(),
-                1 => self.attributes = self.attributes.setBold(true),
+                1 => {
+                    self.attributes = self.attributes.setBold(true);
+                    // Bold converts palette 0-7 to 8-15 for foreground
+                    self.applyBoldToForeground();
+                },
                 2 => self.attributes = self.attributes.setFaint(true),
                 3 => self.attributes = self.attributes.setItalic(true),
                 4 => self.attributes = self.attributes.setUnderline(.single),
@@ -38,6 +72,8 @@ const StyleState = struct {
                 22 => {
                     self.attributes = self.attributes.setBold(false);
                     self.attributes = self.attributes.setFaint(false);
+                    // Unbold converts palette 8-15 back to 0-7 for foreground
+                    self.removeBoldFromForeground();
                 },
                 24 => self.attributes = self.attributes.setUnderline(.none),
                 25 => self.attributes = self.attributes.setBlink(false),
@@ -45,11 +81,18 @@ const StyleState = struct {
                 28 => self.attributes = self.attributes.setInvisible(false),
                 29 => self.attributes = self.attributes.setStrikethrough(false),
 
-                // Foreground colors (30-37)
-                30...37 => self.fg_color = .{ .palette = @intCast(param - 30) },
+                // Foreground colors (30-37) - remap ANSI order to DOS order
+                30...37 => {
+                    var dos_idx = ANSI_TO_DOS_COLOR[param - 30];
+                    // In classic ANSI, bold converts normal colors (0-7) to bright (8-15)
+                    if (self.attributes.bold and dos_idx < 8) {
+                        dos_idx += 8;
+                    }
+                    self.fg_color = .{ .palette = dos_idx };
+                },
 
-                // Background colors (40-47)
-                40...47 => self.bg_color = .{ .palette = @intCast(param - 40) },
+                // Background colors (40-47) - remap ANSI order to DOS order
+                40...47 => self.bg_color = .{ .palette = ANSI_TO_DOS_COLOR[param - 40] },
 
                 // Default foreground
                 39 => self.fg_color = DEFAULT_FG_COLOR,
@@ -57,11 +100,11 @@ const StyleState = struct {
                 // Default background
                 49 => self.bg_color = DEFAULT_BG_COLOR,
 
-                // Bright foreground colors (90-97)
-                90...97 => self.fg_color = .{ .palette = @intCast(param - 90 + 8) },
+                // Bright foreground colors (90-97) - remap ANSI order to DOS order
+                90...97 => self.fg_color = .{ .palette = ANSI_TO_DOS_BRIGHT_COLOR[param - 90] },
 
-                // Bright background colors (100-107)
-                100...107 => self.bg_color = .{ .palette = @intCast(param - 100 + 8) },
+                // Bright background colors (100-107) - remap ANSI order to DOS order
+                100...107 => self.bg_color = .{ .palette = ANSI_TO_DOS_BRIGHT_COLOR[param - 100] },
 
                 // 256-color foreground (38;5;n)
                 38 => {
@@ -97,6 +140,30 @@ const StyleState = struct {
 
                 else => {}, // Ignore unknown SGR codes
             }
+        }
+    }
+
+    /// Apply bold attribute to current foreground color (palette 0-7 → 8-15).
+    fn applyBoldToForeground(self: *StyleState) void {
+        switch (self.fg_color) {
+            .palette => |idx| {
+                if (idx < 8) {
+                    self.fg_color = .{ .palette = idx + 8 };
+                }
+            },
+            else => {},
+        }
+    }
+
+    /// Remove bold attribute from current foreground color (palette 8-15 → 0-7).
+    fn removeBoldFromForeground(self: *StyleState) void {
+        switch (self.fg_color) {
+            .palette => |idx| {
+                if (idx >= 8 and idx < 16) {
+                    self.fg_color = .{ .palette = idx - 8 };
+                }
+            },
+            else => {},
         }
     }
 };
