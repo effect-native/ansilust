@@ -289,7 +289,8 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
 
     var state = RenderState.init();
 
-    // Find the rightmost non-blank cell to avoid drawing trailing blanks
+    // Find the rightmost cell with content or non-default background
+    // This preserves background colors that extend past the last character
     var rightmost: u32 = 0;
     var x: u32 = 0;
     while (x < width) : (x += 1) {
@@ -315,20 +316,23 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
     try writer.writeAll("\x1b[0m");
 }
 
-/// Check if a cell is blank (space with default colors).
+/// Check if a cell is blank (space with default background).
+///
+/// A cell is considered blank if:
+/// 1. It contains a space character
+/// 2. It has the default black background (palette 0 or .none)
+///
+/// We don't check foreground color because colored spaces with default bg
+/// are still blank for rendering purposes. However, spaces with colored
+/// backgrounds must be rendered to preserve the background color bar.
 fn isBlankCell(cell: ir.CellView) bool {
     const is_space = cell.contents.scalar == ' ';
-    const is_default_fg = switch (cell.fg_color) {
-        .none => true,
-        .palette => |idx| idx == 7, // Light gray is default DOS text color
-        else => false,
-    };
     const is_default_bg = switch (cell.bg_color) {
         .none => true,
         .palette => |idx| idx == 0, // Black is default DOS background
         else => false,
     };
-    return is_space and is_default_fg and is_default_bg;
+    return is_space and is_default_bg;
 }
 
 /// Encode a scalar value to UTF-8 and write to output.

@@ -161,12 +161,14 @@ test "ansi: SGR resets attributes and colors" {
     try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
     try expectEqual(@as(u21, 'B'), (try doc.getCell(1, 0)).contents.scalar);
 
+    // SGR 31 (Red) → DOS palette 4, bold converts to 12 (bright red)
+    // SGR 44 (Blue bg) → DOS palette 1
     try expectCellStyle(
         &doc,
         0,
         0,
-        ir.Color{ .palette = 1 },
-        ir.Color{ .palette = 4 },
+        ir.Color{ .palette = 12 }, // Bright red (bold applied)
+        ir.Color{ .palette = 1 }, // Blue background
         ir.AttributeFlags.withBold(),
     );
     try expectCellStyle(
@@ -185,12 +187,14 @@ test "ansi: SGR explicit defaults clear colors" {
 
     try parseIntoDoc(&doc, "\x1B[31;44mA\x1B[39;49mB");
 
+    // SGR 31 (Red) → DOS palette 4
+    // SGR 44 (Blue bg) → DOS palette 1
     try expectCellStyle(
         &doc,
         0,
         0,
-        ir.Color{ .palette = 1 },
-        ir.Color{ .palette = 4 },
+        ir.Color{ .palette = 4 }, // Red foreground
+        ir.Color{ .palette = 1 }, // Blue background
         ir.AttributeFlags.none(),
     );
     try expectCellStyle(
@@ -211,12 +215,14 @@ test "ansi: SGR bright colors map to high palettes" {
 
     try expectEqual(@as(u21, 'X'), (try doc.getCell(0, 0)).contents.scalar);
 
+    // SGR 93 (Bright yellow) → DOS palette 14
+    // SGR 104 (Bright blue bg) → DOS palette 9
     try expectCellStyle(
         &doc,
         0,
         0,
-        ir.Color{ .palette = 11 },
-        ir.Color{ .palette = 12 },
+        ir.Color{ .palette = 14 }, // Yellow foreground
+        ir.Color{ .palette = 9 }, // Light blue background
         ir.AttributeFlags.none(),
     );
 }
