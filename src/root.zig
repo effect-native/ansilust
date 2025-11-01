@@ -81,4 +81,7 @@ pub fn renderToUtf8Ansi(
 test {
     // Run all tests from IR module
     std.testing.refAllDecls(@This());
+
+    // Import renderer tests
+    _ = @import("renderers/utf8ansi_test.zig");
 }

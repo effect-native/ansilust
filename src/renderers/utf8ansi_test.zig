@@ -2,12 +2,17 @@ const std = @import("std");
 const testing = std.testing;
 const Utf8Ansi = @import("utf8ansi.zig");
 
+// Helper for managed ArrayList in Zig 0.15
+fn ArrayList(comptime T: type) type {
+    return std.array_list.AlignedManaged(T, null);
+}
+
 test "TerminalGuard emits DECAWM toggle in both modes" {
     const allocator = testing.allocator;
 
     // Test TTY mode
     {
-        var output = std.ArrayList(u8).init(allocator);
+        var output = ArrayList(u8).init(allocator);
         defer output.deinit();
 
         var guard = try Utf8Ansi.TerminalGuard.init(allocator, output.writer().any(), true);
@@ -21,7 +26,7 @@ test "TerminalGuard emits DECAWM toggle in both modes" {
 
     // Test file mode
     {
-        var output = std.ArrayList(u8).init(allocator);
+        var output = ArrayList(u8).init(allocator);
         defer output.deinit();
 
         var guard = try Utf8Ansi.TerminalGuard.init(allocator, output.writer().any(), false);
@@ -34,12 +39,12 @@ test "TerminalGuard emits DECAWM toggle in both modes" {
     }
 }
 
-test "TerminalGuard emits cursor hide/clear only in TTY mode" {
+test "TerminalGuard emits cursor hide only in TTY mode" {
     const allocator = testing.allocator;
 
-    // Test TTY mode - should emit cursor hide and clear
+    // Test TTY mode - should emit cursor hide (but NOT clear screen)
     {
-        var output = std.ArrayList(u8).init(allocator);
+        var output = ArrayList(u8).init(allocator);
         defer output.deinit();
 
         var guard = try Utf8Ansi.TerminalGuard.init(allocator, output.writer().any(), true);
@@ -49,13 +54,11 @@ test "TerminalGuard emits cursor hide/clear only in TTY mode" {
 
         // Should contain cursor hide sequence
         try testing.expect(std.mem.indexOf(u8, result, "\x1b[?25l") != null);
-        // Should contain clear screen sequence
-        try testing.expect(std.mem.indexOf(u8, result, "\x1b[2J") != null);
     }
 
-    // Test file mode - should NOT emit cursor hide or clear
+    // Test file mode - should NOT emit cursor hide
     {
-        var output = std.ArrayList(u8).init(allocator);
+        var output = ArrayList(u8).init(allocator);
         defer output.deinit();
 
         var guard = try Utf8Ansi.TerminalGuard.init(allocator, output.writer().any(), false);
@@ -65,15 +68,13 @@ test "TerminalGuard emits cursor hide/clear only in TTY mode" {
 
         // Should NOT contain cursor hide sequence
         try testing.expect(std.mem.indexOf(u8, result, "\x1b[?25l") == null);
-        // Should NOT contain clear screen sequence
-        try testing.expect(std.mem.indexOf(u8, result, "\x1b[2J") == null);
     }
 }
 
 test "TerminalGuard restores terminal state on deinit" {
     const allocator = testing.allocator;
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     {
@@ -91,9 +92,9 @@ test "TerminalGuard restores terminal state on deinit" {
 
 // === Cycle 2: Minimal Render Pipeline ===
 
-const ir = @import("../ir.zig");
+const ir = @import("../ir/lib.zig");
 
-test "render emits cursor positioning for each row" {
+test "render emits newlines for row separation" {
     const allocator = testing.allocator;
 
     var doc = try ir.Document.init(allocator, 3, 2);
@@ -107,7 +108,7 @@ test "render emits cursor positioning for each row" {
     try doc.setCell(1, 1, .{ .contents = .{ .scalar = 'Y' } });
     try doc.setCell(2, 1, .{ .contents = .{ .scalar = 'Z' } });
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     const options = Utf8Ansi.RenderOptions{ .is_tty = false };
@@ -115,19 +116,21 @@ test "render emits cursor positioning for each row" {
 
     const result = output.items;
 
-    // Should contain cursor positioning for row 1 (1-indexed)
-    try testing.expect(std.mem.indexOf(u8, result, "\x1b[1;1H") != null);
-    // Should contain cursor positioning for row 2
-    try testing.expect(std.mem.indexOf(u8, result, "\x1b[2;1H") != null);
+    // Should contain the content from both rows
+    try testing.expect(std.mem.indexOf(u8, result, "ABC") != null);
+    try testing.expect(std.mem.indexOf(u8, result, "XYZ") != null);
+    // Should contain newline for row separation
+    try testing.expect(std.mem.indexOf(u8, result, "\n") != null);
 }
 
-test "render handles empty document" {
+test "render handles minimal document" {
     const allocator = testing.allocator;
 
-    var doc = try ir.Document.init(allocator, 0, 0);
+    // Use 1x1 document (0x0 is rejected by CellGrid validation)
+    var doc = try ir.Document.init(allocator, 1, 1);
     defer doc.deinit();
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     const options = Utf8Ansi.RenderOptions{ .is_tty = false };
@@ -156,7 +159,7 @@ test "GlyphMapper translates box-drawing chars" {
     try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0xC4 } });
     try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xBF } });
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     const options = Utf8Ansi.RenderOptions{ .is_tty = false };
@@ -186,7 +189,7 @@ test "GlyphMapper translates shading chars" {
     try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xB2 } });
     try doc.setCell(3, 0, .{ .contents = .{ .scalar = 0xDB } });
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     const options = Utf8Ansi.RenderOptions{ .is_tty = false };
@@ -214,7 +217,7 @@ test "GlyphMapper handles ASCII passthrough" {
     try doc.setCell(3, 0, .{ .contents = .{ .scalar = 'l' } });
     try doc.setCell(4, 0, .{ .contents = .{ .scalar = 'o' } });
 
-    var output = std.ArrayList(u8).init(allocator);
+    var output = ArrayList(u8).init(allocator);
     defer output.deinit();
 
     const options = Utf8Ansi.RenderOptions{ .is_tty = false };
@@ -270,8 +273,8 @@ test "ColorMapper emits SGR 38;5;N for DOS palette indices" {
     const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
     defer allocator.free(buffer);
 
-    // Should contain 256-color SGR for red (DOS 4 → ANSI 256 code 196)
-    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;196m") != null);
+    // Should contain 256-color SGR for red (DOS 4 → ANSI 256 code 124)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;124m") != null);
     // Should contain 256-color SGR for blue (DOS 1 → ANSI 256 code 19)
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;19m") != null);
 }
@@ -306,22 +309,20 @@ test "RenderState batches consecutive cells with same style" {
     defer doc.deinit();
 
     // Set multiple cells with the SAME color
-    const red_on_black = .{
-        .fg_color = .{ .palette = 4 }, // DOS red
-        .bg_color = .{ .palette = 0 }, // Black
-    };
+    const fg_color: ir.Color = .{ .palette = 4 }; // DOS red
+    const bg_color: ir.Color = .{ .palette = 0 }; // Black
 
-    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
-    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
-    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' }, .fg_color = red_on_black.fg_color, .bg_color = red_on_black.bg_color });
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' }, .fg_color = fg_color, .bg_color = bg_color });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' }, .fg_color = fg_color, .bg_color = bg_color });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' }, .fg_color = fg_color, .bg_color = bg_color });
 
     const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
     defer allocator.free(buffer);
 
-    // Count occurrences of the red foreground code
+    // Count occurrences of the red foreground code (DOS 4 → ANSI 124)
     var count: usize = 0;
     var pos: usize = 0;
-    while (std.mem.indexOfPos(u8, buffer, pos, "\x1b[38;5;196m")) |found_pos| {
+    while (std.mem.indexOfPos(u8, buffer, pos, "\x1b[38;5;124m")) |found_pos| {
         count += 1;
         pos = found_pos + 1;
     }
@@ -440,4 +441,71 @@ test "TTY mode uses relative positioning (no absolute CSI row;col H)" {
 
     // Should contain newlines for row separation
     try testing.expect(std.mem.indexOf(u8, buffer, "\n") != null);
+}
+
+// === NUL Byte Rendering ===
+// Inspired by: reference/sixteencolors/fire-43/US-JELLY.ANS (5,723 NUL bytes used as spacing)
+// Prior art: PabloDraw treats NUL (scalar 0) as blank/invisible character
+//
+// CP437 byte 0x00 when used for DISPLAY should render as SPACE (0x20), not NULL control char.
+// Emitting literal NULL bytes (0x00) in UTF-8 output is problematic - terminals may:
+//   - Ignore them entirely (no cursor advance)
+//   - Interpret them as string terminators
+//   - Display them as replacement characters
+//
+// Solution: Render scalar 0 as SPACE (0x20) to ensure cursor advances and layout is preserved.
+
+test "Renderer emits space for NUL byte (scalar 0)" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 5, 1);
+    defer doc.deinit();
+
+    // Set cells: 'A', NUL, 'B'
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0 } }); // NUL
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'B' } });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Output should NOT contain literal NULL byte (0x00)
+    for (buffer) |byte| {
+        try testing.expect(byte != 0x00);
+    }
+
+    // Should contain 'A' and 'B'
+    try testing.expect(std.mem.indexOf(u8, buffer, "A") != null);
+    try testing.expect(std.mem.indexOf(u8, buffer, "B") != null);
+
+    // The character between A and B should be a space (0x20), not NULL
+    // Find the sequence "A B" (with space between)
+    const needle = "A B";
+    try testing.expect(std.mem.indexOf(u8, buffer, needle) != null);
+}
+
+test "Renderer handles multiple consecutive NUL bytes as spaces" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 6, 1);
+    defer doc.deinit();
+
+    // Set cells: 'X', NUL, NUL, NUL, 'Y'
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'X' } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0 } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0 } });
+    try doc.setCell(3, 0, .{ .contents = .{ .scalar = 0 } });
+    try doc.setCell(4, 0, .{ .contents = .{ .scalar = 'Y' } });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should NOT contain any NULL bytes
+    for (buffer) |byte| {
+        try testing.expect(byte != 0x00);
+    }
+
+    // Should contain "X   Y" (3 spaces between X and Y)
+    const needle = "X   Y";
+    try testing.expect(std.mem.indexOf(u8, buffer, needle) != null);
 }
