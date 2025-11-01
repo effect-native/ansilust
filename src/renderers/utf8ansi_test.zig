@@ -385,6 +385,80 @@ test "ColorMapper emits SGR 38;2;R;G;B in truecolor mode" {
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[48;2;0;0;255m") != null);
 }
 
+// === NEW: 24-bit Truecolor by Default (2025-11-01) ===
+// Following spec update: FR1.2.2 - emit 24-bit RGB for palette colors by default
+// Rationale: 8-bit 256-color indices can't be trusted across terminals
+
+test "ColorMapper emits 24-bit RGB for DOS palette colors by default" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    // Set cells with DOS palette indices (not RGB)
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'R' },
+        .fg_color = .{ .palette = 4 }, // DOS red (palette index 4)
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'G' },
+        .fg_color = .{ .palette = 2 }, // DOS green (palette index 2)
+    });
+    try doc.setCell(2, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .bg_color = .{ .palette = 1 }, // DOS blue background (palette index 1)
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should emit 24-bit RGB for DOS red (0xAA0000 = 170,0,0)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;170;0;0m") != null);
+
+    // Should emit 24-bit RGB for DOS green (0x00AA00 = 0,170,0)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;0;170;0m") != null);
+
+    // Should emit 24-bit RGB for DOS blue background (0x0000AA = 0,0,170)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[48;2;0;0;170m") != null);
+
+    // Should NOT contain 256-color SGR sequences for palette colors
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;") == null);
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[48;5;") == null);
+}
+
+test "DOS palette high-intensity colors emit correct RGB values" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 3, 1);
+    defer doc.deinit();
+
+    // Test high-intensity colors (8-15)
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'Y' },
+        .fg_color = .{ .palette = 14 }, // Yellow (0xFFFF55)
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'W' },
+        .fg_color = .{ .palette = 15 }, // White (0xFFFFFF)
+    });
+    try doc.setCell(2, 0, .{
+        .contents = .{ .scalar = 'D' },
+        .fg_color = .{ .palette = 8 }, // Dark Gray (0x555555)
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Yellow: 0xFFFF55 = 255,255,85
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;255;255;85m") != null);
+
+    // White: 0xFFFFFF = 255,255,255
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;255;255;255m") != null);
+
+    // Dark Gray: 0x555555 = 85,85,85
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;85;85;85m") != null);
+}
+
 // === Cycle 8: File Mode Validation ===
 
 test "render in file mode omits cursor hide/clear" {
