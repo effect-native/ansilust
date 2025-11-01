@@ -333,9 +333,16 @@ pub const Parser = struct {
     /// - Rejects 2-byte UTF-8 for low codepoints (likely CP437 data)
     /// - Handles ASCII fast-path (single byte)
     fn tryDecodeUTF8(self: *Parser, start_pos: usize, first_byte: u8) ?UTF8DecodeResult {
-        // Single-byte ASCII (0x00-0x7F) - fast path
-        if (first_byte < 0x80) {
+        // Printable ASCII (0x20-0x7E) - fast path
+        // Control characters (0x00-0x1F, 0x7F) are NOT valid UTF-8 in ANSI files,
+        // they should be treated as CP437 glyphs (smileys, arrows, etc.)
+        if (first_byte >= 0x20 and first_byte < 0x7F) {
             return .{ .codepoint = @as(u21, first_byte), .bytes_consumed = 1 };
+        }
+
+        // Control characters and 0x7F-0xFF: not ASCII, try multi-byte or return null
+        if (first_byte < 0x80) {
+            return null; // Let CP437 decoder handle control chars
         }
 
         // Invalid UTF-8 start byte (0x80-0xBF are continuation bytes)
@@ -843,14 +850,74 @@ pub fn parse(allocator: std.mem.Allocator, input: []const u8) !ir.Document {
 }
 
 fn decodeCP437(byte: u8) u21 {
-    if (byte < 0x80) {
+    // For 0x00-0x1F: Use control character glyphs
+    if (byte < 0x20) {
+        return CP437_CONTROL[byte];
+    }
+
+    // For 0x20-0x7F: ASCII passthrough (except 0x7F which is special)
+    if (byte < 0x7F) {
         return @as(u21, byte);
     }
 
+    // For 0x7F: House symbol (⌂)
+    if (byte == 0x7F) {
+        return 0x2302;
+    }
+
+    // For 0x80-0xFF: Extended characters
     const index: usize = @intCast(byte - 0x80);
     return CP437_EXTENDED[index];
 }
 
+/// CP437 control character glyphs (0x00-0x1F).
+/// In CP437, the control character range displays as visible glyphs
+/// rather than actual control codes.
+///
+/// ## Visual Alignment Adjustments for Modern Terminals
+///
+/// Some glyphs have been adjusted from the standard CP437→Unicode mapping to improve
+/// rendering in modern terminal fonts. The standard mapping prioritizes semantic equivalence,
+/// but we prioritize visual fidelity to match the artist's intent on original CRT displays.
+///
+/// **0x16 (byte 22): U+2583 ▃ LOWER THREE EIGHTHS BLOCK**
+///
+/// Standard CP437 mapping uses U+25AC (▬ BLACK RECTANGLE), but this renders too high
+/// above the baseline in modern fonts, breaking the visual continuity of the artwork.
+///
+/// Requirements for replacement character:
+/// - Sits near baseline (similar vertical position to underscore '_')
+/// - Thicker/more visible than thin underscores
+/// - Maintains horizontal gaps between adjacent characters (doesn't merge like '──')
+/// - Works well in decorative patterns like "_,XX,_"
+///
+/// Alternatives considered:
+/// - U+25AC ▬ (original): Too high above baseline
+/// - U+2581 ▁ (LOWER ONE EIGHTH BLOCK): Too low/thin
+/// - U+25AA ▪ (BLACK SMALL SQUARE): Too high, similar issue to original
+/// - U+2582 ▂ (LOWER ONE QUARTER BLOCK): Close, but slightly too thin
+/// - U+2583 ▃ (LOWER THREE EIGHTHS BLOCK): ✓ Best balance of height and thickness
+///
+/// The LOWER THREE EIGHTHS BLOCK provides good visual weight while sitting low enough
+/// to align with surrounding baseline characters, preserving the artwork's intended look.
+const CP437_CONTROL = [32]u21{
+    0x0020, 0x263A, 0x263B, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022,
+    0x25D8, 0x25CB, 0x25D9, 0x2642, 0x2640, 0x266A, 0x266B, 0x263C,
+    0x25BA, 0x25C4, 0x2195, 0x203C, 0x00B6, 0x00A7, 0x2583, 0x21A8,
+    0x2191, 0x2193, 0x2192, 0x2190, 0x221F, 0x2194, 0x25B2, 0x25BC,
+};
+
+/// CP437 extended character set (0x80-0xFF).
+///
+/// ## Visual Alignment Adjustments
+///
+/// Some glyphs have been adjusted from standard CP437→Unicode mapping for better
+/// rendering in modern terminal fonts:
+///
+/// - **0xF9 (byte 249)**: U+2027 ‧ HYPHENATION POINT instead of U+2219 ∙ BULLET OPERATOR
+///   Standard mapping uses BULLET OPERATOR which renders too bold/heavy in modern fonts.
+///   HYPHENATION POINT provides a lighter dot that better matches the visual weight
+///   intended in the original artwork.
 const CP437_EXTENDED = [_]u21{
     0x00C7, 0x00FC, 0x00E9, 0x00E2, 0x00E4, 0x00E0, 0x00E5, 0x00E7,
     0x00EA, 0x00EB, 0x00E8, 0x00EF, 0x00EE, 0x00EC, 0x00C4, 0x00C5,
@@ -867,7 +934,7 @@ const CP437_EXTENDED = [_]u21{
     0x03B1, 0x00DF, 0x0393, 0x03C0, 0x03A3, 0x03C3, 0x00B5, 0x03C4,
     0x03A6, 0x0398, 0x03A9, 0x03B4, 0x221E, 0x03C6, 0x03B5, 0x2229,
     0x2261, 0x00B1, 0x2265, 0x2264, 0x2320, 0x2321, 0x00F7, 0x2248,
-    0x00B0, 0x2219, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
+    0x00B0, 0x2027, 0x00B7, 0x221A, 0x207F, 0x00B2, 0x25A0, 0x00A0,
 };
 
 // Convert 256-color palette index to RGB

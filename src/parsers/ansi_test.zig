@@ -649,9 +649,9 @@ test "ANSI parser handles NUL byte as printable character" {
     const cell_0 = try doc.getCell(0, 0);
     try expectEqual(@as(u21, 'A'), cell_0.contents.scalar);
 
-    // Cell 1: NUL (scalar value 0)
+    // Cell 1: NUL byte (0x00) → CP437 maps to U+0020 (space)
     const cell_1 = try doc.getCell(1, 0);
-    try expectEqual(@as(u21, 0), cell_1.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_1.contents.scalar);
 
     // Cell 2: 'B'
     const cell_2 = try doc.getCell(2, 0);
@@ -666,15 +666,15 @@ test "ANSI parser advances cursor on NUL byte" {
     const input = "\x00\x00\x00X";
     try parseIntoDoc(&doc, input);
 
-    // First 3 cells should be NUL
+    // First 3 cells should be NUL (0x00) → CP437 space (U+0020)
     const cell_0 = try doc.getCell(0, 0);
-    try expectEqual(@as(u21, 0), cell_0.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_0.contents.scalar);
 
     const cell_1 = try doc.getCell(1, 0);
-    try expectEqual(@as(u21, 0), cell_1.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_1.contents.scalar);
 
     const cell_2 = try doc.getCell(2, 0);
-    try expectEqual(@as(u21, 0), cell_2.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_2.contents.scalar);
 
     // Fourth cell should be 'X' (cursor advanced 3 positions by NULs)
     const cell_3 = try doc.getCell(3, 0);
@@ -689,9 +689,9 @@ test "ANSI parser handles NUL bytes with ANSI escape sequences" {
     const input = "\x1b[31m\x00A\x1b[0m";
     try parseIntoDoc(&doc, input);
 
-    // Cell 0: NUL should be written (scalar value 0)
+    // Cell 0: NUL byte (0x00) → CP437 maps to U+0020 (space)
     const cell_0 = try doc.getCell(0, 0);
-    try expectEqual(@as(u21, 0), cell_0.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_0.contents.scalar);
 
     // Cell 1: 'A' should be written after NUL
     const cell_1 = try doc.getCell(1, 0);
@@ -710,9 +710,9 @@ test "ANSI parser handles mixed NUL and space characters" {
     const cell_0 = try doc.getCell(0, 0);
     try expectEqual(@as(u21, 0x20), cell_0.contents.scalar);
 
-    // Cell 1: NUL (0x00)
+    // Cell 1: NUL byte (0x00) → CP437 maps to U+0020 (space)
     const cell_1 = try doc.getCell(1, 0);
-    try expectEqual(@as(u21, 0x00), cell_1.contents.scalar);
+    try expectEqual(@as(u21, 0x0020), cell_1.contents.scalar);
 
     // Cell 2: space (0x20)
     const cell_2 = try doc.getCell(2, 0);

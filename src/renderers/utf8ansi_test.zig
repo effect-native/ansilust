@@ -151,13 +151,13 @@ test "GlyphMapper translates box-drawing chars" {
     var doc = try ir.Document.init(allocator, 3, 1);
     defer doc.deinit();
 
-    // Set CP437 box-drawing characters
-    // 0xDA = ┌ (box top-left)
-    // 0xC4 = ─ (box horizontal)
-    // 0xBF = ┐ (box top-right)
-    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0xDA } });
-    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0xC4 } });
-    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xBF } });
+    // Set Unicode box-drawing characters (IR stores Unicode scalars)
+    // U+250C = ┌ (top-left corner)
+    // U+2500 = ─ (horizontal)
+    // U+2510 = ┐ (top-right corner)
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0x250C } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0x2500 } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0x2510 } });
 
     var output = ArrayList(u8).init(allocator);
     defer output.deinit();
@@ -179,15 +179,15 @@ test "GlyphMapper translates shading chars" {
     var doc = try ir.Document.init(allocator, 4, 1);
     defer doc.deinit();
 
-    // Set CP437 shading characters
-    // 0xB0 = ░ (light shade)
-    // 0xB1 = ▒ (medium shade)
-    // 0xB2 = ▓ (dark shade)
-    // 0xDB = █ (full block)
-    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0xB0 } });
-    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0xB1 } });
-    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0xB2 } });
-    try doc.setCell(3, 0, .{ .contents = .{ .scalar = 0xDB } });
+    // Set Unicode shading characters (IR stores Unicode scalars)
+    // U+2591 = ░ (light shade)
+    // U+2592 = ▒ (medium shade)
+    // U+2593 = ▓ (dark shade)
+    // U+2588 = █ (full block)
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 0x2591 } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 0x2592 } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 0x2593 } });
+    try doc.setCell(3, 0, .{ .contents = .{ .scalar = 0x2588 } });
 
     var output = ArrayList(u8).init(allocator);
     defer output.deinit();
@@ -774,4 +774,88 @@ test "Integration: Round-trip hyperlinks through parser and renderer" {
     try testing.expect(std.mem.indexOf(u8, output, "\x1b]8;;https://ansilust.dev\x1b\\") != null);
     try testing.expect(std.mem.indexOf(u8, output, "Ansilust") != null);
     try testing.expect(std.mem.indexOf(u8, output, "\x1b]8;;\x1b\\") != null);
+}
+
+// Contextual Glyph Rendering Tests
+
+test "Renderer: tilde after quote-backtick renders as SMALL TILDE" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    // Create the sequence: "`~ (quote, backtick, tilde)
+    // This should render tilde as U+02DC (˜ SMALL TILDE) for better baseline alignment
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = '"' } }); // U+0022 QUOTATION MARK
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = '`' } }); // U+0060 GRAVE ACCENT
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = '~' } }); // U+007E TILDE → should render as U+02DC
+
+    const output = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(output);
+
+    // Check that U+02DC (˜ SMALL TILDE) appears in output (UTF-8: CB 9C)
+    const has_small_tilde = std.mem.indexOf(u8, output, "\xCB\x9C") != null;
+    try testing.expect(has_small_tilde);
+
+    // Verify the regular tilde (U+007E) does NOT appear where the small tilde should be
+    // Strip ANSI codes to check the actual character sequence
+    var cleaned = ArrayList(u8).init(allocator);
+    defer cleaned.deinit();
+
+    var i: usize = 0;
+    while (i < output.len) {
+        if (output[i] == 0x1B and i + 1 < output.len and output[i + 1] == '[') {
+            // Skip ANSI sequence
+            while (i < output.len and output[i] != 'm') : (i += 1) {}
+            i += 1;
+        } else {
+            try cleaned.append(output[i]);
+            i += 1;
+        }
+    }
+
+    // The cleaned output should contain "`˜ not "`~
+    const has_quote_backtick_small_tilde = std.mem.indexOf(u8, cleaned.items, "\"`˜") != null;
+    try testing.expect(has_quote_backtick_small_tilde);
+}
+
+test "Renderer: tilde globally renders as SMALL TILDE for ANSI art" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 20, 1);
+    defer doc.deinit();
+
+    // Create text with tildes: ~strike~
+    // ALL tildes now render as U+02DC (SMALL TILDE) for better baseline alignment in art
+    const text = "~strike~";
+    for (text, 0..) |char, i| {
+        try doc.setCell(@intCast(i), 0, .{ .contents = .{ .scalar = char } });
+    }
+
+    const output = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(output);
+
+    // Strip ANSI codes
+    var cleaned = ArrayList(u8).init(allocator);
+    defer cleaned.deinit();
+
+    var i: usize = 0;
+    while (i < output.len) {
+        if (output[i] == 0x1B and i + 1 < output.len and output[i + 1] == '[') {
+            // Skip ANSI sequence
+            while (i < output.len and output[i] != 'm') : (i += 1) {}
+            i += 1;
+        } else {
+            try cleaned.append(output[i]);
+            i += 1;
+        }
+    }
+
+    // Should contain SMALL TILDE (U+02DC = CB 9C in UTF-8)
+    const has_small_tilde = std.mem.indexOf(u8, cleaned.items, "\xCB\x9C") != null;
+    try testing.expect(has_small_tilde);
+
+    // Verify it renders as ˜strike˜ not ~strike~
+    const has_small_tilde_text = std.mem.indexOf(u8, cleaned.items, "˜strike˜") != null;
+    try testing.expect(has_small_tilde_text);
 }
