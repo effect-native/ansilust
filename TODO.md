@@ -564,6 +564,390 @@ Create modern BBS software platform for SSH-based communities.
 - Live art preview in galleries
 - Art format conversion on upload
 
+### SSH Art Viewer - `ssh 16colo.rs`
+**Status**: ❌ Not started  
+**Priority**: HIGH (Showcase ansilust capabilities)
+
+Create an SSH-accessible ANSI art viewer inspired by ACiDView.exe and similar DOS art viewers.
+
+**Concept**: `ssh 16colo.rs` - Browse the entire 16colors.net archive via SSH
+
+**Inspiration**:
+- ACiDView.exe (DOS art pack viewer)
+- iCEView (iCE art pack viewer)
+- `ssh terminal.shop` (modern SSH service)
+- Similar viewers from the BBS era
+
+**Research Tasks**:
+- [ ] Run ACiDView.exe in DOSBox to study UX
+- [ ] Document ACiDView navigation and features
+- [ ] Study other DOS art viewers (iCEView, etc.)
+- [ ] Research 16colors.net API or scraping options
+- [ ] Check if 16colors.net has bulk download options
+
+**Core Features to Spec**:
+
+**Browse Interface**:
+- [ ] Main menu: Browse by year, group, artist, format
+- [ ] Art pack listing (scrollable)
+- [ ] File browser within packs
+- [ ] Preview pane showing current art
+- [ ] Info panel (filename, size, artist, date, format)
+
+**Viewing Features**:
+- [ ] Full-screen art display
+- [ ] Next/Previous navigation (arrow keys, vim keys)
+- [ ] Zoom/pan for large files
+- [ ] Animation playback for ansimations
+- [ ] Format info display (CP437, ANSI, XBin, etc.)
+
+**Search & Filter**:
+- [ ] Search by artist name
+- [ ] Search by art pack name
+- [ ] Filter by year/decade
+- [ ] Filter by art group (ACiD, iCE, etc.)
+- [ ] Filter by format type
+- [ ] Random art button
+
+**Download/Export**:
+- [ ] Download original file (scp/sftp)
+- [ ] Export as UTF8ANSI
+- [ ] Export as PNG (future)
+- [ ] Create shareable links
+
+**Social Features**:
+- [ ] Favorites/bookmarks
+- [ ] View count tracking
+- [ ] Comments/ratings (optional)
+- [ ] Share to social media
+
+**Technical Architecture**:
+
+**Backend**:
+- [ ] SSH server (libssh or similar)
+- [ ] Ansilust integration for rendering
+- [ ] 16colors.net data sync/cache
+- [ ] SQLite database for metadata
+- [ ] Redis for session management
+
+**UI Framework**:
+- [ ] TUI library (vaxis, notcurses, etc.)
+- [ ] Keyboard navigation
+- [ ] Mouse support (optional)
+- [ ] Layout: menu + preview + info panels
+
+**Performance Requirements**:
+- [ ] Support 50+ concurrent users
+- [ ] Art rendering < 100ms
+- [ ] Instant navigation between files
+- [ ] Efficient caching of rendered art
+
+**Data Management**:
+- [ ] Sync 16colors.net archive (100GB+)
+- [ ] Organize by year/group/pack
+- [ ] Extract SAUCE metadata
+- [ ] Build search index
+- [ ] Incremental updates
+
+**User Experience (inspired by ACiDView)**:
+```
+┌─ 16COLO.RS ────────────────────────────────────────────────────┐
+│ [F]ile  [B]rowse  [S]earch  [R]andom  [H]elp  [Q]uit          │
+├────────────────────────────────────────────────────────────────┤
+│ Art Packs (1996)                    │  US-JELLY.ANS            │
+│ ─────────────────                   │  ────────────────────    │
+│ > ACiD 1996                         │  [Art preview here]      │
+│   iCE 1996                          │  Using ansilust          │
+│   Fire 1996                         │  renderer                │
+│   Fuel 1996                         │                          │
+│                                     │  Artist: Unknown         │
+│                                     │  Group: ACiD             │
+│ Files in ACiD 1996                  │  Size: 162KB             │
+│ ──────────────────                  │  Format: ANSI/CP437      │
+│   US-JELLY.ANS                      │  Date: 1996-08-15        │
+│   US-NEON.ANS                       │                          │
+│   US-CYBER.ANS                      │  [↑↓] Navigate           │
+│                                     │  [Enter] View full       │
+│                                     │  [D] Download            │
+└─────────────────────────────────────┴──────────────────────────┘
+```
+
+**Implementation Phases**:
+
+**Phase 1 - MVP**:
+- [ ] Basic SSH server
+- [ ] Simple file browser
+- [ ] Ansilust rendering
+- [ ] Navigation (arrows, enter, q)
+- [ ] Static data set (fire-43 pack)
+
+**Phase 2 - Full Archive**:
+- [ ] 16colors.net sync
+- [ ] Search functionality
+- [ ] Multiple packs/years
+- [ ] Metadata extraction
+
+**Phase 3 - Polish**:
+- [ ] Advanced navigation
+- [ ] Animation support
+- [ ] Download/export
+- [ ] User accounts/favorites
+
+**Phase 4 - Social**:
+- [ ] Comments/ratings
+- [ ] Statistics
+- [ ] Recommendations
+
+**Deployment**:
+- [ ] Domain: `16colo.rs` (check availability) or `art.16colo.rs`
+- [ ] Server: VPS with 200GB+ storage
+- [ ] Bandwidth: Handle art downloads
+- [ ] SSL/TLS for SSH
+- [ ] Monitoring and logging
+
+**Legal/Licensing**:
+- [ ] Verify 16colors.net terms of use
+- [ ] Respect artist copyrights
+- [ ] Provide attribution
+- [ ] Link back to 16colors.net
+- [ ] Contact 16colors.net maintainers for permission
+
+**Why This Matters**:
+- Showcases ansilust's rendering capabilities
+- Makes BBS art accessible to modern audience
+- Preserves computing history
+- Tests all format parsers with real data
+- Drives development of missing features
+
+### AI MUD - AI-Populated Multi-User Dungeon
+**Status**: ❌ Not started  
+**Priority**: FUTURE (Experimental)
+
+Create a text-based MUD where most NPCs are AI agents with persistent personalities and memories.
+
+**Concept**: Traditional MUD gameplay enhanced with AI NPCs that remember interactions, develop relationships, and create emergent storylines.
+
+**Core Vision**:
+- Small number of human players (5-20)
+- Large number of AI NPCs (100-500)
+- Persistent world with dynamic storylines
+- ANSI art for room descriptions and character portraits
+- Terminal-based interface (SSH access)
+
+**Research Tasks**:
+- [ ] Study classic MUDs (DikuMUD, CircleMUD, LPMud)
+- [ ] Research AI NPC systems in games
+- [ ] Study LLM agent frameworks (AutoGen, LangChain, etc.)
+- [ ] Research persistent memory systems (vector DBs, RAG)
+- [ ] Study multi-agent simulation papers
+- [ ] Look at existing AI Dungeon / AI RPG systems
+
+**AI NPC System**:
+
+**Personality & Memory**:
+- [ ] Each NPC has persistent personality profile
+- [ ] Long-term memory of interactions with players
+- [ ] Relationship tracking (friend/enemy/neutral)
+- [ ] Emotional state modeling
+- [ ] Goals and motivations
+- [ ] Cultural background and knowledge
+
+**Behavior Types**:
+- [ ] Shopkeepers (buy/sell, remember prices/haggling)
+- [ ] Quest givers (generate quests based on world state)
+- [ ] Guards (remember faces, enforce rules)
+- [ ] Commoners (gossip, daily routines)
+- [ ] Monsters (patrol, hunt, flee)
+- [ ] Faction leaders (politics, alliances)
+
+**AI Agent Architecture**:
+- [ ] LLM-based decision making (GPT-4, Claude, Llama)
+- [ ] Vector database for memory (Pinecone, Weaviate)
+- [ ] State machine for basic behaviors
+- [ ] Natural language understanding for commands
+- [ ] Response generation (contextual, personality-aware)
+
+**World Simulation**:
+
+**Dynamic World State**:
+- [ ] NPCs have daily routines (work, sleep, socialize)
+- [ ] Economic simulation (supply/demand, prices)
+- [ ] Weather and time of day
+- [ ] Faction relationships (war, peace, trade)
+- [ ] Emergent events (AI NPCs can start quests)
+
+**Persistent Changes**:
+- [ ] Player actions remembered by NPCs
+- [ ] Reputation system (per-faction, per-NPC)
+- [ ] World state changes based on player/NPC actions
+- [ ] Story arcs emerge from AI interactions
+
+**Technical Specifications**:
+
+**Game Engine**:
+- [ ] Written in Zig (integrate with ansilust)
+- [ ] Event-driven architecture
+- [ ] Multi-threaded for AI processing
+- [ ] Database for persistence (PostgreSQL)
+- [ ] Redis for caching/sessions
+
+**AI Integration**:
+- [ ] LLM API integration (OpenAI, Anthropic, local models)
+- [ ] Rate limiting and cost management
+- [ ] Fallback to scripted behavior when API unavailable
+- [ ] Batch processing for NPC updates
+- [ ] Asynchronous AI decision making
+
+**Rendering**:
+- [ ] ANSI art room descriptions (use ansilust)
+- [ ] Character portraits in CP437/Unicode art
+- [ ] Dynamic text wrapping
+- [ ] Color-coded NPC dialogue
+- [ ] Status displays (HP, location, inventory)
+
+**Performance Requirements**:
+- [ ] Support 20 concurrent human players
+- [ ] 500 AI NPCs updating every 1-5 minutes
+- [ ] LLM API calls < 1000/hour (cost management)
+- [ ] Response time < 1 second for player commands
+- [ ] Database queries optimized
+
+**Game Mechanics**:
+
+**Traditional MUD Elements**:
+- [ ] Rooms, exits, objects
+- [ ] Combat system (turn-based)
+- [ ] Inventory and equipment
+- [ ] Skills and leveling
+- [ ] Crafting system
+- [ ] Magic system
+
+**AI-Enhanced Features**:
+- [ ] Dynamic quests generated by AI
+- [ ] NPC-driven storylines
+- [ ] Unique dialogue every interaction
+- [ ] NPCs remember promises/betrayals
+- [ ] Emergent faction politics
+- [ ] AI dungeon master mode
+
+**Example Interactions**:
+
+**Shopkeeper NPC**:
+```
+> look shopkeeper
+You see Marta the Blacksmith, a weathered dwarf with soot-stained hands.
+She looks up from her anvil and recognizes you.
+
+Marta says: "Ah, you're back! How did that sword I sold you work out?"
+Marta says: "I heard you helped defend the village last week. Brave of you."
+Marta says: "For that, I'll give you 10% off today. What do you need?"
+
+> buy dagger
+Marta examines your coin purse and nods approvingly.
+Marta says: "This is well-crafted steel. I made it myself yesterday."
+Marta says: "That'll be 45 gold. Friend price."
+```
+
+**Guard NPC**:
+```
+> enter castle
+Guard Theron blocks your path with his spear.
+
+Theron says: "Hold there! I remember you from last month."
+Theron says: "You caused trouble in the tavern. The captain still wants words."
+Theron says: "State your business, or turn around."
+
+> say I've come to apologize to the captain
+Theron studies your face, then nods slowly.
+
+Theron says: "Alright. But I'm watching you. No more brawls."
+Theron says: "The captain is in the throne room. Be respectful."
+Theron steps aside and lets you pass.
+```
+
+**Implementation Phases**:
+
+**Phase 1 - Basic MUD + Simple AI**:
+- [ ] Core MUD engine (rooms, combat, inventory)
+- [ ] SSH server integration
+- [ ] 5-10 AI NPCs with basic responses
+- [ ] Simple memory (last interaction only)
+- [ ] ANSI art integration
+
+**Phase 2 - Persistent AI**:
+- [ ] Vector database for NPC memories
+- [ ] Relationship tracking
+- [ ] Personality profiles
+- [ ] Daily routines
+
+**Phase 3 - Dynamic World**:
+- [ ] Quest generation
+- [ ] Faction system
+- [ ] Economic simulation
+- [ ] Emergent events
+
+**Phase 4 - Advanced AI**:
+- [ ] Multi-agent interactions
+- [ ] NPC-to-NPC dialogue
+- [ ] Political intrigue
+- [ ] Player-driven story arcs
+
+**Cost Considerations**:
+
+**LLM API Costs**:
+- [ ] Estimate: 500 NPCs × 10 updates/day = 5000 API calls/day
+- [ ] GPT-4: ~$15-30/day at current pricing
+- [ ] Optimization: Cache common responses, use cheaper models
+- [ ] Alternative: Self-hosted LLM (Llama 3, Mistral)
+
+**Infrastructure**:
+- [ ] VPS: $50-100/month (8GB RAM, 4 cores)
+- [ ] Database: Managed PostgreSQL $20/month
+- [ ] Vector DB: Pinecone free tier or self-hosted
+- [ ] Total: $100-150/month + LLM costs
+
+**Monetization (Optional)**:
+- [ ] Subscription for human players ($5-10/month)
+- [ ] Cosmetic items (character portraits, ANSI art)
+- [ ] Premium AI interactions
+- [ ] Early access to new areas
+
+**Unique Selling Points**:
+- NPCs feel alive (remember you, develop relationships)
+- Every conversation is unique
+- Emergent storytelling (not scripted)
+- Retro aesthetic (ANSI art, SSH access)
+- Persistent world that evolves
+
+**Integration with Ansilust**:
+- Use ansilust for rendering room descriptions
+- Support multiple art formats (ANS, XBin, etc.)
+- Dynamic art selection based on time/weather
+- Character portraits in CP437 art
+- Map displays using box-drawing characters
+
+**Challenges to Solve**:
+- [ ] AI consistency (NPCs don't contradict themselves)
+- [ ] Cost management (LLM API calls)
+- [ ] Response quality (avoid generic replies)
+- [ ] NPC coordination (factions, politics)
+- [ ] Abuse prevention (players trolling AI)
+- [ ] Latency (AI responses must be fast)
+
+**Research Inspirations**:
+- [ ] Westworld (AI hosts with memories)
+- [ ] AI Dungeon (GPT-powered adventures)
+- [ ] Generative Agents paper (Stanford, 2023)
+- [ ] Classic MUDs (for game mechanics)
+- [ ] Dwarf Fortress (emergent simulation)
+
+**Why This Matters**:
+- Pushes boundaries of AI-human interaction
+- Creates living, breathing virtual world
+- Tests limits of LLM agent systems
+- Showcases ansilust rendering in game context
+- Could be foundation for new genre of games
+
 ### TUI Web Browser
 **Status**: ❌ Spec exists somewhere  
 **Priority**: FUTURE
