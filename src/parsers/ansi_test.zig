@@ -863,3 +863,62 @@ test "OSC 8: hyperlink with colors and attributes" {
     // Red (ANSI 1) maps to DOS palette 4
     try expectEqual(@as(u8, 4), cell_0.fg_color.palette);
 }
+
+test "UTF8ANSI roundtrip: basic ASCII text" {
+    // Test that UTF8-encoded ANSI (our renderer output) can be parsed back correctly
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // This is UTF8ANSI with escape sequences (not CP437)
+    const utf8ansi_input = "Hello\x1b[31mRed\x1b[0m";
+    try parseIntoDoc(&doc, utf8ansi_input);
+
+    // Check ASCII characters decoded correctly
+    try expectEqual(@as(u21, 'H'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'e'), (try doc.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'l'), (try doc.getCell(2, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'l'), (try doc.getCell(3, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'o'), (try doc.getCell(4, 0)).contents.scalar);
+
+    // Check color applied to "Red"
+    const cell_r = try doc.getCell(5, 0);
+    try expectEqual(@as(u21, 'R'), cell_r.contents.scalar);
+    try expectEqual(@as(u8, 4), cell_r.fg_color.palette); // DOS Red
+}
+
+test "UTF8ANSI roundtrip: multi-byte UTF-8 characters" {
+    // Test that multi-byte UTF-8 sequences are decoded correctly
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // UTF-8 encoded emoji and symbols: "A" (1-byte) + "→" (3-byte U+2192) + "B" (1-byte)
+    const utf8ansi_input = "A\xe2\x86\x92B";
+    try parseIntoDoc(&doc, utf8ansi_input);
+
+    // Check that we got 3 characters, not 5 bytes
+    try expectEqual(@as(u21, 'A'), (try doc.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 0x2192), (try doc.getCell(1, 0)).contents.scalar); // → (rightwards arrow)
+    try expectEqual(@as(u21, 'B'), (try doc.getCell(2, 0)).contents.scalar);
+
+    // Verify source encoding is UTF-8, not CP437
+    try expectEqual(ir.SourceEncoding.utf_8, (try doc.getCell(1, 0)).source_encoding);
+}
+
+test "UTF8ANSI roundtrip: mixed UTF-8 and ANSI escapes" {
+    // Real-world case: UTF8ANSI output from our renderer
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Mix of UTF-8 text and SGR color codes
+    const utf8ansi_input = "\x1b[32mTest\xe2\x9c\x93\x1b[0m"; // Green "Test✓" (U+2713 checkmark)
+    try parseIntoDoc(&doc, utf8ansi_input);
+
+    // All 5 chars should be green
+    const cell_t = try doc.getCell(0, 0);
+    const cell_checkmark = try doc.getCell(4, 0);
+
+    try expectEqual(@as(u21, 'T'), cell_t.contents.scalar);
+    try expectEqual(@as(u21, 0x2713), cell_checkmark.contents.scalar); // ✓
+    try expectEqual(@as(u8, 2), cell_t.fg_color.palette); // DOS Green
+    try expectEqual(@as(u8, 2), cell_checkmark.fg_color.palette); // DOS Green
+}

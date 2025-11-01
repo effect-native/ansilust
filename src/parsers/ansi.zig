@@ -300,6 +300,89 @@ pub const Parser = struct {
         self.advanceRow();
     }
 
+    /// Attempt to decode a UTF-8 sequence starting at given position.
+    /// Returns the decoded codepoint and number of bytes consumed, or null if not valid UTF-8.
+    fn tryDecodeUTF8(self: *Parser, start_pos: usize, first_byte: u8) ?struct { codepoint: u21, bytes_consumed: u8 } {
+        // Single-byte ASCII (0x00-0x7F)
+        if (first_byte < 0x80) {
+            return .{ .codepoint = @as(u21, first_byte), .bytes_consumed = 1 };
+        }
+
+        // Invalid UTF-8 start byte (0x80-0xBF are continuation bytes)
+        if (first_byte < 0xC0) return null;
+
+        // Multi-byte sequence
+        var bytes_needed: u8 = 0;
+        var codepoint: u21 = 0;
+
+        if (first_byte < 0xE0) {
+            // 2-byte sequence (110xxxxx 10xxxxxx)
+            bytes_needed = 2;
+            codepoint = @as(u21, first_byte & 0x1F);
+        } else if (first_byte < 0xF0) {
+            // 3-byte sequence (1110xxxx 10xxxxxx 10xxxxxx)
+            bytes_needed = 3;
+            codepoint = @as(u21, first_byte & 0x0F);
+        } else if (first_byte < 0xF8) {
+            // 4-byte sequence (11110xxx 10xxxxxx 10xxxxxx 10xxxxxx)
+            bytes_needed = 4;
+            codepoint = @as(u21, first_byte & 0x07);
+        } else {
+            // Invalid UTF-8 (0xF8-0xFF)
+            return null;
+        }
+
+        // Check if we have enough bytes remaining
+        // Note: start_pos points to the byte AFTER first_byte (due to parse loop increment)
+        if (start_pos + bytes_needed - 1 > self.content_end) return null;
+
+        // Decode continuation bytes
+        var i: u8 = 1;
+        while (i < bytes_needed) : (i += 1) {
+            const cont_byte = self.input[start_pos + i - 1];
+            // Continuation bytes must be 10xxxxxx
+            if ((cont_byte & 0xC0) != 0x80) return null;
+            codepoint = (codepoint << 6) | @as(u21, cont_byte & 0x3F);
+        }
+
+        // Validate codepoint range
+        if (codepoint > 0x10FFFF) return null;
+
+        // Check for overlong encoding
+        const min_codepoint: u21 = switch (bytes_needed) {
+            2 => 0x80,
+            3 => 0x800,
+            4 => 0x10000,
+            else => 0,
+        };
+        if (codepoint < min_codepoint) return null;
+
+        // IMPORTANT: Disambiguate CP437 from UTF-8.
+        //
+        // CP437 uses ALL bytes 0x80-0xFF as single-byte characters (box drawing, etc.).
+        // UTF-8 also uses bytes 0x80-0xFF, creating ambiguity. We use these heuristics:
+        //
+        // 1. 2-byte UTF-8 (0xC0-0xDF): Encodes U+0080 to U+07FF
+        //    - Reject if codepoint < 0x100 (likely CP437, not UTF-8)
+        //    - Reject if codepoint in Latin-1 supplement (U+0080-U+00FF) since CP437
+        //      has its own encoding for these (not 1:1 with Unicode)
+        //
+        // 2. 3-byte UTF-8 (0xE0-0xEF): Encodes U+0800 to U+FFFF
+        //    - Accept! These are clearly beyond CP437's range
+        //    - Common for arrows (→ U+2192), checkmarks (✓ U+2713), emoji
+        //
+        // 3. 4-byte UTF-8 (0xF0-0xF7): Encodes U+10000 to U+10FFFF
+        //    - Accept! Clearly beyond CP437
+        //
+        // This allows modern UTF8ANSI (from our renderer) while preserving CP437.
+        if (bytes_needed == 2 and codepoint < 0x800) {
+            // 2-byte sequence for low codepoint - likely CP437, not UTF-8
+            return null;
+        }
+
+        return .{ .codepoint = codepoint, .bytes_consumed = bytes_needed };
+    }
+
     fn writeScalar(self: *Parser, byte: u8) !void {
         const width = self.document.grid.width;
         var height = self.document.grid.height;
@@ -320,10 +403,25 @@ pub const Parser = struct {
 
         if (self.cursor_y >= height) return;
 
-        const scalar = decodeCP437(byte);
+        // Try UTF-8 decoding first
+        // Note: self.pos has already been incremented by parse loop, so it points to next byte
+        var scalar: u21 = undefined;
+        var encoding: ir.SourceEncoding = undefined;
+
+        if (self.tryDecodeUTF8(self.pos, byte)) |utf8_result| {
+            scalar = utf8_result.codepoint;
+            encoding = .utf_8;
+            // Advance position past UTF-8 continuation bytes (first byte already consumed by loop)
+            self.pos += utf8_result.bytes_consumed - 1;
+        } else {
+            // Fall back to CP437 decoding for single byte
+            scalar = decodeCP437(byte);
+            encoding = .cp437;
+        }
+
         try self.document.setCell(self.cursor_x, self.cursor_y, .{
             .contents = ir.CellContents{ .scalar = scalar },
-            .source_encoding = ir.SourceEncoding.cp437,
+            .source_encoding = encoding,
             .fg_color = self.style.fg_color,
             .bg_color = self.style.bg_color,
             .attr_flags = self.style.attributes,
