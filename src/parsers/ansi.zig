@@ -183,6 +183,21 @@ pub const Parser = struct {
     saved_cursor_y: u32 = 0,
     current_hyperlink_id: u32 = 0,
 
+    /// Ansimation detection: Track ESC[2J (clear screen) to detect multi-frame files.
+    ///
+    /// Ansimation files contain multiple frames separated by:
+    /// 1. ESC[2J (clear entire display)
+    /// 2. Frame content
+    /// 3. ESC[1;1H (cursor home) marking the start of the next frame
+    ///
+    /// We stop parsing after the first complete frame to prevent:
+    /// - Parser freeze/hang on large multi-frame files (55+ frames)
+    /// - Excessive memory usage from grid auto-expansion
+    ///
+    /// Detection heuristic: ESC[2J → content → ESC[1;1H = frame boundary
+    seen_clear_screen: bool = false,
+    has_content_after_clear: bool = false,
+
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
         document.source_format = .ansi;
         document.default_encoding = .cp437;
@@ -439,6 +454,11 @@ pub const Parser = struct {
             .hyperlink_id = if (self.current_hyperlink_id > 0) self.current_hyperlink_id else null,
         });
 
+        // Track that we've written content after clear screen (for ansimation detection)
+        if (self.seen_clear_screen) {
+            self.has_content_after_clear = true;
+        }
+
         self.cursor_x += 1;
         if (self.cursor_x >= width) {
             self.cursor_x = 0;
@@ -537,6 +557,14 @@ pub const Parser = struct {
         const row = if (params.len > 0 and params[0] > 0) params[0] - 1 else 0;
         const col = if (params.len > 1 and params[1] > 0) params[1] - 1 else 0;
 
+        // Ansimation detection: ESC[1;1H after ESC[2J + content = new frame
+        // Stop parsing to prevent freeze on multi-frame files
+        if (self.seen_clear_screen and self.has_content_after_clear and row == 0 and col == 0) {
+            // This is a frame boundary - stop parsing by advancing to end of content
+            self.pos = self.content_end;
+            return;
+        }
+
         self.cursor_y = @min(row, height - 1);
         self.cursor_x = @min(col, width - 1);
     }
@@ -601,7 +629,11 @@ pub const Parser = struct {
                 }
             },
             2 => {
-                // Erase entire display
+                // Erase entire display (ESC[2J)
+                // Mark that we've seen a clear screen - this is used for ansimation detection
+                self.seen_clear_screen = true;
+                self.has_content_after_clear = false;
+
                 var y: u32 = 0;
                 while (y < height) : (y += 1) {
                     var x: u32 = 0;

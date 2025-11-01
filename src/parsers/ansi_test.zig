@@ -922,3 +922,85 @@ test "UTF8ANSI roundtrip: mixed UTF-8 and ANSI escapes" {
     try expectEqual(@as(u8, 2), cell_t.fg_color.palette); // DOS Green
     try expectEqual(@as(u8, 2), cell_checkmark.fg_color.palette); // DOS Green
 }
+
+// Ansimation Tests
+// Ansimation files contain multiple frames separated by ESC[2J (clear screen) and ESC[1;1H (cursor home).
+// We should detect ansimation and stop after parsing the first frame to avoid:
+// 1. Excessive memory usage (grid expansion for each frame)
+// 2. Parser hanging/freezing on large multi-frame files
+//
+// Detection heuristic: ESC[2J followed by content, then ESC[1;1H = frame boundary
+
+test "Ansimation: detect and stop after first frame" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Simulated ansimation: clear screen, frame 1 content, cursor home, frame 2 content
+    // ESC[2J = clear screen
+    // ESC[1;1H = cursor home
+    // Frame 1: "ABC" at (0,0)
+    // ESC[1;1H = NEW FRAME marker
+    // Frame 2: "XYZ" at (0,0) - should NOT be parsed
+    const ansimation_input = "\x1b[2J\x1b[1;1HABC\x1b[1;1HXYZ";
+    try parseIntoDoc(&doc, ansimation_input);
+
+    // Should only have frame 1 content
+    const cell_0 = try doc.getCell(0, 0);
+    const cell_1 = try doc.getCell(1, 0);
+    const cell_2 = try doc.getCell(2, 0);
+
+    try expectEqual(@as(u21, 'A'), cell_0.contents.scalar);
+    try expectEqual(@as(u21, 'B'), cell_1.contents.scalar);
+    try expectEqual(@as(u21, 'C'), cell_2.contents.scalar);
+
+    // Cell 3 should be empty (not 'X' from frame 2)
+    const cell_3 = try doc.getCell(3, 0);
+    try expectEqual(@as(u21, ' '), cell_3.contents.scalar);
+}
+
+test "Ansimation: multiple cursor homes without clear screen should continue parsing" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // NOT ansimation - just cursor movement within a single frame
+    // No ESC[2J, so multiple ESC[1;1H commands should be treated as normal cursor positioning
+    const input = "ABC\x1b[1;1HXYZ";
+    try parseIntoDoc(&doc, input);
+
+    // Should overwrite: X at (0,0), Y at (1,0), Z at (2,0)
+    const cell_0 = try doc.getCell(0, 0);
+    const cell_1 = try doc.getCell(1, 0);
+    const cell_2 = try doc.getCell(2, 0);
+
+    try expectEqual(@as(u21, 'X'), cell_0.contents.scalar);
+    try expectEqual(@as(u21, 'Y'), cell_1.contents.scalar);
+    try expectEqual(@as(u21, 'Z'), cell_2.contents.scalar);
+}
+
+test "Ansimation: clear screen alone should not stop parsing" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // ESC[2J clears screen but preserves cursor position
+    // Write "ABC" (cursor at 3,0), clear screen, write "XYZ" (at cursor position 3,0)
+    const input = "ABC\x1b[2JXYZ";
+    try parseIntoDoc(&doc, input);
+
+    // After clear, first 3 cells should be cleared (spaces)
+    const cell_0 = try doc.getCell(0, 0);
+    const cell_1 = try doc.getCell(1, 0);
+    const cell_2 = try doc.getCell(2, 0);
+
+    try expectEqual(@as(u21, ' '), cell_0.contents.scalar);
+    try expectEqual(@as(u21, ' '), cell_1.contents.scalar);
+    try expectEqual(@as(u21, ' '), cell_2.contents.scalar);
+
+    // XYZ should be written starting at cursor position (3,0)
+    const cell_3 = try doc.getCell(3, 0);
+    const cell_4 = try doc.getCell(4, 0);
+    const cell_5 = try doc.getCell(5, 0);
+
+    try expectEqual(@as(u21, 'X'), cell_3.contents.scalar);
+    try expectEqual(@as(u21, 'Y'), cell_4.contents.scalar);
+    try expectEqual(@as(u21, 'Z'), cell_5.contents.scalar);
+}
