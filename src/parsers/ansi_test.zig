@@ -626,3 +626,95 @@ test "ansi: grid auto-expands when content exceeds bounds" {
     const cell_29 = try doc.getCell(0, 29);
     try expect(cell_29.contents.scalar == 'L'); // "Line 30" starts with 'L'
 }
+
+// NUL Byte Handling Tests
+// Inspired by: reference/sixteencolors/fire-43/US-JELLY.ANS (contains 5,723 NUL bytes as intentional spacing)
+// Prior art: PabloDraw (Source/Pablo/Formats/Character/Types/Ansi.load.cs:481-483)
+//   - PabloDraw treats NUL (0x00) as a printable character that advances the cursor
+//   - Falls through to ReadChar() which writes character 0 to canvas and increments position
+//   - Character 0 in CP437 is typically rendered as blank/invisible glyph
+//
+// Implementation note: NUL bytes should be written to the grid as scalar value 0,
+// advancing the cursor position. They are NOT control characters to be ignored.
+
+test "ANSI parser handles NUL byte as printable character" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: "A" + NUL + "B"
+    const input = "A\x00B";
+    try parseIntoDoc(&doc, input);
+
+    // Cell 0: 'A'
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 'A'), cell_0.contents.scalar);
+
+    // Cell 1: NUL (scalar value 0)
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u21, 0), cell_1.contents.scalar);
+
+    // Cell 2: 'B'
+    const cell_2 = try doc.getCell(2, 0);
+    try expectEqual(@as(u21, 'B'), cell_2.contents.scalar);
+}
+
+test "ANSI parser advances cursor on NUL byte" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: 3 consecutive NUL bytes followed by 'X'
+    const input = "\x00\x00\x00X";
+    try parseIntoDoc(&doc, input);
+
+    // First 3 cells should be NUL
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 0), cell_0.contents.scalar);
+
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u21, 0), cell_1.contents.scalar);
+
+    const cell_2 = try doc.getCell(2, 0);
+    try expectEqual(@as(u21, 0), cell_2.contents.scalar);
+
+    // Fourth cell should be 'X' (cursor advanced 3 positions by NULs)
+    const cell_3 = try doc.getCell(3, 0);
+    try expectEqual(@as(u21, 'X'), cell_3.contents.scalar);
+}
+
+test "ANSI parser handles NUL bytes with ANSI escape sequences" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: Red foreground, NUL, 'A', reset
+    const input = "\x1b[31m\x00A\x1b[0m";
+    try parseIntoDoc(&doc, input);
+
+    // Cell 0: NUL should be written (scalar value 0)
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 0), cell_0.contents.scalar);
+
+    // Cell 1: 'A' should be written after NUL
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u21, 'A'), cell_1.contents.scalar);
+}
+
+test "ANSI parser handles mixed NUL and space characters" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: space, NUL, space
+    const input = " \x00 ";
+    try parseIntoDoc(&doc, input);
+
+    // Cell 0: space (0x20)
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 0x20), cell_0.contents.scalar);
+
+    // Cell 1: NUL (0x00)
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u21, 0x00), cell_1.contents.scalar);
+
+    // Cell 2: space (0x20)
+    const cell_2 = try doc.getCell(2, 0);
+    try expectEqual(@as(u21, 0x20), cell_2.contents.scalar);
+}
