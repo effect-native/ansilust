@@ -288,33 +288,57 @@ reference/sixteencolors/
    - [ ] Create `reference/sixteencolors/README.md` with corpus overview
 
 ### UTF8ANSI Roundtrip Support
-**Status**: ❌ Not implemented  
+**Status**: ✅ COMPLETE  
 **Priority**: HIGH
 
 Ansilust must support both CP437 and UTF8ANSI as input types without issues.
-zig build run -- reference/sixteencolors/animated/WZKM-MERMAID.ANS
+
 **Test case**:
 ```bash
 # Render CP437 ANSI to UTF8ANSI
-zig build run -- reference/sixteencolors/fire-43/US-JELLY.ANS > reference/sixteencolors/fire-43/US-JELLY.utf8ansi
+zig build run -- reference/sixteencolors/fire-43/US-JELLY.ANS > /tmp/us-jelly.utf8ansi
 
 # Re-render UTF8ANSI (should work identically)
-zig build run -- reference/sixteencolors/fire-43/US-JELLY.utf8ansi
-```
-
-**Current status**: ❌ CONFIRMED BUG - Freezes on UTF8ANSI input (timeout after 3s)
-**Required**: Parser must detect UTF8ANSI vs CP437 input and handle both
-
-**Test results (2025-10-31)**:
-```bash
-# CP437 → UTF8ANSI works fine
-zig build run -- reference/sixteencolors/fire-43/US-JELLY.ANS > /tmp/us-jelly.utf8ansi
-# Exit code: 0 ✅
-
-# UTF8ANSI input FREEZES
 timeout 3 zig build run -- /tmp/us-jelly.utf8ansi
-# Exit code: 124 (timeout) ❌
 ```
+
+**Completed**: 2025-11-01  
+**Implementation**: TDD approach with RED→GREEN→REFACTOR phases
+
+**Solution implemented**:
+- Added `tryDecodeUTF8()` function with smart CP437/UTF-8 disambiguation
+- UTF-8 detection heuristics:
+  * Accept 3-byte and 4-byte UTF-8 (clearly beyond CP437 range)
+  * Reject 2-byte UTF-8 for codepoints < U+0800 (likely CP437)
+  * Preserves CP437 box drawing (0x80-0xFF) while enabling modern UTF-8
+- Modified `writeScalar()` to try UTF-8 first, fall back to CP437
+- Track source encoding per cell (`.utf_8` vs `.cp437`)
+
+**Tests added** (all passing):
+- UTF8ANSI roundtrip: basic ASCII text
+- UTF8ANSI roundtrip: multi-byte UTF-8 characters (→ U+2192)
+- UTF8ANSI roundtrip: mixed UTF-8 and ANSI escapes (✓ U+2713)
+- Preserves existing CP437 box drawing tests
+
+**Validation results** (2025-11-01):
+```bash
+# CP437 → UTF8ANSI ✅
+zig build run -- reference/sixteencolors/fire-43/US-JELLY.ANS > /tmp/us-jelly.utf8ansi
+# Exit code: 0
+
+# UTF8ANSI → UTF8ANSI ✅ (NO FREEZE!)
+timeout 3 zig build run -- /tmp/us-jelly.utf8ansi > /tmp/us-jelly-round2.utf8ansi
+# Exit code: 0
+
+# Multiple file validation ✅
+zig build run -- reference/ansilove/ansilove/examples/burps/bs-alove.ans > /tmp/test.utf8ansi
+zig build run -- /tmp/test.utf8ansi > /tmp/test2.utf8ansi
+# Both succeed without freeze
+```
+
+**Git commits**:
+- `62fbc86` - GREEN: Add UTF-8 support to ANSI parser
+- `3c29eaf` - REFACTOR: Clean up UTF-8 decoder implementation
 
 ### Animation Handling - No Freezing
 **Status**: ❌ Not implemented  
