@@ -1,6 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const Utf8Ansi = @import("utf8ansi.zig");
+const ir = @import("../ir/lib.zig");
 
 // Helper for managed ArrayList in Zig 0.15
 fn ArrayList(comptime T: type) type {
@@ -91,8 +92,6 @@ test "TerminalGuard restores terminal state on deinit" {
 }
 
 // === Cycle 2: Minimal Render Pipeline ===
-
-const ir = @import("../ir/lib.zig");
 
 test "render emits newlines for row separation" {
     const allocator = testing.allocator;
@@ -660,4 +659,44 @@ test "Renderer skips hyperlinks for cells without hyperlink_id" {
 
     // Should NOT contain any OSC 8 sequences
     try testing.expect(std.mem.indexOf(u8, buffer, "\x1b]8;") == null);
+}
+
+// Integration: Round-trip test for hyperlinks (parse ANSI → render UTF8ANSI)
+
+test "Integration: Round-trip hyperlinks through parser and renderer" {
+    const allocator = testing.allocator;
+    const ansi_parser = @import("../parsers/ansi.zig");
+
+    // Input ANSI with hyperlink
+    const input = "\x1b]8;;https://ansilust.dev\x1b\\Ansilust\x1b]8;;\x1b\\ is great!";
+
+    // Parse to IR
+    var doc = try ansi_parser.parse(allocator, input);
+    defer doc.deinit();
+
+    // Verify hyperlink in document
+    try testing.expectEqual(@as(usize, 1), doc.hyperlink_table.count());
+    const link = doc.hyperlink_table.get(1);
+    try testing.expect(link != null);
+    try testing.expectEqualStrings("https://ansilust.dev", link.?.uri);
+
+    // Verify cells have correct hyperlink IDs
+    var x: u32 = 0;
+    while (x < 8) : (x += 1) { // "Ansilust" = 8 chars
+        const cell = try doc.getCell(x, 0);
+        try testing.expectEqual(@as(u32, 1), cell.hyperlink_id);
+    }
+
+    // Verify cells after hyperlink have no hyperlink
+    const cell_after = try doc.getCell(8, 0); // space after "Ansilust"
+    try testing.expectEqual(@as(u32, 0), cell_after.hyperlink_id);
+
+    // Render to UTF8ANSI
+    const output = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(output);
+
+    // Verify output contains hyperlink sequences
+    try testing.expect(std.mem.indexOf(u8, output, "\x1b]8;;https://ansilust.dev\x1b\\") != null);
+    try testing.expect(std.mem.indexOf(u8, output, "Ansilust") != null);
+    try testing.expect(std.mem.indexOf(u8, output, "\x1b]8;;\x1b\\") != null);
 }
