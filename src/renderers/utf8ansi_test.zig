@@ -2,6 +2,7 @@ const std = @import("std");
 const testing = std.testing;
 const Utf8Ansi = @import("utf8ansi.zig");
 const ir = @import("../ir/lib.zig");
+const parsers = @import("parsers");
 
 // Helper for managed ArrayList in Zig 0.15
 fn ArrayList(comptime T: type) type {
@@ -665,7 +666,7 @@ test "Renderer skips hyperlinks for cells without hyperlink_id" {
 
 test "Integration: Round-trip hyperlinks through parser and renderer" {
     const allocator = testing.allocator;
-    const ansi_parser = @import("../parsers/ansi.zig");
+    const ansi_parser = parsers.ansi;
 
     // Input ANSI with hyperlink
     const input = "\x1b]8;;https://ansilust.dev\x1b\\Ansilust\x1b]8;;\x1b\\ is great!";
