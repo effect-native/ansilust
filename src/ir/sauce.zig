@@ -269,16 +269,24 @@ pub const SauceRecord = struct {
 
     /// Get column width for ANSI/character art.
     /// Returns tinfo1 for character-based files.
+    /// Validates dimensions are reasonable (<= 1024) to prevent malformed SAUCE
+    /// from causing parser hangs.
     pub fn getColumns(self: *const SauceRecord) ?u16 {
         if (self.file_type != .character) return null;
-        return if (self.tinfo1 > 0) self.tinfo1 else null;
+        // Reject unreasonable dimensions (malformed SAUCE with ASCII text in TInfo)
+        if (self.tinfo1 == 0 or self.tinfo1 > 1024) return null;
+        return self.tinfo1;
     }
 
     /// Get line count for ANSI/character art.
     /// Returns tinfo2 for character-based files.
+    /// Validates dimensions are reasonable (<= 4096) to prevent malformed SAUCE
+    /// from causing parser hangs.
     pub fn getLines(self: *const SauceRecord) ?u16 {
         if (self.file_type != .character) return null;
-        return if (self.tinfo2 > 0) self.tinfo2 else null;
+        // Reject unreasonable dimensions (malformed SAUCE with ASCII text in TInfo)
+        if (self.tinfo2 == 0 or self.tinfo2 > 4096) return null;
+        return self.tinfo2;
     }
 
     /// Check if this is an ANSI file.
@@ -390,4 +398,34 @@ test "SAUCE: string field trimming" {
     defer allocator.free(trimmed);
 
     try std.testing.expectEqualStrings("Test", trimmed);
+}
+
+test "SAUCE: reject unreasonable dimensions" {
+    const allocator = std.testing.allocator;
+
+    // Simulate malformed SAUCE like WZKM-MERMAID.ANS
+    // TInfo1/2 contain ASCII text instead of binary dimensions
+    // Bytes 0x5020 (little-endian) = 8272, 0x0820 = 8200
+    // This would create 67M cells and hang the parser!
+    var data: [SAUCE_RECORD_SIZE]u8 = undefined;
+    @memset(&data, 0);
+    @memcpy(data[0..5], SAUCE_ID);
+    @memcpy(data[5..7], SAUCE_VERSION);
+
+    // Set file type to character/ANSI
+    data[94] = 1; // character
+    data[95] = 1; // ANSI
+
+    // Write malformed TInfo (ASCII text masquerading as dimensions)
+    data[96] = 0x50; // 'P'
+    data[97] = 0x20; // ' '
+    data[98] = 0x08; // backspace
+    data[99] = 0x20; // ' '
+
+    var record = try SauceRecord.parse(allocator, &data);
+    defer record.deinit();
+
+    // getColumns/getLines should reject unreasonable values (>1024)
+    try std.testing.expectEqual(@as(?u16, null), record.getColumns());
+    try std.testing.expectEqual(@as(?u16, null), record.getLines());
 }
