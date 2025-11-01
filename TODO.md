@@ -505,7 +505,7 @@ Build comprehensive list of ANSI editors and get them running for testing/resear
 ### Renderer Improvements
 - [ ] Text attributes (bold, underline, blink)
 - [ ] Animation playback support
-- [ ] Hyperlinks (OSC 8)
+- [x] Hyperlinks (OSC 8) - ✅ Completed 2025-11-01
 
 ## Future Applications (Long-term Vision)
 
@@ -1091,4 +1091,8 @@ Design markup language for TUI browsers (like HTML for terminals).
 - [x] DOS palette colors
 - [x] Null byte handling (renders as spaces)
 - [x] Zig 0.15 compatibility
-- [x] 102/102 tests passing
+- [x] OSC 8 Hyperlink support (parser + renderer) - 2025-11-01
+  - Parser: OSC 8 sequence parsing with ESC \ and BEL terminators
+  - Renderer: Emit OSC 8 start/end sequences, track hyperlink state
+  - Tests: 15 comprehensive tests (8 parser + 6 renderer + 1 integration)
+  - Round-trip validation: ANSI → IR → UTF8ANSI preserves hyperlinks
