@@ -231,6 +231,11 @@ pub const Parser = struct {
                 else => try self.writeScalar(byte),
             }
         }
+
+        // If we have animation data, capture the final frame
+        if (self.seen_clear_screen and self.has_content_after_clear) {
+            try self.captureAnimationFrame();
+        }
     }
 
     fn ensureSauce(self: *Parser) !void {
@@ -527,7 +532,7 @@ pub const Parser = struct {
                     // Handle CSI command
                     switch (byte) {
                         'm' => self.style.applySGR(params[0..param_count]),
-                        'H' => self.handleCursorPosition(params[0..param_count]),
+                        'H' => try self.handleCursorPosition(params[0..param_count]),
                         'A' => self.handleCursorUp(params[0..param_count]),
                         'B' => self.handleCursorDown(params[0..param_count]),
                         'C' => self.handleCursorForward(params[0..param_count]),
@@ -548,7 +553,7 @@ pub const Parser = struct {
         }
     }
 
-    fn handleCursorPosition(self: *Parser, params: []const u16) void {
+    fn handleCursorPosition(self: *Parser, params: []const u16) !void {
         const width = self.document.grid.width;
         const height = self.document.grid.height;
         if (width == 0 or height == 0) return;
@@ -558,11 +563,12 @@ pub const Parser = struct {
         const col = if (params.len > 1 and params[1] > 0) params[1] - 1 else 0;
 
         // Ansimation detection: ESC[1;1H after ESC[2J + content = new frame
-        // Stop parsing to prevent freeze on multi-frame files
+        // Capture current grid as animation frame
         if (self.seen_clear_screen and self.has_content_after_clear and row == 0 and col == 0) {
-            // This is a frame boundary - stop parsing by advancing to end of content
-            self.pos = self.content_end;
-            return;
+            // This is a frame boundary - save current grid as a frame
+            try self.captureAnimationFrame();
+            // Reset for next frame
+            self.has_content_after_clear = false;
         }
 
         self.cursor_y = @min(row, height - 1);
@@ -672,6 +678,50 @@ pub const Parser = struct {
             .bg_color = DEFAULT_BG_COLOR,
             .attr_flags = ir.AttributeFlags.none(),
         });
+    }
+
+    /// Capture current grid state as an animation frame.
+    /// Called when a frame boundary is detected (ESC[1;1H after content).
+    fn captureAnimationFrame(self: *Parser) !void {
+        const width = self.document.grid.width;
+        const height = self.document.grid.height;
+
+        // Create animation data if this is the first frame
+        if (self.document.animation_data == null) {
+            self.document.animation_data = ir.animation.Animation.init(self.allocator, width, height);
+            self.document.source_format = .ansimation;
+        }
+
+        // Clone current grid for the snapshot
+        var frame_grid = try ir.cell_grid.CellGrid.init(self.allocator, width, height);
+        errdefer frame_grid.deinit();
+
+        // Copy all cells from document grid to frame grid
+        var y: u32 = 0;
+        while (y < height) : (y += 1) {
+            var x: u32 = 0;
+            while (x < width) : (x += 1) {
+                const cell = try self.document.grid.getCell(x, y);
+                try frame_grid.setCell(x, y, .{
+                    .contents = cell.contents,
+                    .source_encoding = cell.source_encoding,
+                    .fg_color = cell.fg_color,
+                    .bg_color = cell.bg_color,
+                    .attr_flags = cell.attr_flags,
+                    .hyperlink_id = cell.hyperlink_id,
+                });
+            }
+        }
+
+        // Create snapshot frame (duration will be set from SAUCE later)
+        const snapshot = ir.animation.Snapshot{
+            .grid = frame_grid,
+            .duration = 100, // Default 100ms, will be updated from SAUCE
+            .delay = 0,
+        };
+
+        // Add frame to animation
+        try self.document.animation_data.?.addFrame(.{ .snapshot = snapshot });
     }
 
     fn handleOSC(self: *Parser) !void {

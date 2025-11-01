@@ -931,7 +931,7 @@ test "UTF8ANSI roundtrip: mixed UTF-8 and ANSI escapes" {
 //
 // Detection heuristic: ESC[2J followed by content, then ESC[1;1H = frame boundary
 
-test "Ansimation: detect and stop after first frame" {
+test "Ansimation: capture frames into animation_data" {
     var doc = try initDocument();
     defer doc.deinit();
 
@@ -940,22 +940,23 @@ test "Ansimation: detect and stop after first frame" {
     // ESC[1;1H = cursor home
     // Frame 1: "ABC" at (0,0)
     // ESC[1;1H = NEW FRAME marker
-    // Frame 2: "XYZ" at (0,0) - should NOT be parsed
+    // Frame 2: "XYZ" at (0,0)
     const ansimation_input = "\x1b[2J\x1b[1;1HABC\x1b[1;1HXYZ";
     try parseIntoDoc(&doc, ansimation_input);
 
-    // Should only have frame 1 content
+    // Should have animation_data with 2 frames
+    try expect(doc.animation_data != null);
+    try expectEqual(@as(usize, 2), doc.animation_data.?.getFrameCount());
+
+    // Main grid has last frame content (XYZ)
     const cell_0 = try doc.getCell(0, 0);
-    const cell_1 = try doc.getCell(1, 0);
-    const cell_2 = try doc.getCell(2, 0);
+    try expectEqual(@as(u21, 'X'), cell_0.contents.scalar);
 
-    try expectEqual(@as(u21, 'A'), cell_0.contents.scalar);
-    try expectEqual(@as(u21, 'B'), cell_1.contents.scalar);
-    try expectEqual(@as(u21, 'C'), cell_2.contents.scalar);
-
-    // Cell 3 should be empty (not 'X' from frame 2)
-    const cell_3 = try doc.getCell(3, 0);
-    try expectEqual(@as(u21, ' '), cell_3.contents.scalar);
+    // Frame 0 should have "ABC"
+    const frame0_grid = &doc.animation_data.?.frames.items[0].snapshot.grid;
+    try expectEqual(@as(u21, 'A'), (try frame0_grid.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try frame0_grid.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'C'), (try frame0_grid.getCell(2, 0)).contents.scalar);
 }
 
 test "Ansimation: multiple cursor homes without clear screen should continue parsing" {
@@ -1003,4 +1004,44 @@ test "Ansimation: clear screen alone should not stop parsing" {
     try expectEqual(@as(u21, 'X'), cell_3.contents.scalar);
     try expectEqual(@as(u21, 'Y'), cell_4.contents.scalar);
     try expectEqual(@as(u21, 'Z'), cell_5.contents.scalar);
+}
+
+// Multi-Frame Animation Tests
+
+test "Ansimation: parse multiple frames into animation_data" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // 3-frame animation:
+    // Frame 1: ESC[2J ESC[1;1H "AAA"
+    // Frame 2: ESC[1;1H "BBB"
+    // Frame 3: ESC[1;1H "CCC"
+    const input = "\x1b[2J\x1b[1;1HAAA\x1b[1;1HBBB\x1b[1;1HCCC";
+    try parseIntoDoc(&doc, input);
+
+    // Should have animation data with 3 frames
+    try expect(doc.animation_data != null);
+    const anim = doc.animation_data.?;
+    try expectEqual(@as(usize, 3), anim.getFrameCount());
+
+    // Frame 0 should be snapshot with "AAA"
+    try expect(anim.frames.items[0] == .snapshot);
+    const frame0_grid = &anim.frames.items[0].snapshot.grid;
+    try expectEqual(@as(u21, 'A'), (try frame0_grid.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'A'), (try frame0_grid.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'A'), (try frame0_grid.getCell(2, 0)).contents.scalar);
+
+    // Frame 1 should have "BBB" (delta or snapshot)
+    var frame1 = try anim.decodeFrame(1, std.testing.allocator);
+    defer frame1.deinit();
+    try expectEqual(@as(u21, 'B'), (try frame1.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try frame1.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'B'), (try frame1.getCell(2, 0)).contents.scalar);
+
+    // Frame 2 should have "CCC"
+    var frame2 = try anim.decodeFrame(2, std.testing.allocator);
+    defer frame2.deinit();
+    try expectEqual(@as(u21, 'C'), (try frame2.getCell(0, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'C'), (try frame2.getCell(1, 0)).contents.scalar);
+    try expectEqual(@as(u21, 'C'), (try frame2.getCell(2, 0)).contents.scalar);
 }
