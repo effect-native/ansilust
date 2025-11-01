@@ -21,6 +21,15 @@ Each idea is documented in its own markdown file with:
 
 ## Current Ideas
 
+### curl.md
+Integration specification for seamless curl piping to ansilust. Features include:
+- Single file streaming: `curl url/to/ansi.ans | ansilust`
+- Artpack archive support: `curl url/to/artpack.zip | ansilust --speed 9600`
+- Smart caching with hash-based deduplication
+- Baud rate simulation for authentic retro BBS experience
+- Automatic format detection (ANSI, ZIP, RAR, 7z)
+- Cache management commands for repeated artpack viewing
+
 ### 16colors-tui-bbs-viewer.md
 A BBS-style terminal user interface for browsing the 16colo.rs ANSI art archive. Features include:
 - Authentic 1990s BBS experience with configurable modem speed emulation
