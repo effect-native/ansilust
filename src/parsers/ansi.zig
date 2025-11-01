@@ -173,8 +173,10 @@ pub const Parser = struct {
     input: []const u8,
     document: *ir.Document,
     pos: usize = 0,
+    content_end: usize = 0,
     cursor_x: u32 = 0,
     cursor_y: u32 = 0,
+    sauce_processed: bool = false,
 
     style: StyleState = .{},
     saved_cursor_x: u32 = 0,
@@ -187,6 +189,7 @@ pub const Parser = struct {
             .allocator = allocator,
             .input = input,
             .document = document,
+            .content_end = input.len,
         };
     }
 
@@ -195,7 +198,9 @@ pub const Parser = struct {
     }
 
     pub fn parse(self: *Parser) !void {
-        while (self.pos < self.input.len) {
+        try self.ensureSauce();
+
+        while (self.pos < self.content_end) {
             const byte = self.input[self.pos];
             self.pos += 1;
 
@@ -205,14 +210,70 @@ pub const Parser = struct {
                 0x0D => self.handleCarriageReturn(),
                 0x09 => self.handleTab(),
                 0x1A => {
-                    try self.parseSauce();
-                    return;
+                    break;
                 },
                 else => try self.writeScalar(byte),
             }
         }
+    }
 
-        try self.parseSauce();
+    fn ensureSauce(self: *Parser) !void {
+        if (self.sauce_processed) return;
+        self.content_end = self.input.len;
+
+        const sauce_offset = sauce.detectSauce(self.input) orelse {
+            self.sauce_processed = true;
+            return;
+        };
+
+        self.content_end = sauce_offset;
+
+        var record = sauce.SauceRecord.parse(self.allocator, self.input[sauce_offset..]) catch {
+            self.sauce_processed = true;
+            return;
+        };
+
+        var comments_start = sauce_offset;
+        if (record.comment_lines > 0) {
+            if (sauce.detectComments(self.input, record.comment_lines, sauce_offset)) |comment_offset| {
+                comments_start = comment_offset;
+                self.content_end = comment_offset;
+                record.parseComments(self.input[comment_offset..sauce_offset]) catch {
+                    // Ignore comment parse errors but keep SAUCE record
+                };
+            }
+        }
+
+        const columns_opt = record.getColumns();
+        const lines_opt = record.getLines();
+
+        self.document.setSauce(record);
+        self.document.applySauceHints();
+        try self.applySauceDimensions(columns_opt, lines_opt);
+
+        self.content_end = @min(self.content_end, comments_start);
+        self.sauce_processed = true;
+    }
+
+    fn applySauceDimensions(self: *Parser, columns_opt: ?u16, lines_opt: ?u16) !void {
+        var new_width: u32 = self.document.grid.width;
+        var new_height: u32 = self.document.grid.height;
+
+        if (columns_opt) |cols| {
+            if (cols > 0) new_width = cols;
+        }
+
+        if (lines_opt) |lines| {
+            if (lines > 0) new_height = lines;
+        }
+
+        if (new_width == 0 or new_height == 0) {
+            return;
+        }
+
+        if (new_width != self.document.grid.width or new_height != self.document.grid.height) {
+            try self.document.resize(new_width, new_height);
+        }
     }
 
     fn handleNewline(self: *Parser) void {
@@ -465,32 +526,6 @@ pub const Parser = struct {
             .bg_color = DEFAULT_BG_COLOR,
             .attr_flags = ir.AttributeFlags.none(),
         });
-    }
-
-    fn parseSauce(self: *Parser) !void {
-        const sauce_offset = sauce.detectSauce(self.input) orelse return;
-
-        var sauce_record = sauce.SauceRecord.parse(self.allocator, self.input[sauce_offset..]) catch {
-            return;
-        };
-
-        if (sauce_record.comment_lines > 0) {
-            if (sauce.detectComments(self.input, sauce_record.comment_lines, sauce_offset)) |comment_offset| {
-                sauce_record.parseComments(self.input[comment_offset..]) catch {
-                    // Ignore comment parse errors but keep SAUCE record
-                };
-            }
-        }
-
-        self.document.setSauce(sauce_record);
-        self.document.applySauceHints();
-
-        // Auto-resize document if SAUCE specifies dimensions
-        if (sauce_record.getColumns()) |cols| {
-            if (sauce_record.getLines()) |lines| {
-                try self.document.resize(cols, lines);
-            }
-        }
     }
 };
 
