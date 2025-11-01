@@ -18,49 +18,146 @@ All distribution mechanisms must prioritize security, reproducibility, and maint
 
 ### Distribution Channels
 
-**CR1**: The project shall be runnable without prior installation via npm with `npx ansilust` for immediate execution.
+#### Direct Execution
 
-**CR2**: The project shall be installable via Homebrew with `brew install ansilust`.
+**CR1**: The project shall be runnable via `npx ansilust`.
 
-**CR3**: The project shall be available on AUR (Arch User Repository) for Arch Linux users.
+**CR2**: The project shall be runnable via `nix run github:effect-native/ansilust` or `nix run nixpkgs#ansilust`.
 
-**CR4**: The project shall be runnable without prior installation via Nix package manager with `nix run`.
+**CR3**: The project shall be runnable via `bunx ansilust`.
 
-**CR5**: WHEN users access `https://ansilust.com/install.bash` the system shall provide a Bash installer script.
+**CR4**: The project shall be runnable via `deno run npm:ansilust`.
 
-**CR6**: WHEN users access `https://ansilust.com/install.ps1` the system shall provide a PowerShell installer script.
+**CR5**: The project shall be runnable via container runtimes with `docker run ghcr.io/effect-native/ansilust` or `podman run ghcr.io/effect-native/ansilust`.
 
-**CR7**: The project shall support installation on Linux, macOS, and Windows platforms.
+#### Explicit Installation
 
-**CR7.1**: The project shall support installation on ARM devices including Raspberry Pi (armv7, aarch64).
+**CR7**: The project shall be installable via npm with `npm install -g ansilust`.
 
-**CR7.2**: The project shall support installation in Docker containers across all supported architectures.
+**CR8**: The project shall be installable via Homebrew with `brew install ansilust`.
 
-**CR7.3**: The project shall support installation on VPS environments (Ubuntu, Debian, CentOS, Alpine, etc.).
+**CR9**: The project shall be available on AUR (Arch User Repository) for Arch Linux users.
 
-**CR7.4**: WHERE Termux is available the project shall support installation on rooted Android devices.
+**CR10**: The project shall be installable via Nix with `nix-env -iA nixpkgs.ansilust` or `nix profile install`.
+
+**CR11**: WHEN users access `https://ansilust.com/install` the system shall provide a Bash installer script.
+
+**CR11.1**: The Bash installer script shall include header comments with a deep link to its source code on GitHub.
+
+**CR12**: WHEN users access `https://ansilust.com/install.ps1` the system shall provide a PowerShell installer script.
+
+**CR12.1**: The PowerShell installer script shall include header comments with a deep link to its source code on GitHub.
+
+**CR13**: The project shall support installation on Linux, macOS, and Windows platforms.
+
+**CR13.1**: The project shall support installation on ARM devices including Raspberry Pi (armv7, aarch64).
+
+**CR13.2**: The project shall support installation in Docker containers across all supported architectures.
+
+**CR13.3**: The project shall support installation on VPS environments (Ubuntu, Debian, CentOS, Alpine, etc.).
+
+**CR13.4**: WHERE Termux is available the project shall support installation on Android devices.
 
 ### Security & Automation
 
-**CR8**: All package builds and distributions shall be automated via GitHub Actions CI/CD.
+**CR14**: All package builds and distributions shall be automated via GitHub Actions CI/CD.
 
-**CR9**: All release artifacts shall be cryptographically signed and verifiable.
+**CR15**: All release artifacts shall be cryptographically signed and verifiable.
 
-**CR10**: The build process shall be reproducible to ensure supply chain security.
+**CR16**: The build process shall be reproducible to ensure supply chain security.
 
-**CR11**: WHEN a new git tag is created the system shall automatically trigger release workflows.
+**CR17**: WHEN a new git tag is created the system shall automatically trigger release workflows.
 
-**CR12**: IF any security scan fails THEN the release workflow shall abort with clear error messages.
+**CR18**: IF any security scan fails THEN the release workflow shall abort with clear error messages.
+
+**CR19**: Install scripts shall include clear attribution and source code links for transparency and security auditing.
 
 ### Package Requirements
 
-**CR13**: Each distribution package shall include the compiled ansilust binary for the target platform.
+**CR20**: Each distribution package shall include the compiled ansilust binary for the target platform.
 
-**CR14**: Each package shall include documentation (README, LICENSE, usage examples).
+**CR21**: Each package shall include documentation (README, LICENSE, usage examples).
 
-**CR15**: The npm package shall include Zig-compiled binaries for the current platform.
+**CR22**: The npm package shall include Zig-compiled binaries for the current platform.
 
-**CR16**: WHEN installed via any method the `ansilust` command shall be available in the user's PATH.
+**CR23**: WHEN explicitly installed the `ansilust` command shall be available in the user's PATH.
+
+**CR24**: WHEN executed directly (npx, nix run, bunx, deno, docker) the command shall work with a single invocation.
+
+---
+
+## Direct Execution vs Installation
+
+### Direct Execution
+
+**Concept**: Run ansilust with a single command, no explicit installation step required.
+
+**How users think about it**: "Just run it immediately without dealing with installation."
+
+**Methods**:
+
+| Method | Command | Platform |
+|--------|---------|----------|
+| **npx** | `npx ansilust` | All (Node.js) |
+| **bunx** | `bunx ansilust` | All (Bun) |
+| **deno** | `deno run npm:ansilust` | All (Deno) |
+| **nix run** | `nix run nixpkgs#ansilust` | All (Nix) |
+| **docker/podman** | `docker run ghcr.io/owner/ansilust`<br>`podman run ghcr.io/owner/ansilust` | All (containers) |
+
+**User benefits**:
+- No separate installation step
+- Easy to try without commitment
+- Good for CI/CD and one-off usage
+- Version can be specified inline
+
+### Installation (Explicit)
+
+**Concept**: Explicitly install ansilust, then run it.
+
+**How users think about it**: "Install once, use many times."
+
+**Methods**:
+
+| Method | Install Command | Run Command | Platform |
+|--------|----------------|-------------|----------|
+| **npm global** | `npm install -g ansilust` | `ansilust` | All (Node.js) |
+| **Homebrew** | `brew install ansilust` | `ansilust` | macOS/Linux |
+| **AUR** | `yay -S ansilust` | `ansilust` | Arch Linux |
+| **Nix profile** | `nix profile install nixpkgs#ansilust` | `ansilust` | All (Nix) |
+| **Bash installer** | `curl -fsSL ansilust.com/install \| bash` | `ansilust` | Linux/macOS |
+| **PowerShell** | `irm ansilust.com/install.ps1 \| iex` | `ansilust` | Windows |
+
+**User benefits**:
+- Command available in PATH
+- Managed by package manager
+- Clear update/uninstall path
+- Familiar workflow for each platform
+
+### Recommended User Workflows
+
+**Casual User / First Time**:
+```bash
+# Just run it
+npx ansilust file.ans
+
+# Like it? Install it
+npm install -g ansilust
+ansilust file.ans
+```
+
+**CI/CD Pipeline**:
+```yaml
+# Direct execution
+- run: npx ansilust file.ans
+```
+
+**Power User / Developer**:
+```bash
+# Install via preferred package manager
+brew install ansilust  # macOS
+yay -S ansilust       # Arch Linux
+nix profile install nixpkgs#ansilust  # NixOS
+```
 
 ---
 
@@ -77,11 +174,19 @@ All distribution mechanisms must prioritize security, reproducibility, and maint
   - Android via Termux (aarch64, armv7)
 
 ### Distribution Formats
-- **npm**: Package with platform-specific binaries
+
+#### Direct Execution Formats
+- **npx/bunx/deno**: Run from npm registry with single command
+- **nix run**: Run from nixpkgs or flake repository
+- **docker/podman**: Run from container registry (OCI-compatible)
+
+#### Explicit Installation Formats
+- **npm global**: Package installed to npm global bin directory
 - **Homebrew**: Formula with bottle builds
-- **AUR**: PKGBUILD for source or binary package
-- **Nix**: Derivation for reproducible builds
-- **Direct**: Standalone binary archives (tar.gz, zip)
+- **AUR**: PKGBUILD for Arch Linux
+- **Nix profile**: Derivation installed to user profile
+- **Installer scripts**: Bash/PowerShell scripts that download and install binary
+- **Manual**: Binary archives (tar.gz, zip) for manual extraction
 
 ### Domain & Hosting
 - **Domain**: ansilust.com (OWNED - confirmed)
@@ -108,55 +213,73 @@ All distribution mechanisms must prioritize security, reproducibility, and maint
 
 ## Acceptance Criteria
 
-### Installation Methods
+### Direct Execution
 
-**AC1**: A user shall successfully install ansilust with `npm install -g ansilust` and run it with `npx ansilust`.
+**AC1**: A user shall successfully run `npx ansilust` and have it work immediately.
 
-**AC2**: A user shall successfully install ansilust with `brew install ansilust` on macOS or Linux (Homebrew-supported).
+**AC2**: A user shall successfully run `bunx ansilust` and have it work immediately.
 
-**AC3**: An Arch Linux user shall successfully install ansilust from AUR using `yay -S ansilust` or `paru -S ansilust`.
+**AC3**: A user shall successfully run `deno run npm:ansilust` and have it work immediately.
 
-**AC4**: A Nix user shall successfully run `nix run github:owner/ansilust` or install with `nix-env -iA nixpkgs.ansilust`.
+**AC4**: A user shall successfully run `nix run github:owner/ansilust` and have it work immediately.
 
-**AC5**: A user shall successfully install ansilust on Linux/macOS with:
+**AC5**: A user shall successfully run `nix run nixpkgs#ansilust` and have it work immediately.
+
+**AC6**: A user shall successfully run `docker run ghcr.io/owner/ansilust` and have it work immediately.
+
+**AC7**: A user shall successfully run `podman run ghcr.io/owner/ansilust` and have it work immediately.
+
+### Explicit Installation
+
+**AC8**: A user shall successfully install ansilust globally with `npm install -g ansilust`.
+
+**AC9**: A user shall successfully install ansilust with `brew install ansilust` on macOS or Linux.
+
+**AC10**: An Arch Linux user shall successfully install ansilust from AUR using `yay -S ansilust` or `paru -S ansilust`.
+
+**AC11**: A Nix user shall successfully install ansilust with `nix profile install nixpkgs#ansilust` or `nix-env -iA nixpkgs.ansilust`.
+
+**AC12**: A user shall successfully install ansilust on Linux/macOS with:
 ```bash
 curl -fsSL https://ansilust.com/install | bash
 ```
 
-**AC6**: A user shall successfully install ansilust on Windows with:
+**AC13**: A user shall successfully install ansilust on Windows with:
 ```powershell
 powershell -c "irm ansilust.com/install.ps1 | iex"
 ```
 
-**AC6.1**: A user shall successfully install ansilust on Raspberry Pi (armv7/aarch64) using the bash installer.
+**AC14**: A user shall successfully install ansilust on Raspberry Pi (armv7/aarch64) using the bash installer.
 
-**AC6.2**: A user shall successfully install ansilust in a Docker container with the bash installer.
+**AC15**: A user shall successfully install ansilust in a Docker container with the bash installer.
 
-**AC6.3**: A user shall successfully install ansilust on a VPS (DigitalOcean, AWS, Hetzner, etc.) with the bash installer.
+**AC16**: A user shall successfully install ansilust on a VPS (DigitalOcean, AWS, Hetzner, etc.) with the bash installer.
 
-**AC6.4**: A user shall successfully install ansilust on Android via Termux using the bash installer.
+**AC17**: A user shall successfully install ansilust on Android via Termux using the bash installer.
+
+**AC18**: WHEN explicitly installed the `ansilust` command shall be available in PATH for subsequent use.
 
 ### Security & Verification
 
-**AC7**: WHEN a user downloads ansilust the system shall provide SHA256 checksums for all artifacts.
+**AC19**: WHEN a user downloads ansilust the system shall provide SHA256 checksums for all artifacts.
 
-**AC8**: WHEN examining the release workflow the process shall be fully automated via GitHub Actions.
+**AC20**: WHEN examining the release workflow the process shall be fully automated via GitHub Actions.
 
-**AC9**: WHEN reviewing build artifacts the builds shall be reproducible given the same source and toolchain version.
+**AC21**: WHEN reviewing build artifacts the builds shall be reproducible given the same source and toolchain version.
 
-**AC10**: The install scripts shall verify checksums before extracting binaries.
+**AC22**: The install scripts shall verify checksums before extracting binaries.
 
-**AC11**: The install scripts shall fail gracefully with clear error messages on verification failures.
+**AC23**: The install scripts shall fail gracefully with clear error messages on verification failures.
 
 ### Package Quality
 
-**AC12**: Each distributed package shall include up-to-date documentation.
+**AC24**: Each distributed package shall include up-to-date documentation.
 
-**AC13**: Each package shall correctly set up the `ansilust` command in the user's PATH.
+**AC25**: Each package shall correctly set up the `ansilust` command in the user's PATH.
 
-**AC14**: WHEN running `ansilust --version` the command shall display the correct version number.
+**AC26**: WHEN running `ansilust --version` the command shall display the correct version number.
 
-**AC15**: WHEN running `ansilust --help` the command shall display comprehensive usage information.
+**AC27**: WHEN running `ansilust --help` the command shall display comprehensive usage information.
 
 ---
 
@@ -166,7 +289,7 @@ The following are explicitly **out of scope** for this feature:
 
 - **Windows Package Managers**: Chocolatey, Scoop, winget (future consideration)
 - **Linux Package Managers**: apt/deb, yum/rpm, snap, flatpak (future consideration)
-- **Container Images**: Docker, Podman images (future consideration)
+- **Pre-built Container Images**: Official container images (in scope for direct execution via existing registries)
 - **Language-Specific Managers**: cargo install, go install (not applicable)
 - **Auto-Update Mechanism**: Built-in auto-updater within ansilust binary
 - **Telemetry**: Usage analytics or crash reporting
@@ -176,7 +299,9 @@ The following are explicitly **out of scope** for this feature:
 
 ## Success Metrics
 
-**SM1**: Ansilust is installable via at least 6 different methods (npm, brew, AUR, nix, bash script, PowerShell script).
+**SM1**: Ansilust is executable via at least 5 direct execution methods (npx, bunx, deno, nix run, docker/podman).
+
+**SM1.1**: Ansilust is installable via at least 6 explicit installation methods (npm global, brew, AUR, nix profile, bash script, PowerShell script).
 
 **SM2**: GitHub Actions workflows successfully build and publish releases for all platforms on every tagged version.
 
@@ -283,6 +408,10 @@ The following are explicitly **out of scope** for this feature:
 
 **DT3**: Error messages in install scripts shall be clear and actionable.
 
+**DT4**: Install script headers shall include valid GitHub source code links.
+
+**DT5**: GitHub source code links in install scripts shall resolve to the correct file and branch.
+
 ---
 
 ## Dependencies
@@ -341,6 +470,52 @@ The following are explicitly **out of scope** for this feature:
 - **SLSA Framework**: Supply chain security levels
 - **Reproducible Builds**: Deterministic compilation
 - **Sigstore**: Keyless signing (future consideration)
+- **Transparent Install Scripts**: Source code links for security auditing
+
+### Install Script Header Format
+
+All install scripts served from ansilust.com shall include header comments with source links:
+
+**Bash Installer (`install` or `install.sh`):**
+```bash
+#!/usr/bin/env bash
+# ansilust installer script
+# 
+# This script is served from: https://ansilust.com/install
+# Source code: https://github.com/owner/ansilust/blob/main/scripts/install.sh
+# 
+# Usage: curl -fsSL https://ansilust.com/install | bash
+# 
+# For security, you should review this script before running:
+# curl -fsSL https://ansilust.com/install | less
+#
+```
+
+**PowerShell Installer (`install.ps1`):**
+```powershell
+# ansilust installer script
+# 
+# This script is served from: https://ansilust.com/install.ps1
+# Source code: https://github.com/owner/ansilust/blob/main/scripts/install.ps1
+# 
+# Usage: irm ansilust.com/install.ps1 | iex
+# 
+# For security, you should review this script before running:
+# irm ansilust.com/install.ps1 | more
+#
+```
+
+**Benefits**:
+- **Transparency**: Users can audit the source code before running
+- **Security**: Clear path to verify script integrity
+- **Trust**: Open-source visibility builds confidence
+- **Debugging**: Easy to file issues against specific script versions
+
+**Implementation Notes**:
+- GitHub links should point to `main` branch for latest installer
+- Consider version-specific links for tagged releases (e.g., `/blob/v1.0.0/scripts/install.sh`)
+- Scripts should be in version control at predictable paths (e.g., `scripts/install.sh`, `scripts/install.ps1`)
+- Consider adding script version/hash in comments for traceability
 
 ---
 
@@ -349,7 +524,7 @@ The following are explicitly **out of scope** for this feature:
 ### High Priority Risks
 
 **R1**: **Security Vulnerability in Install Scripts**
-- *Mitigation*: Code review, shellcheck/PSScriptAnalyzer, security scanning
+- *Mitigation*: Code review, shellcheck/PSScriptAnalyzer, security scanning, source code transparency with GitHub links
 
 **R2**: **GitHub Actions Quota Limits**
 - *Mitigation*: Optimize builds, use caching, conditional workflows
