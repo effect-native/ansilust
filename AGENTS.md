@@ -202,6 +202,38 @@ Based on research, our IR must support:
 - **Testing discipline**: Never delete or down-scope unit tests enumerated in `.specs/ir/plan.md` or STATUS. When refactoring APIs, port the existing tests to the new interface instead of removing them. If a test must change, update plan/STATUS to reflect the new coverage before modifying the code.
 - **Commit discipline**: Capture every XP stage with a dedicated git commit—Red (failing tests added), Green (tests passing), and Refactor (cleanup)—and repeat at each phase and micro-phase boundary once validations succeed. For Red commits, ensure the new tests fail for the expected reason. Always rerun the relevant test suite (e.g. `zig build test`) immediately before committing.
 
+## Zig Module Import Patterns
+
+**Problem**: Files can only belong to one module. Direct imports like `@import("../parsers/lib.zig")` cause "file exists in multiple modules" errors.
+
+**Solution**: Use module dependencies defined in `build.zig`:
+
+```zig
+// build.zig sets up module dependencies:
+const parsers_mod = b.addModule("parsers", .{ .root_source_file = b.path("src/parsers/lib.zig"), ... });
+mod.addImport("parsers", parsers_mod);  // Makes parsers available to ansilust module
+
+// In test files under src/renderers/ or src/ir/:
+const parsers = @import("parsers");  // ✅ Correct - uses module dependency
+const parsers = @import("../parsers/lib.zig");  // ❌ Wrong - direct import causes module conflict
+```
+
+**Module Structure**:
+- `ansilust` module (src/root.zig) - main library module
+- `parsers` module (src/parsers/lib.zig) - parser implementations
+- Module dependencies configured in build.zig line 49-50
+
+**Test Count Verification**:
+```bash
+# Count all tests in codebase
+rg '^test ' src/ --count-matches | awk -F: '{sum += $2} END {print sum}'
+
+# Verify zig runs all tests
+zig build test --summary all 2>&1 | grep "tests passed"
+
+# Should match: 121 tests found = 121 tests run
+```
+
 1. **Study complete** ✓
    - Classic text art format specifications (libansilove loaders)
    - Modern terminal escape sequence handling (Ghostty parser)
