@@ -254,7 +254,7 @@ test "renderToBuffer returns bytes suitable for stdout" {
 
 // === Cycle 4: Color Emission ===
 
-test "ColorMapper emits SGR 38;5;N for DOS palette indices" {
+test "ColorMapper emits 24-bit RGB for DOS palette indices (default)" {
     const allocator = testing.allocator;
 
     var doc = try ir.Document.init(allocator, 2, 1);
@@ -273,10 +273,10 @@ test "ColorMapper emits SGR 38;5;N for DOS palette indices" {
     const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
     defer allocator.free(buffer);
 
-    // Should contain 256-color SGR for red (DOS 4 → ANSI 256 code 124)
-    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;124m") != null);
-    // Should contain 256-color SGR for blue (DOS 1 → ANSI 256 code 19)
-    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;5;19m") != null);
+    // Should emit 24-bit RGB for red (DOS 4 → RGB 170,0,0)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;170;0;0m") != null);
+    // Should emit 24-bit RGB for blue (DOS 1 → RGB 0,0,170)
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b[38;2;0;0;170m") != null);
 }
 
 test "ColorMapper emits SGR 39/49 for Color None" {
@@ -319,10 +319,10 @@ test "RenderState batches consecutive cells with same style" {
     const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
     defer allocator.free(buffer);
 
-    // Count occurrences of the red foreground code (DOS 4 → ANSI 124)
+    // Count occurrences of the red foreground code (DOS 4 → RGB 170,0,0)
     var count: usize = 0;
     var pos: usize = 0;
-    while (std.mem.indexOfPos(u8, buffer, pos, "\x1b[38;5;124m")) |found_pos| {
+    while (std.mem.indexOfPos(u8, buffer, pos, "\x1b[38;2;170;0;0m")) |found_pos| {
         count += 1;
         pos = found_pos + 1;
     }

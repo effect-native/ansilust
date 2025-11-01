@@ -13,7 +13,45 @@ pub const RenderOptions = struct {
     is_tty: bool = true,
 };
 
+/// DOS/VGA palette RGB values (CGA/EGA standard, 16 colors).
+///
+/// These are the canonical RGB values for the classic DOS/VGA palette used in
+/// BBS-era ANSI art. By emitting explicit RGB values as 24-bit truecolor
+/// (SGR 38;2;R;G;B), we ensure consistent color rendering across all terminal
+/// emulators, regardless of their 256-color palette configuration.
+///
+/// **Why 24-bit instead of 256-color?**
+/// The ANSI 256-color palette indices (0-255) are not standardized - different
+/// terminals map the same index to different RGB values. This causes color
+/// inconsistencies when viewing artwork. By emitting explicit RGB values, we
+/// guarantee the artist's intended colors are displayed correctly.
+///
+/// Reference: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+/// Spec: .specs/render-utf8ansi/requirements.md FR1.2.2
+const DOS_PALETTE_RGB: [16]struct { r: u8, g: u8, b: u8 } = .{
+    .{ .r = 0x00, .g = 0x00, .b = 0x00 }, // 0: Black
+    .{ .r = 0x00, .g = 0x00, .b = 0xAA }, // 1: Blue
+    .{ .r = 0x00, .g = 0xAA, .b = 0x00 }, // 2: Green
+    .{ .r = 0x00, .g = 0xAA, .b = 0xAA }, // 3: Cyan
+    .{ .r = 0xAA, .g = 0x00, .b = 0x00 }, // 4: Red
+    .{ .r = 0xAA, .g = 0x00, .b = 0xAA }, // 5: Magenta
+    .{ .r = 0xAA, .g = 0x55, .b = 0x00 }, // 6: Brown
+    .{ .r = 0xAA, .g = 0xAA, .b = 0xAA }, // 7: Light Gray
+    .{ .r = 0x55, .g = 0x55, .b = 0x55 }, // 8: Dark Gray
+    .{ .r = 0x55, .g = 0x55, .b = 0xFF }, // 9: Light Blue
+    .{ .r = 0x55, .g = 0xFF, .b = 0x55 }, // 10: Light Green
+    .{ .r = 0x55, .g = 0xFF, .b = 0xFF }, // 11: Light Cyan
+    .{ .r = 0xFF, .g = 0x55, .b = 0x55 }, // 12: Light Red
+    .{ .r = 0xFF, .g = 0x55, .b = 0xFF }, // 13: Light Magenta
+    .{ .r = 0xFF, .g = 0xFF, .b = 0x55 }, // 14: Yellow
+    .{ .r = 0xFF, .g = 0xFF, .b = 0xFF }, // 15: White
+};
+
 /// DOS/VGA palette (16 colors) to ANSI 256-color mapping.
+///
+/// **DEPRECATED**: This mapping is kept for optional `--256color` compatibility mode.
+/// By default, the renderer uses 24-bit truecolor (DOS_PALETTE_RGB) for maximum
+/// color fidelity across terminals.
 ///
 /// The DOS palette uses indices 0-15, but these don't map directly to
 /// ANSI 256-color indices 0-15. Instead, we map to the "xterm 256-color"
@@ -416,19 +454,32 @@ fn encodeGlyph(writer: std.io.AnyWriter, scalar: u21) !void {
 
 /// Emit SGR color codes for foreground and background.
 ///
-/// Uses the DOS→ANSI 256 color mapping for palette colors.
-/// Emits SGR 39/49 for Color.none (terminal default).
+/// **Default behavior (24-bit truecolor)**:
+/// - Palette indices 0-15: Convert to RGB via DOS_PALETTE_RGB, emit as 24-bit
+/// - RGB colors: Emit directly as 24-bit (SGR 38;2;R;G;B / 48;2;R;G;B)
+/// - Color::None: Emit SGR 39/49 (terminal default)
 ///
-/// Currently only implements 256-color mode. Truecolor (24-bit RGB)
-/// will be added in Cycle 7.
+/// **Rationale for 24-bit default**:
+/// ANSI 256-color palette indices can't be trusted across terminals - the same
+/// index may map to different RGB values in different terminal emulators, causing
+/// color inconsistencies. By emitting explicit RGB values, we ensure the artist's
+/// intended colors display correctly regardless of terminal configuration.
+///
+/// Spec: .specs/render-utf8ansi/requirements.md FR1.2.2
 fn emitColors(writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
     // Emit foreground color
     switch (fg) {
         .none => try writer.writeAll("\x1b[39m"), // Default foreground
         .palette => |idx| {
-            // Map DOS palette to ANSI 256-color
-            const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
-            try writer.print("\x1b[38;5;{d}m", .{ansi_idx});
+            // Convert DOS palette index to RGB and emit as 24-bit truecolor
+            if (idx < 16) {
+                const rgb = DOS_PALETTE_RGB[idx];
+                try writer.print("\x1b[38;2;{d};{d};{d}m", .{ rgb.r, rgb.g, rgb.b });
+            } else {
+                // Extended palette indices (16-255): fall back to 256-color mode
+                // (These are rare in classic BBS art but may appear in modern files)
+                try writer.print("\x1b[38;5;{d}m", .{idx});
+            }
         },
         .rgb => |rgb| {
             // Truecolor (24-bit RGB) - SGR 38;2;R;G;B
@@ -440,9 +491,14 @@ fn emitColors(writer: std.io.AnyWriter, fg: ir.Color, bg: ir.Color) !void {
     switch (bg) {
         .none => try writer.writeAll("\x1b[49m"), // Default background
         .palette => |idx| {
-            // Map DOS palette to ANSI 256-color
-            const ansi_idx = if (idx < 16) DOS_TO_ANSI_256[idx] else idx;
-            try writer.print("\x1b[48;5;{d}m", .{ansi_idx});
+            // Convert DOS palette index to RGB and emit as 24-bit truecolor
+            if (idx < 16) {
+                const rgb = DOS_PALETTE_RGB[idx];
+                try writer.print("\x1b[48;2;{d};{d};{d}m", .{ rgb.r, rgb.g, rgb.b });
+            } else {
+                // Extended palette indices (16-255): fall back to 256-color mode
+                try writer.print("\x1b[48;5;{d}m", .{idx});
+            }
         },
         .rgb => |rgb| {
             // Truecolor (24-bit RGB) - SGR 48;2;R;G;B
