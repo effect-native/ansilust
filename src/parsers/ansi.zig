@@ -181,6 +181,7 @@ pub const Parser = struct {
     style: StyleState = .{},
     saved_cursor_x: u32 = 0,
     saved_cursor_y: u32 = 0,
+    current_hyperlink_id: u32 = 0,
 
     pub fn init(allocator: std.mem.Allocator, input: []const u8, document: *ir.Document) Parser {
         document.source_format = .ansi;
@@ -326,6 +327,7 @@ pub const Parser = struct {
             .fg_color = self.style.fg_color,
             .bg_color = self.style.bg_color,
             .attr_flags = self.style.attributes,
+            .hyperlink_id = if (self.current_hyperlink_id > 0) self.current_hyperlink_id else null,
         });
 
         self.cursor_x += 1;
@@ -347,6 +349,9 @@ pub const Parser = struct {
         if (next_byte == '[') {
             self.pos += 1;
             try self.handleCSI();
+        } else if (next_byte == ']') {
+            self.pos += 1;
+            try self.handleOSC();
         }
     }
 
@@ -526,6 +531,112 @@ pub const Parser = struct {
             .bg_color = DEFAULT_BG_COLOR,
             .attr_flags = ir.AttributeFlags.none(),
         });
+    }
+
+    fn handleOSC(self: *Parser) !void {
+        // OSC format: ESC ] Ps ; Pt ST
+        // where ST = ESC \ or BEL (0x07)
+        // For OSC 8: ESC ] 8 ; params ; URI ST
+
+        // Parse command number
+        var cmd: u16 = 0;
+        while (self.pos < self.input.len) {
+            const byte = self.input[self.pos];
+            if (byte >= '0' and byte <= '9') {
+                cmd = cmd * 10 + (byte - '0');
+                self.pos += 1;
+            } else if (byte == ';') {
+                self.pos += 1;
+                break;
+            } else {
+                // Invalid OSC sequence, skip it
+                self.skipToStringTerminator();
+                return;
+            }
+        }
+
+        // Only handle OSC 8 (hyperlinks)
+        if (cmd == 8) {
+            try self.handleOSC8();
+        } else {
+            // Skip unknown OSC sequences
+            self.skipToStringTerminator();
+        }
+    }
+
+    fn handleOSC8(self: *Parser) !void {
+        // OSC 8 format: ESC ] 8 ; params ; URI ST
+        // Parse params (optional key=value pairs separated by :)
+        const params_start = self.pos;
+        var params_end = self.pos;
+
+        // Find end of params (next semicolon)
+        while (self.pos < self.input.len) {
+            const byte = self.input[self.pos];
+            if (byte == ';') {
+                params_end = self.pos;
+                self.pos += 1;
+                break;
+            }
+            self.pos += 1;
+        }
+
+        // Parse URI (everything until ST)
+        const uri_start = self.pos;
+        var uri_end = self.pos;
+
+        while (self.pos < self.input.len) {
+            const byte = self.input[self.pos];
+
+            // Check for string terminator: ESC \ or BEL
+            if (byte == 0x07) {
+                // BEL terminator
+                uri_end = self.pos;
+                self.pos += 1;
+                break;
+            } else if (byte == 0x1B) {
+                // Possible ESC \ terminator
+                if (self.pos + 1 < self.input.len and self.input[self.pos + 1] == '\\') {
+                    uri_end = self.pos;
+                    self.pos += 2;
+                    break;
+                }
+            }
+
+            self.pos += 1;
+        }
+
+        const uri = self.input[uri_start..uri_end];
+        const params = if (params_end > params_start) self.input[params_start..params_end] else null;
+
+        // Empty URI means end hyperlink
+        if (uri.len == 0) {
+            self.current_hyperlink_id = 0;
+        } else {
+            // Add hyperlink to document (deduplicates automatically)
+            self.current_hyperlink_id = try self.document.addHyperlink(uri, params);
+        }
+    }
+
+    fn skipToStringTerminator(self: *Parser) void {
+        // Skip until we find ST (ESC \ or BEL)
+        while (self.pos < self.input.len) {
+            const byte = self.input[self.pos];
+
+            if (byte == 0x07) {
+                // BEL terminator
+                self.pos += 1;
+                break;
+            } else if (byte == 0x1B) {
+                // Possible ESC \ terminator
+                if (self.pos + 1 < self.input.len and self.input[self.pos + 1] == '\\') {
+                    self.pos += 2;
+                    break;
+                }
+            }
+
+            self.pos += 1;
+        }
     }
 };
 

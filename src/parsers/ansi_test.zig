@@ -718,3 +718,148 @@ test "ANSI parser handles mixed NUL and space characters" {
     const cell_2 = try doc.getCell(2, 0);
     try expectEqual(@as(u21, 0x20), cell_2.contents.scalar);
 }
+
+// OSC 8 Hyperlink Tests
+// Reference: https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
+// Format: ESC ] 8 ; params ; URI ST
+// where ST = ESC \ or BEL (0x07)
+
+test "OSC 8: simple hyperlink without parameters" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: ESC ] 8 ; ; http://example.com ESC \ link text ESC ] 8 ; ; ESC \
+    const input = "\x1b]8;;http://example.com\x1b\\Link\x1b]8;;\x1b\\";
+    try parseIntoDoc(&doc, input);
+
+    // Verify hyperlink was added to document
+    try expectEqual(@as(usize, 1), doc.hyperlink_table.count());
+
+    // Verify first hyperlink
+    const link = doc.hyperlink_table.get(1);
+    try expect(link != null);
+    try expectEqualStrings("http://example.com", link.?.uri);
+    try expect(link.?.params == null);
+
+    // Verify cells have hyperlink ID set
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 'L'), cell_0.contents.scalar);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+
+    const cell_3 = try doc.getCell(3, 0);
+    try expectEqual(@as(u21, 'k'), cell_3.contents.scalar);
+    try expectEqual(@as(u32, 1), cell_3.hyperlink_id);
+}
+
+test "OSC 8: hyperlink with id parameter" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: ESC ] 8 ; id=test123 ; http://example.com ESC \ text ESC ] 8 ; ; ESC \
+    const input = "\x1b]8;id=test123;http://example.com\x1b\\text\x1b]8;;\x1b\\";
+    try parseIntoDoc(&doc, input);
+
+    // Verify hyperlink with params
+    const link = doc.hyperlink_table.get(1);
+    try expect(link != null);
+    try expectEqualStrings("http://example.com", link.?.uri);
+    try expect(link.?.params != null);
+    try expectEqualStrings("id=test123", link.?.params.?);
+
+    // Verify cells have hyperlink ID
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+}
+
+test "OSC 8: hyperlink end clears hyperlink ID" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Input: link, text1, end link, text2
+    const input = "\x1b]8;;http://example.com\x1b\\A\x1b]8;;\x1b\\B";
+    try parseIntoDoc(&doc, input);
+
+    // Cell 0: 'A' with hyperlink
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 'A'), cell_0.contents.scalar);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+
+    // Cell 1: 'B' without hyperlink
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u21, 'B'), cell_1.contents.scalar);
+    try expectEqual(@as(u32, 0), cell_1.hyperlink_id);
+}
+
+test "OSC 8: multiple hyperlinks in document" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Two different hyperlinks
+    const input = "\x1b]8;;http://first.com\x1b\\A\x1b]8;;\x1b\\B\x1b]8;;http://second.com\x1b\\C\x1b]8;;\x1b\\";
+    try parseIntoDoc(&doc, input);
+
+    // Should have 2 hyperlinks
+    try expectEqual(@as(usize, 2), doc.hyperlink_table.count());
+
+    // Cell 0: 'A' with first hyperlink
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+
+    // Cell 1: 'B' with no hyperlink
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u32, 0), cell_1.hyperlink_id);
+
+    // Cell 2: 'C' with second hyperlink
+    const cell_2 = try doc.getCell(2, 0);
+    try expectEqual(@as(u32, 2), cell_2.hyperlink_id);
+}
+
+test "OSC 8: hyperlink deduplication with same URI" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Same URL used twice
+    const input = "\x1b]8;;http://example.com\x1b\\A\x1b]8;;\x1b\\\x1b]8;;http://example.com\x1b\\B\x1b]8;;\x1b\\";
+    try parseIntoDoc(&doc, input);
+
+    // Should only have 1 hyperlink (deduplicated)
+    try expectEqual(@as(usize, 1), doc.hyperlink_table.count());
+
+    // Both cells reference same hyperlink ID
+    const cell_0 = try doc.getCell(0, 0);
+    const cell_1 = try doc.getCell(1, 0);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+    try expectEqual(@as(u32, 1), cell_1.hyperlink_id);
+}
+
+test "OSC 8: hyperlink with BEL terminator" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Using BEL (0x07) instead of ESC \ as terminator
+    const input = "\x1b]8;;http://example.com\x07Link\x1b]8;;\x07";
+    try parseIntoDoc(&doc, input);
+
+    // Verify hyperlink was parsed
+    try expectEqual(@as(usize, 1), doc.hyperlink_table.count());
+
+    const link = doc.hyperlink_table.get(1);
+    try expect(link != null);
+    try expectEqualStrings("http://example.com", link.?.uri);
+}
+
+test "OSC 8: hyperlink with colors and attributes" {
+    var doc = try initDocument();
+    defer doc.deinit();
+
+    // Hyperlink + SGR color
+    const input = "\x1b[31m\x1b]8;;http://example.com\x1b\\Red Link\x1b]8;;\x1b\\\x1b[0m";
+    try parseIntoDoc(&doc, input);
+
+    // Verify cell has both hyperlink and red color
+    const cell_0 = try doc.getCell(0, 0);
+    try expectEqual(@as(u21, 'R'), cell_0.contents.scalar);
+    try expectEqual(@as(u32, 1), cell_0.hyperlink_id);
+    // Red (ANSI 1) maps to DOS palette 4
+    try expectEqual(@as(u8, 4), cell_0.fg_color.palette);
+}
