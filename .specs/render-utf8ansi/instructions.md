@@ -20,7 +20,7 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 **MVP Solution**: Create a renderer that:
 - Renders UTF8ANSI by default with simple CLI: `ansilust <file>` or `cat <file> | ansilust`
 - Respects SAUCE metadata for grid dimensions and rendering hints (defaults to 80 columns when missing)
-- Emits 256-color SGR sequences with explicit VGA palette mapping (no theme dependency)
+- Emits 24-bit truecolor SGR sequences with explicit VGA palette RGB values (no theme dependency, maximum compatibility)
 - Translates CP437 glyphs to visually-equivalent Unicode characters (Phase 1 subset)
 - Consumes SAUCE internally without rendering it to screen
 - Guarantees terminal state cleanup (cursor visibility, wrap mode restoration)
@@ -30,11 +30,9 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 
 ### Color Fidelity
 
-**R1.1**: The renderer shall emit 256-color SGR sequences (CSI 38;5;Nm / CSI 48;5;Nm) for all palette-indexed colors by default.
+**R1.1**: The renderer shall emit 24-bit truecolor SGR sequences (CSI 38;2;R;G;Bm / CSI 48;2;R;G;Bm) for all palette-indexed colors by default, using the exact RGB values from the palette specification.
 
-**R1.1a**: WHEN emitting 256-color SGR for DOS palette indices (0-15) the renderer shall use the pre-calculated ANSI 256-color code mapping (not direct indices):
-- 0→16, 1→19, 2→34, 3→37, 4→124, 5→127, 6→136, 7→248
-- 8→240, 9→105, 10→120, 11→123, 12→210, 13→213, 14→228, 15→231
+**R1.1a**: **Rationale**: 24-bit truecolor is preferred over 8-bit (256-color) mode because the 256-color palette indices cannot be trusted across different terminal emulators. Each terminal may map the same index to different RGB values, causing color inconsistencies. By emitting explicit RGB values, we ensure the artist's intended colors are displayed consistently regardless of terminal configuration. See: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 
 **R1.2**: The renderer shall map 16-color DOS/VGA palette indices to their canonical RGB values (CGA/EGA standard):
 - 0: #000000 (Black), 1: #0000AA (Blue), 2: #00AA00 (Green), 3: #00AAAA (Cyan)
@@ -42,7 +40,7 @@ The UTF8ANSI renderer consumes the Ansilust IR and emits ANSI escape sequences f
 - 8: #555555 (Dark Gray), 9: #5555FF (Light Blue), 10: #55FF55 (Light Green), 11: #55FFFF (Light Cyan)
 - 12: #FF5555 (Light Red), 13: #FF55FF (Light Magenta), 14: #FFFF55 (Yellow), 15: #FFFFFF (White)
 
-**R1.3**: WHERE `--truecolor` flag is provided the renderer shall emit 24-bit SGR sequences (CSI 38;2;R;G;Bm / CSI 48;2;R;G;Bm).
+**R1.3**: WHERE `--256color` flag is provided the renderer may optionally emit 8-bit SGR sequences (CSI 38;5;Nm / CSI 48;5;Nm) for compatibility with older terminals that don't support 24-bit color, using the pre-calculated ANSI 256-color code mapping for DOS palette indices (0-15): 0→16, 1→19, 2→34, 3→37, 4→124, 5→127, 6→136, 7→248, 8→240, 9→105, 10→120, 11→123, 12→210, 13→213, 14→228, 15→231.
 
 **R1.4**: WHEN a cell has Color::None the renderer shall emit SGR 39 (default foreground) or SGR 49 (default background) instead of an explicit color code.
 
@@ -202,7 +200,7 @@ cat <file> | ansilust [options]
 
 Options:
   --palette <vga|ansi|workbench>   Palette to use (default: vga)
-  --truecolor                      Use 24-bit color instead of 256-color
+  --256color                       Use 8-bit 256-color mode instead of 24-bit (for older terminals)
   --ice                            Enable iCE colors mode (if not in SAUCE)
   --no-cleanup                     Skip terminal cleanup (for debugging)
   --columns <N>                    Override column width (default: SAUCE or 80)
@@ -216,8 +214,8 @@ ansilust ~/Downloads/acdu0395/SO-PG1.ANS
 # Render from stdin (classic pipeline)
 cat ~/Downloads/acdu0395/SO-PG1.ANS | ansilust
 
-# Render with 24-bit color
-ansilust ~/Downloads/acdu0395/SO-PG1.ANS --truecolor
+# Render with 256-color mode (for older terminals)
+ansilust ~/Downloads/acdu0395/SO-PG1.ANS --256color
 
 # Render with column override (when SAUCE missing)
 cat file-without-sauce.ans | ansilust --columns 80
@@ -251,7 +249,7 @@ defer ir.deinit();
 // Render IR to UTF8ANSI (respects SAUCE or defaults to 80 columns)
 const output = try utf8ansi.render(ir, allocator, .{
     .palette = args.palette orelse .vga,
-    .truecolor = args.truecolor,
+    .use_256color = args.use_256color, // Default: false (use 24-bit)
     .ice_colors = ir.sauce.?.ice_colors,
     .columns = args.columns, // Optional override
 });
@@ -263,7 +261,7 @@ try stdout.writeAll(output);
 
 ## Acceptance Criteria
 
-**AC1**: WHEN viewing a 16-color ANSI file with `--palette vga` THEN colors match the VGA palette specification regardless of terminal theme.
+**AC1**: WHEN viewing a 16-color ANSI file with `--palette vga` THEN colors match the VGA palette specification regardless of terminal theme or terminal-specific palette mappings.
 
 **AC2**: WHEN viewing a file containing CP437 box-drawing characters THEN they render as Unicode box-drawing glyphs (not "?" boxes).
 
@@ -280,7 +278,7 @@ try stdout.writeAll(output);
 - No SAUCE metadata visible
 - No terminal state corruption after exit
 
-**AC7**: WHEN rendering with `--truecolor` THEN 24-bit SGR sequences are emitted instead of 256-color.
+**AC7**: WHEN rendering with `--256color` THEN 8-bit SGR sequences are emitted instead of 24-bit for compatibility with older terminals.
 
 **AC8**: WHEN running `ansilust <file>` THEN Bramwell reports significantly improved rendering quality compared to baseline `cat <file>`.
 
@@ -433,6 +431,7 @@ try stdout.writeAll(output);
 ## Open Questions for Iteration
 
 **Q1**: Should we support auto-detection of 24-bit color capability (e.g., check $COLORTERM)?
+**Answer**: No - default to 24-bit as it's widely supported; users can opt into 256-color with `--256color` if needed.
 
 **Q3**: Should we add a `--verify` mode that parses output and compares to IR (round-trip test)?
 
