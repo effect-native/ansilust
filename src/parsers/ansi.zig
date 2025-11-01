@@ -300,10 +300,20 @@ pub const Parser = struct {
         self.advanceRow();
     }
 
+    const UTF8DecodeResult = struct {
+        codepoint: u21,
+        bytes_consumed: u8,
+    };
+
     /// Attempt to decode a UTF-8 sequence starting at given position.
     /// Returns the decoded codepoint and number of bytes consumed, or null if not valid UTF-8.
-    fn tryDecodeUTF8(self: *Parser, start_pos: usize, first_byte: u8) ?struct { codepoint: u21, bytes_consumed: u8 } {
-        // Single-byte ASCII (0x00-0x7F)
+    ///
+    /// This function implements UTF-8 decoding with CP437 disambiguation:
+    /// - Accepts 3-byte and 4-byte UTF-8 (clearly beyond CP437 range)
+    /// - Rejects 2-byte UTF-8 for low codepoints (likely CP437 data)
+    /// - Handles ASCII fast-path (single byte)
+    fn tryDecodeUTF8(self: *Parser, start_pos: usize, first_byte: u8) ?UTF8DecodeResult {
+        // Single-byte ASCII (0x00-0x7F) - fast path
         if (first_byte < 0x80) {
             return .{ .codepoint = @as(u21, first_byte), .bytes_consumed = 1 };
         }
@@ -403,18 +413,19 @@ pub const Parser = struct {
 
         if (self.cursor_y >= height) return;
 
-        // Try UTF-8 decoding first
+        // Decode character: try UTF-8 first, fall back to CP437
         // Note: self.pos has already been incremented by parse loop, so it points to next byte
         var scalar: u21 = undefined;
         var encoding: ir.SourceEncoding = undefined;
 
         if (self.tryDecodeUTF8(self.pos, byte)) |utf8_result| {
+            // UTF-8 sequence detected (single-byte ASCII or multi-byte)
             scalar = utf8_result.codepoint;
             encoding = .utf_8;
-            // Advance position past UTF-8 continuation bytes (first byte already consumed by loop)
+            // Advance position past continuation bytes (first byte already consumed by loop)
             self.pos += utf8_result.bytes_consumed - 1;
         } else {
-            // Fall back to CP437 decoding for single byte
+            // Not valid UTF-8 - treat as single-byte CP437
             scalar = decodeCP437(byte);
             encoding = .cp437;
         }
