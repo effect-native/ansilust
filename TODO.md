@@ -3,32 +3,42 @@
 ## Critical Issues
 
 ### UTF8ANSI Renderer - Use 24-bit Colors by Default
-**Status**: ⚠️ Spec updated, implementation may need adjustment  
+**Status**: ✅ COMPLETE  
 **Priority**: HIGH  
-**Updated**: 2025-11-01
+**Completed**: 2025-11-01
 
-The UTF8ANSI renderer spec has been updated to use 24-bit truecolor by default instead of 8-bit (256-color) mode.
+The UTF8ANSI renderer now uses 24-bit truecolor by default instead of 8-bit (256-color) mode.
 
 **Rationale**: 8-bit 256-color palette indices cannot be trusted across different terminal emulators. Each terminal may map the same index to different RGB values, causing color inconsistencies in artwork. By emitting explicit 24-bit RGB values, we ensure the artist's intended colors are displayed consistently regardless of terminal configuration.
 
 **Reference**: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 
-**Spec Updates**:
-- `.specs/render-utf8ansi/instructions.md` - Changed default to 24-bit, added `--256color` flag
-- `.specs/render-utf8ansi/requirements.md` - Updated FR1.2.2-FR1.2.5 with rationale
-- `.specs/render-utf8ansi/design.md` - Updated color emission strategy
-- `.specs/render-utf8ansi/plan.md` - Updated Cycle 4 and Cycle 7 implementation plans
+**Implementation** (TDD RED→GREEN→REFACTOR):
+- Added DOS_PALETTE_RGB table with canonical CGA/EGA RGB values
+- Modified emitColors() to convert palette indices 0-15 → RGB → 24-bit SGR
+- Updated existing tests to expect 24-bit sequences (125/125 passing ✅)
+- Marked DOS_TO_ANSI_256 as deprecated (kept for future --256color flag)
 
-**Implementation Status**:
-- ✅ Current implementation (src/renderers/utf8ansi.zig) already supports both modes
-- ⚠️ May need to verify default behavior matches new spec (24-bit by default)
-- ⚠️ CLI may need `--256color` flag instead of `--truecolor`
+**Color Mapping Examples**:
+- DOS Red (4): `\x1b[38;2;170;0;0m` instead of `\x1b[38;5;124m`
+- DOS Blue (1): `\x1b[38;2;0;0;170m` instead of `\x1b[38;5;19m`
+- DOS Yellow (14): `\x1b[38;2;255;255;85m` instead of `\x1b[38;5;228m`
 
-**Required Actions**:
-- [ ] Verify current default color mode in implementation
-- [ ] Update CLI flags if needed (`--256color` instead of `--truecolor`)
-- [ ] Update tests to reflect new default behavior
-- [ ] Validate colors are consistent across terminals (Ghostty, Alacritty, Kitty, etc.)
+**Validation**:
+```bash
+# US-JELLY.ANS now emits 24-bit RGB values
+zig build run -- reference/sixteencolors/fire-43/US-JELLY.ANS
+# Output contains: [38;2;170;0;0m (24-bit red)
+# Instead of: [38;5;124m (256-color red)
+```
+
+**Git commits**:
+- `158a0ae` - RED: Add 24-bit truecolor by default tests
+- `86599fe` - GREEN: Emit 24-bit truecolor by default for palette colors
+
+**Future work**:
+- [ ] Add `--256color` CLI flag for optional compatibility mode with older terminals
+- [ ] Validate colors across different terminals (Ghostty, Alacritty, Kitty, etc.)
 
 ### Batch/Wildcard File Processing
 **Status**: ❌ Not implemented  
