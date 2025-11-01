@@ -47,7 +47,7 @@ zig build
 
 **Testing:**
 - 102+ unit tests (all passing)
-- Zero memory leaks
+- Memory leak detection via `std.testing.allocator` in all tests
 - Real-world corpus validation (137+ ANSI files from sixteencolors archive)
 
 ### 🚧 What's Planned (Not Yet Implemented)
@@ -176,7 +176,7 @@ See individual `AGENTS.md` files in each reference directory for detailed guides
 This project follows test-driven development (TDD) with:
 - Red/Green/Refactor cycles for new features
 - Atomic git commits for each TDD phase
-- Zero tolerance for memory leaks
+- Memory leak detection using `std.testing.allocator` in all tests
 - 100% test pass rate before commits
 
 See `.specs/ir/PHASE5_XP_TDD_SUMMARY.md` for detailed TDD methodology.
