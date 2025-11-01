@@ -59,7 +59,8 @@ pub const Utf8Ansi = struct {
 
 2. **Palette Setup**
    - Use IR custom palette if present; otherwise fallback to VGA/other hints.
-   - Precompute palette index → ANSI mapping and truecolor usage per cell.
+   - By default, emit 24-bit truecolor SGR sequences for all colors to ensure consistent rendering across terminals (8-bit 256-color indices cannot be trusted across different terminal emulators).
+   - Support optional `--256color` flag for compatibility with older terminals.
 
 3. **Row Iteration**
    - For each row `y`:
@@ -83,8 +84,9 @@ pub const Utf8Ansi = struct {
 
 ### 3.2 Color Emission
 
-- `ColorMapper` handles palette vs truecolor emission per cell.
+- `ColorMapper` handles palette to RGB conversion and emits 24-bit truecolor by default.
 - `Color::None` uses `SGR 39` or `SGR 49`.
+- When `--256color` flag is provided, optionally uses 8-bit SGR sequences with pre-calculated DOS→ANSI 256-color mapping.
 - Works identically for TTY and file output.
 
 ### 3.3 Glyph Encoding

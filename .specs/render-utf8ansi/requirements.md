@@ -24,11 +24,13 @@ This document captures the high-level requirements for the UTF8ANSI renderer usi
 
 **FR1.2.1**: The renderer shall reproduce the classic 16-color DOS/VGA palette so that ANSI art colors match the author’s intent regardless of terminal theme.
 
-**FR1.2.2**: WHEN the user opts into 24-bit color the renderer shall emit colors using the exact RGB values defined by the selected palette.
+**FR1.2.2**: The renderer shall emit colors using 24-bit truecolor SGR sequences (CSI 38;2;R;G;Bm / CSI 48;2;R;G;Bm) by default, using the exact RGB values defined by the selected palette, to ensure consistent color rendering across all terminal emulators. This is preferred over 8-bit (256-color) mode because 256-color palette indices cannot be trusted to map consistently across different terminals.
 
-**FR1.2.3**: WHERE the IR provides a custom palette the renderer shall apply it automatically without requiring additional flags or permissions so the artwork honors the source specification.
+**FR1.2.3**: WHERE the user opts into 8-bit mode with `--256color` the renderer shall emit 8-bit SGR sequences (CSI 38;5;Nm / CSI 48;5;Nm) for compatibility with older terminals that don't support 24-bit color.
 
-**FR1.2.4**: IF a color is unspecified (terminal default) THEN the renderer shall leave the terminal’s foreground or background unchanged to respect user themes.
+**FR1.2.4**: WHERE the IR provides a custom palette the renderer shall apply it automatically without requiring additional flags or permissions so the artwork honors the source specification.
+
+**FR1.2.5**: IF a color is unspecified (terminal default) THEN the renderer shall leave the terminal’s foreground or background unchanged to respect user themes.
 
 ### FR1.3: Character Fidelity
 

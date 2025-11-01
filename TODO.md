@@ -2,6 +2,34 @@
 
 ## Critical Issues
 
+### UTF8ANSI Renderer - Use 24-bit Colors by Default
+**Status**: ⚠️ Spec updated, implementation may need adjustment  
+**Priority**: HIGH  
+**Updated**: 2025-11-01
+
+The UTF8ANSI renderer spec has been updated to use 24-bit truecolor by default instead of 8-bit (256-color) mode.
+
+**Rationale**: 8-bit 256-color palette indices cannot be trusted across different terminal emulators. Each terminal may map the same index to different RGB values, causing color inconsistencies in artwork. By emitting explicit 24-bit RGB values, we ensure the artist's intended colors are displayed consistently regardless of terminal configuration.
+
+**Reference**: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+
+**Spec Updates**:
+- `.specs/render-utf8ansi/instructions.md` - Changed default to 24-bit, added `--256color` flag
+- `.specs/render-utf8ansi/requirements.md` - Updated FR1.2.2-FR1.2.5 with rationale
+- `.specs/render-utf8ansi/design.md` - Updated color emission strategy
+- `.specs/render-utf8ansi/plan.md` - Updated Cycle 4 and Cycle 7 implementation plans
+
+**Implementation Status**:
+- ✅ Current implementation (src/renderers/utf8ansi.zig) already supports both modes
+- ⚠️ May need to verify default behavior matches new spec (24-bit by default)
+- ⚠️ CLI may need `--256color` flag instead of `--truecolor`
+
+**Required Actions**:
+- [ ] Verify current default color mode in implementation
+- [ ] Update CLI flags if needed (`--256color` instead of `--truecolor`)
+- [ ] Update tests to reflect new default behavior
+- [ ] Validate colors are consistent across terminals (Ghostty, Alacritty, Kitty, etc.)
+
 ### Batch/Wildcard File Processing
 **Status**: ❌ Not implemented  
 **Priority**: HIGH

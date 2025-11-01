@@ -102,27 +102,27 @@ This plan follows Kent Beck's Extreme Programming red/green/refactor cycle:
 
 ---
 
-### Cycle 4: Color Emission - DOS Palette (RED → GREEN → REFACTOR)
+### Cycle 4: Color Emission - 24-bit Truecolor (RED → GREEN → REFACTOR)
 
-**Objective**: Emit 256-color SGR sequences using DOS→ANSI 256 mapping.
+**Objective**: Emit 24-bit truecolor SGR sequences by default for consistent colors across terminals.
 
 #### RED Phase
-- [ ] Write test: `ColorMapper emits SGR 38;5;N for DOS palette indices`
-- [ ] Write test: `ColorMapper uses pre-calculated ANSI 256 mapping`
+- [ ] Write test: `ColorMapper emits SGR 38;2;R;G;B for palette indices`
+- [ ] Write test: `ColorMapper uses exact RGB values from DOS palette`
 - [ ] Write test: `ColorMapper emits SGR 39/49 for Color::None`
 - [ ] Tests fail (ColorMapper.apply is stub)
-- [ ] Commit: `test(utf8ansi): add color emission red tests`
+- [ ] Commit: `test(utf8ansi): add 24-bit color emission red tests`
 
 #### GREEN Phase
-- [ ] Implement DOS→ANSI 256 mapping table (16 entries)
-- [ ] Implement `ColorMapper.apply` to emit foreground/background SGR
+- [ ] Implement DOS palette RGB table (16 entries with exact RGB values)
+- [ ] Implement `ColorMapper.apply` to emit foreground/background 24-bit SGR
 - [ ] Handle Color::None → SGR 39/49
 - [ ] Run `zig build test` → tests pass
-- [ ] Commit: `feat(utf8ansi): implement DOS palette color emission (green)`
+- [ ] Commit: `feat(utf8ansi): implement 24-bit truecolor emission (green)`
 
 #### REFACTOR Phase
 - [ ] Extract color emission logic to helper functions
-- [ ] Add doc comments for palette mapping
+- [ ] Add doc comments for palette mapping and rationale (8-bit indices can't be trusted)
 - [ ] Run `zig fmt`
 - [ ] Run `zig build test` → still passing
 - [ ] Commit: `refactor(utf8ansi): clean up color emission`
@@ -192,32 +192,33 @@ This plan follows Kent Beck's Extreme Programming red/green/refactor cycle:
 
 ---
 
-### Cycle 7: Truecolor Support (RED → GREEN → REFACTOR)
+### Cycle 7: 256-color Compatibility Mode (RED → GREEN → REFACTOR)
 
-**Objective**: Add 24-bit color emission for `--truecolor` flag.
+**Objective**: Add optional 8-bit 256-color mode for older terminals with `--256color` flag.
 
 #### RED Phase
-- [ ] Write test: `ColorMapper emits SGR 38;2;R;G;B in truecolor mode`
-- [ ] Tests fail (only 256-color implemented)
-- [ ] Commit: `test(utf8ansi): add truecolor red tests`
+- [ ] Write test: `ColorMapper emits SGR 38;5;N in 256-color mode`
+- [ ] Tests fail (only 24-bit truecolor implemented)
+- [ ] Commit: `test(utf8ansi): add 256-color red tests`
 
 #### GREEN Phase
-- [ ] Add `truecolor` field to Options
-- [ ] Modify `ColorMapper.apply` to emit 24-bit SGR when enabled
-- [ ] Update CLI to support `--truecolor` flag
+- [ ] Add `use_256color` field to Options
+- [ ] Implement DOS→ANSI 256 mapping table (16 entries)
+- [ ] Modify `ColorMapper.apply` to emit 8-bit SGR when flag is set
+- [ ] Update CLI to support `--256color` flag
 - [ ] Run `zig build test` → tests pass
-- [ ] Commit: `feat(utf8ansi): add truecolor support (green)`
+- [ ] Commit: `feat(utf8ansi): add 256-color compatibility mode (green)`
 
 #### REFACTOR Phase
 - [ ] Consolidate color emission logic
-- [ ] Add doc comments
+- [ ] Add doc comments explaining why 24-bit is preferred
 - [ ] Run `zig fmt`
 - [ ] Run `zig build test` → still passing
-- [ ] Commit: `refactor(utf8ansi): simplify truecolor logic`
+- [ ] Commit: `refactor(utf8ansi): simplify color mode logic`
 
 #### DEMO
-- [ ] Run `zig build run -- ~/Downloads/acdu0395/STC-ACID.ANS --truecolor`
-- [ ] Bramwell feedback: visual comparison with 256-color mode
+- [ ] Run `zig build run -- ~/Downloads/acdu0395/STC-ACID.ANS --256color`
+- [ ] Bramwell feedback: visual comparison with 24-bit mode
 
 ---
 
