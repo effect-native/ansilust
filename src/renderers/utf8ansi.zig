@@ -332,6 +332,7 @@ fn rowHasContent(doc: *const ir.Document, y: u32, width: u32) !bool {
 /// Render a single row at the given y coordinate.
 fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u32) !void {
     var state = RenderState.init();
+    var current_hyperlink_id: u32 = 0;
 
     // Render all cells across the full width of the artboard.
     // BBS ANSI art uses fixed-width canvases (typically 80 columns),
@@ -340,11 +341,40 @@ fn renderRow(doc: *const ir.Document, writer: std.io.AnyWriter, y: u32, width: u
     while (x < width) : (x += 1) {
         const cell = try doc.getCell(x, y);
 
+        // Handle hyperlink state changes
+        if (cell.hyperlink_id != current_hyperlink_id) {
+            // End current hyperlink if active
+            if (current_hyperlink_id > 0) {
+                try writer.writeAll("\x1b]8;;\x1b\\");
+            }
+
+            // Start new hyperlink if present
+            if (cell.hyperlink_id > 0) {
+                const link = doc.getHyperlink(cell.hyperlink_id);
+                if (link) |l| {
+                    try writer.writeAll("\x1b]8;");
+                    if (l.params) |params| {
+                        try writer.writeAll(params);
+                    }
+                    try writer.writeAll(";");
+                    try writer.writeAll(l.uri);
+                    try writer.writeAll("\x1b\\");
+                }
+            }
+
+            current_hyperlink_id = cell.hyperlink_id;
+        }
+
         // Apply style (batches if unchanged)
         try state.applyStyle(writer, cell.fg_color, cell.bg_color);
 
         // Emit the glyph
         try encodeGlyph(writer, cell.contents.scalar);
+    }
+
+    // End hyperlink if still active at row end
+    if (current_hyperlink_id > 0) {
+        try writer.writeAll("\x1b]8;;\x1b\\");
     }
 
     // Reset SGR to clear background color at right edge

@@ -509,3 +509,155 @@ test "Renderer handles multiple consecutive NUL bytes as spaces" {
     const needle = "X   Y";
     try testing.expect(std.mem.indexOf(u8, buffer, needle) != null);
 }
+
+// OSC 8 Hyperlink Rendering Tests
+
+test "Renderer emits OSC 8 sequences for hyperlinks" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    // Add hyperlink to document
+    const link_id = try doc.addHyperlink("http://example.com", null);
+
+    // Set cells with hyperlink
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'L' },
+        .hyperlink_id = link_id,
+    });
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'i' },
+        .hyperlink_id = link_id,
+    });
+    try doc.setCell(2, 0, .{
+        .contents = .{ .scalar = 'n' },
+        .hyperlink_id = link_id,
+    });
+    try doc.setCell(3, 0, .{
+        .contents = .{ .scalar = 'k' },
+        .hyperlink_id = link_id,
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain OSC 8 start sequence
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b]8;;http://example.com\x1b\\") != null);
+
+    // Should contain "Link" text
+    try testing.expect(std.mem.indexOf(u8, buffer, "Link") != null);
+
+    // Should contain OSC 8 end sequence
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b]8;;\x1b\\") != null);
+}
+
+test "Renderer emits OSC 8 with parameters" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    // Add hyperlink with id parameter
+    const link_id = try doc.addHyperlink("http://example.com", "id=test123");
+
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'A' },
+        .hyperlink_id = link_id,
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain OSC 8 with params
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b]8;id=test123;http://example.com\x1b\\") != null);
+}
+
+test "Renderer handles hyperlink end correctly" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    const link_id = try doc.addHyperlink("http://example.com", null);
+
+    // Cell 0: with hyperlink
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'A' },
+        .hyperlink_id = link_id,
+    });
+
+    // Cell 1: without hyperlink
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .hyperlink_id = null,
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should start hyperlink before 'A'
+    const start_seq = "\x1b]8;;http://example.com\x1b\\";
+    const start_idx = std.mem.indexOf(u8, buffer, start_seq);
+    try testing.expect(start_idx != null);
+
+    // Should end hyperlink after 'A' and before 'B'
+    const end_seq = "\x1b]8;;\x1b\\";
+    const end_idx = std.mem.indexOf(u8, buffer, end_seq);
+    try testing.expect(end_idx != null);
+    try testing.expect(end_idx.? > start_idx.?);
+}
+
+test "Renderer handles multiple hyperlinks in sequence" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    const link1 = try doc.addHyperlink("http://first.com", null);
+    const link2 = try doc.addHyperlink("http://second.com", null);
+
+    try doc.setCell(0, 0, .{
+        .contents = .{ .scalar = 'A' },
+        .hyperlink_id = link1,
+    });
+
+    try doc.setCell(1, 0, .{
+        .contents = .{ .scalar = 'B' },
+        .hyperlink_id = link2,
+    });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should contain both hyperlinks
+    try testing.expect(std.mem.indexOf(u8, buffer, "http://first.com") != null);
+    try testing.expect(std.mem.indexOf(u8, buffer, "http://second.com") != null);
+
+    // Should have two hyperlink end sequences (one after each link)
+    var count: usize = 0;
+    var search_offset: usize = 0;
+    while (std.mem.indexOfPos(u8, buffer, search_offset, "\x1b]8;;\x1b\\")) |idx| {
+        count += 1;
+        search_offset = idx + 1;
+    }
+    try testing.expect(count >= 2);
+}
+
+test "Renderer skips hyperlinks for cells without hyperlink_id" {
+    const allocator = testing.allocator;
+
+    var doc = try ir.Document.init(allocator, 10, 1);
+    defer doc.deinit();
+
+    // All cells without hyperlinks
+    try doc.setCell(0, 0, .{ .contents = .{ .scalar = 'A' } });
+    try doc.setCell(1, 0, .{ .contents = .{ .scalar = 'B' } });
+    try doc.setCell(2, 0, .{ .contents = .{ .scalar = 'C' } });
+
+    const buffer = try Utf8Ansi.renderToBuffer(allocator, &doc, false);
+    defer allocator.free(buffer);
+
+    // Should NOT contain any OSC 8 sequences
+    try testing.expect(std.mem.indexOf(u8, buffer, "\x1b]8;") == null);
+}
