@@ -40,7 +40,7 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 
 ## Phase 5A: ANSI Parser (XP TDD Cycles)
 
-### Progress Snapshot (2025-10-30)
+### Progress Snapshot (2025-11-01)
 - [x] Cycle 1 – Plain text & control characters (implemented in `src/parsers/ansi.zig`, tests in `src/parsers/ansi_test.zig`, passing via `zig build test`)
 - [x] Cycle 2 – SGR parsing and color attributes (RED→GREEN→REFACTOR complete; full SGR support with 8/bright/256/truecolor; all 51 tests pass)
 - [x] Cycle 3 – Cursor positioning, save/restore, bounds clamping (RED→GREEN→REFACTOR complete; CSI H/A/B/C/D/s/u; all 55 tests pass)
@@ -48,6 +48,9 @@ We adopt **test-first methodology** exclusively—no implementation without a fa
 - [x] Cycle 5 – Bug fixes & test corrections (overflow guards, xterm palette, CP437 validation; 76/77 tests pass)
 - [x] Cycle 6 – SAUCE metadata integration (RED→GREEN→REFACTOR complete in 3 micro-cycles; 78/78 tests pass)
 - [x] Cycle 7 – SAUCE dimension auto-resize (RED→GREEN→REFACTOR; SO-PG1.ANS validates 80×159; 78/78 tests pass)
+- [x] Cycle 8 – UTF8ANSI roundtrip support (RED→GREEN→REFACTOR; smart CP437/UTF-8 disambiguation; 3 roundtrip tests pass)
+- [x] Cycle 9 – OSC 8 hyperlink support (RED→GREEN→REFACTOR; parser + renderer; 15 hyperlink tests pass)
+- [x] Cycle 10 – Ansimation multi-frame parsing (RED→GREEN→REFACTOR; frame detection + capture + SAUCE validation; 123/123 tests pass)
 - [ ] Integration – Golden corpus regression tests
 
 ### A1: Test Case Extraction (Red Phase Setup)
