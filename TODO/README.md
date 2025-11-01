@@ -28,6 +28,13 @@ A BBS-style terminal user interface for browsing the 16colo.rs ANSI art archive.
 - Full artpack browsing and viewing capabilities
 - Integration with ansilust rendering engine
 
+### screensaver.md
+An ansilust-powered screensaver for Omarchy Linux. Features include:
+- Continuously scrolls through classic ANSI art from the 16colo.rs archive
+- Configurable transition effects and display options
+- Local caching with offline mode support
+- XScreenSaver/systemd integration for Linux desktop environments
+
 ## Contributing Ideas
 
 When adding new project ideas to this folder:
