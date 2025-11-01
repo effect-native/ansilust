@@ -43,12 +43,17 @@ zig build
   - 24-bit RGB (truecolor) support
   - Style batching optimization
   - TTY vs file mode distinction
+  - **Visual fidelity adjustments** for modern terminal fonts:
+    - CP437 control characters (0x00-0x1F) mapped to visible glyphs
+    - Baseline alignment fixes (▃ instead of ▬, ˜ instead of ~)
+    - Weight adjustments (‧ instead of ∙)
   - Targets: Ghostty, Alacritty, Kitty, WezTerm, and other modern terminals
 
 **Testing:**
-- 102+ unit tests (all passing)
+- 127 unit tests (all passing)
 - Memory leak detection via `std.testing.allocator` in all tests
 - Real-world corpus validation (137+ ANSI files from sixteencolors archive)
+- Visual fidelity validation with H4-2017.ANS (Fire artpack)
 
 ### 🚧 What's Planned (Not Yet Implemented)
 

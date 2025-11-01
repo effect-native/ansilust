@@ -158,7 +158,7 @@ Coverage:
 ### Renderers (Medium Priority)
 
 - [x] **UTF8ANSI Renderer** ✅ COMPLETE (2025-11-01)
-  - Status: Full implementation with 25 passing tests
+  - Status: Full implementation with 27 passing tests
   - Features:
     - Output modern terminal ANSI sequences
     - Target: Ghostty, Alacritty, Kitty, WezTerm
@@ -169,7 +169,11 @@ Coverage:
     - SGR attribute emission (bold, underline, etc.)
     - OSC 8 hyperlink emission
     - Color state tracking (avoid redundant escapes)
-  - Validation: US-JELLY.ANS → UTF8ANSI → UTF8ANSI works without freeze
+    - **Visual fidelity adjustments** for modern terminal fonts:
+      - CP437 0x16 → U+2583 ▃ (baseline alignment)
+      - CP437 0xF9 → U+2027 ‧ (lighter weight)
+      - Tilde ~ → U+02DC ˜ (baseline alignment, global)
+  - Validation: US-JELLY.ANS, H4-2017.ANS render with proper character alignment
   - Reference: `src/renderers/utf8ansi.zig`, `src/renderers/utf8ansi_test.zig`
 
 - [ ] **HTML Canvas Renderer**
@@ -368,11 +372,11 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
    - Re-enabled 25 renderer tests that were previously disabled
    - Documented module import patterns in AGENTS.md
 
-**Test Coverage**: 123/123 tests passing (100% pass rate)
-- ANSI parser: 46 tests
-- UTF8ANSI renderer: 25 tests
+**Test Coverage**: 127/127 tests passing (100% pass rate)
+- ANSI parser: 46 tests (includes CP437 control character mapping)
+- UTF8ANSI renderer: 27 tests (includes contextual glyph rendering)
 - Ansimation: 3 tests
-- IR modules: 49 tests
+- IR modules: 51 tests
 
 **Git Commits** (TDD discipline maintained):
 - `63a2a77` - GREEN: Implement ansimation frame detection
