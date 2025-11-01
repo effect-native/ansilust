@@ -231,7 +231,8 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 9. Bramwell Feedback Ready ✓
 
 **Test Results:**
-- 20+ unit tests, all passing
+- 70 renderer unit tests, all passing (as of 2025-10-31)
+- 102 total tests across entire project (100% pass rate)
 - 19/19 acdu0395 corpus files render successfully
 - Zero memory leaks
 - Zero compiler warnings
@@ -261,9 +262,27 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 - Ansimation support not implemented  
 - Hyperlinks (OSC 8) not implemented
 
+### 2025-10-31: UTF8ANSI Null Handling Fix ✅
+
+**Issue**: CP437 null bytes (scalar 0x00) were mapped to Unicode 0x0000, emitting literal null bytes in output. Terminals don't advance cursor for nulls, breaking spacing in ANSI art files like US-JELLY.ANS (which uses 5,723 null bytes for spacing).
+
+**Solution**: Changed `CP437_TO_UNICODE[0]` from `0x0000` to `0x0020` (SPACE) following TDD methodology.
+
+**Testing**:
+- Fixed Zig 0.15 ArrayList API compatibility issues in test suite
+- Updated 5 outdated test expectations to match current implementation
+- All 102 tests now pass (100% pass rate)
+- Added 2 specific NUL-handling tests that verify spaces render correctly
+
+**Changes**:
+- `src/renderers/utf8ansi.zig:78` - Fixed null mapping
+- `src/renderers/utf8ansi_test.zig` - Zig 0.15 ArrayList compatibility + test updates
+- `src/root.zig` - Added renderer test imports
+- `AGENTS.md` - Documented Zig 0.15 ArrayList API changes for future reference
+
 **Next Actions:**
 1. Bramwell subjective evaluation of color fidelity
-2. Consider attribute support in new phase
+2. Consider attribute support (bold, underline, blink) in new phase
 3. Consider ansimation support in new phase
 
 **Methodology Notes:**
