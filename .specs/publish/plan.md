@@ -1,7 +1,7 @@
 # Publishing & Distribution - Implementation Plan
 
-**Phase**: 4 - Plan  
-**Status**: In Progress  
+**Phase**: 4 - Plan
+**Status**: In Progress
 **Dependencies**: design.md (Phase 3 complete)
 
 ---
@@ -55,7 +55,7 @@ This document provides a detailed implementation roadmap for the ansilust publis
 ### 1.1: Monorepo Configuration
 
 - [ ] **1.1.1**: Create root `package.json` with workspace configuration
-  - **Details**: 
+  - **Details**:
     ```json
     {
       "name": "ansilust-monorepo",
@@ -107,7 +107,7 @@ npm ls --workspaces
     ```json
     {
       "$schema": "https://unpkg.com/@changesets/config@2.3.0/schema.json",
-      "changelog": ["@changesets/changelog-github", { "repo": "OWNER/ansilust" }],
+      "changelog": ["@changesets/changelog-github", { "repo": "effect-native/ansilust" }],
       "commit": false,
       "fixed": [],
       "linked": [["ansilust", "ansilust-*"]],
@@ -489,10 +489,10 @@ echo "✅ Phase 2 Complete"
     ```bash
     #!/usr/bin/env bash
     # ansilust installer script
-    # 
+    #
     # Served from: https://ansilust.com/install
-    # Source: https://github.com/OWNER/ansilust/blob/main/scripts/install.sh
-    # 
+    # Source: https://github.com/effect-native/ansilust/blob/main/scripts/install.sh
+    #
     # Usage: curl -fsSL https://ansilust.com/install | bash
     ```
   - **Validation**: Header includes GitHub source URL
@@ -507,7 +507,7 @@ echo "✅ Phase 2 Complete"
 
 - [ ] **3.1.3**: Implement `download_binary()` function
   - **Details**:
-    - Construct URL: `https://github.com/OWNER/ansilust/releases/latest/download/ansilust-{platform}.tar.gz`
+    - Construct URL: `https://github.com/effect-native/ansilust/releases/latest/download/ansilust-{platform}.tar.gz`
     - Download to `/tmp/ansilust.tar.gz`
     - Retry up to 3 times on failure
   - **Validation**: Downloads succeed with retries
@@ -555,10 +555,10 @@ bash -n scripts/install.sh
   - **Details**: Add header to `scripts/install.ps1`:
     ```powershell
     # ansilust installer script
-    # 
+    #
     # Served from: https://ansilust.com/install.ps1
-    # Source: https://github.com/OWNER/ansilust/blob/main/scripts/install.ps1
-    # 
+    # Source: https://github.com/effect-native/ansilust/blob/main/scripts/install.ps1
+    #
     # Usage: irm ansilust.com/install.ps1 | iex
     ```
   - **Validation**: Header includes GitHub source URL
@@ -572,7 +572,7 @@ bash -n scripts/install.sh
 
 - [ ] **3.2.3**: Implement `Download-Binary` function
   - **Details**:
-    - Construct URL: `https://github.com/OWNER/ansilust/releases/latest/download/ansilust-win32-x64.zip`
+    - Construct URL: `https://github.com/effect-native/ansilust/releases/latest/download/ansilust-win32-x64.zip`
     - Download to `$env:TEMP\ansilust.zip`
     - Use `Invoke-WebRequest` with retry logic
   - **Validation**: Downloads succeed
@@ -696,7 +696,7 @@ sha256sum --check SHA256SUMS
     1. Download binaries
     2. Build multi-arch container images
     3. Push to GitHub Container Registry
-  - **Validation**: Container images available at `ghcr.io/OWNER/ansilust`
+  - **Validation**: Container images available at `ghcr.io/effect-native/ansilust`
 
 **Dependencies**: 2.1 (Zig), 2.3 (Assembly script), 3.3 (Checksums)
 
@@ -796,13 +796,13 @@ echo "✅ Phase 3 Complete"
     pkgrel=1
     pkgdesc="Next-generation text art processing"
     arch=('x86_64' 'aarch64' 'armv7h')
-    url="https://github.com/OWNER/ansilust"
+    url="https://github.com/effect-native/ansilust"
     license=('MIT')
     source_x86_64=("$url/releases/download/v$pkgver/ansilust-linux-x64-gnu.tar.gz")
     source_aarch64=("$url/releases/download/v$pkgver/ansilust-linux-arm64-gnu.tar.gz")
     sha256sums_x86_64=('CHECKSUM')
     sha256sums_aarch64=('CHECKSUM')
-    
+
     package() {
       install -Dm755 ansilust "$pkgdir/usr/bin/ansilust"
     }
@@ -842,11 +842,11 @@ ansilust --version
     ```nix
     {
       description = "ansilust - next-generation text art processing";
-      
+
       inputs = {
         nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
       };
-      
+
       outputs = { self, nixpkgs }: {
         packages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ] (system:
           let pkgs = nixpkgs.legacyPackages.${system};
@@ -855,7 +855,7 @@ ansilust --version
               pname = "ansilust";
               version = "VERSION";
               src = fetchTarball {
-                url = "https://github.com/OWNER/ansilust/releases/download/vVERSION/ansilust-${system}.tar.gz";
+                url = "https://github.com/effect-native/ansilust/releases/download/vVERSION/ansilust-${system}.tar.gz";
                 sha256 = "CHECKSUM";
               };
               installPhase = ''
@@ -875,7 +875,7 @@ ansilust --version
   - **Validation**: Runs ansilust from flake
 
 - [ ] **4.2.3**: Test from GitHub
-  - **Command**: `nix run github:OWNER/ansilust -- --version`
+  - **Command**: `nix run github:effect-native/ansilust -- --version`
   - **Validation**: Works from remote repository
 
 - [ ] **4.2.4**: Create update script for CI
@@ -956,7 +956,7 @@ curl -fsSL https://ansilust.com/install.ps1 | head -20
   - **Validation**: Multi-arch manifest created
 
 - [ ] **4.4.5**: Push to GitHub Container Registry (GHCR only)
-  - **Location**: `ghcr.io/OWNER/ansilust:VERSION`
+  - **Location**: `ghcr.io/effect-native/ansilust:VERSION`
   - **Tags**: `latest`, `vX.Y.Z`, `vX.Y`, `vX`
   - **Note**: Docker Hub EXCLUDED (GHCR sufficient)
   - **Validation**: Images pullable from ghcr.io
@@ -967,7 +967,7 @@ curl -fsSL https://ansilust.com/install.ps1 | head -20
 ```bash
 docker build -t ansilust:test .
 docker run --rm ansilust:test --version
-docker push ghcr.io/OWNER/ansilust:test
+docker push ghcr.io/effect-native/ansilust:test
 ```
 
 ---
@@ -982,9 +982,9 @@ docker push ghcr.io/OWNER/ansilust:test
 
 **Validation Command**:
 ```bash
-nix run github:OWNER/ansilust -- --version && \
+nix run github:effect-native/ansilust -- --version && \
 curl -fsSL https://ansilust.com/install | head -1 && \
-docker pull ghcr.io/OWNER/ansilust:latest && \
+docker pull ghcr.io/effect-native/ansilust:latest && \
 echo "✅ Phase 4 Complete"
 ```
 
@@ -1107,7 +1107,7 @@ echo "✅ Documentation complete"
   - **Validation**: All jobs complete successfully
 
 - [ ] **5.3.7**: Verify GitHub release created
-  - **Check**: Release at `github.com/OWNER/ansilust/releases/tag/v1.0.0`
+  - **Check**: Release at `github.com/effect-native/ansilust/releases/tag/v1.0.0`
   - **Assets**: All binaries, checksums, signatures
   - **Validation**: Release published with all artifacts
 
@@ -1117,8 +1117,8 @@ echo "✅ Documentation complete"
 ```bash
 git tag v1.0.0
 git push origin main --tags
-# Monitor: https://github.com/OWNER/ansilust/actions
-# Verify: https://github.com/OWNER/ansilust/releases
+# Monitor: https://github.com/effect-native/ansilust/actions
+# Verify: https://github.com/effect-native/ansilust/releases
 ```
 
 ---
@@ -1138,11 +1138,11 @@ git push origin main --tags
   - **Validation**: Installs v1.0.0
 
 - [ ] **5.4.4**: Test Nix flake
-  - **Command**: `nix run github:OWNER/ansilust -- --version`
+  - **Command**: `nix run github:effect-native/ansilust -- --version`
   - **Validation**: Shows v1.0.0
 
 - [ ] **5.4.5**: Test container image
-  - **Command**: `docker run ghcr.io/OWNER/ansilust:latest --version`
+  - **Command**: `docker run ghcr.io/effect-native/ansilust:latest --version`
   - **Validation**: Shows v1.0.0
 
 - [ ] **5.4.6**: Verify checksums
@@ -1154,8 +1154,8 @@ git push origin main --tags
 **Validation Checkpoint**:
 ```bash
 npx ansilust@latest --version
-nix run github:OWNER/ansilust -- --version
-docker run ghcr.io/OWNER/ansilust:latest --version
+nix run github:effect-native/ansilust -- --version
+docker run ghcr.io/effect-native/ansilust:latest --version
 # All should show v1.0.0
 ```
 
@@ -1236,7 +1236,7 @@ EOF
 ```bash
 npx ansilust@latest --version && \
 curl -fsSL https://ansilust.com/install | head -1 && \
-docker run ghcr.io/OWNER/ansilust:latest --version && \
+docker run ghcr.io/effect-native/ansilust:latest --version && \
 test -f CHANGELOG.md && \
 echo "✅ Phase 5 Complete - v1.0.0 Released!"
 ```
@@ -1397,7 +1397,7 @@ echo "✅ Phase 5 Complete - v1.0.0 Released!"
 **Installation Methods**:
 - npm downloads (npmjs.com/package/ansilust)
 - GitHub release download counts
-- Container image pulls (ghcr.io/OWNER/ansilust)
+- Container image pulls (ghcr.io/effect-native/ansilust)
 - Install script usage (if analytics added later)
 
 **Platform Distribution**:
@@ -1531,7 +1531,7 @@ gh run watch
 **Hosted Externally**:
 - `https://ansilust.com/install` - Bash installer
 - `https://ansilust.com/install.ps1` - PowerShell installer
-- `ghcr.io/OWNER/ansilust` - Container images
+- `ghcr.io/effect-native/ansilust` - Container images
 
 ---
 
@@ -1550,5 +1550,5 @@ gh run watch
 
 **End of Plan Document**
 
-**Status**: Ready for Phase 1 implementation  
+**Status**: Ready for Phase 1 implementation
 **Next Step**: Create root package.json with workspaces (Task 1.1.1)
