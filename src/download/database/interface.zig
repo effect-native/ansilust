@@ -61,6 +61,33 @@ pub const HardcodedImpl = @import("hardcoded.zig").HardcodedImpl;
 pub const SqliteImpl = struct {
     // Placeholder for future SQLite implementation
     allocator: Allocator,
+
+    pub fn getRandomFile(self: *SqliteImpl) !FileEntry {
+        _ = self;
+        return error.NotImplemented;
+    }
+
+    pub fn searchFiles(self: *SqliteImpl, query: []const u8) ![]FileEntry {
+        _ = self;
+        _ = query;
+        return error.NotImplemented;
+    }
+
+    pub fn getPack(self: *SqliteImpl, name: []const u8) !Pack {
+        _ = self;
+        _ = name;
+        return error.NotImplemented;
+    }
+
+    pub fn listPacksByYear(self: *SqliteImpl, year: u16) ![]Pack {
+        _ = self;
+        _ = year;
+        return error.NotImplemented;
+    }
+
+    pub fn deinit(self: *SqliteImpl) void {
+        _ = self;
+    }
 };
 
 /// Archive database abstraction

@@ -20,7 +20,5 @@ packages/ansilust-*/
 *.dll
 .DS_Store
 
-# Changesets
-.changeset/*.md
-!.changeset/config.json
-!.changeset/README.md
+# Changesets (commit *.md files, not node_modules)
+.changeset/node_modules/

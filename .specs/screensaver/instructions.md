@@ -92,24 +92,28 @@ FR1.5.4: The configuration shall support metadata overlay (artist, pack, date) t
 FR1.5.5: WHERE no configuration exists the system shall use sensible defaults.  
 FR1.5.6: Configuration settings shall apply to `16c random`, `16c random-1`, and `16c screensaver`.
 
-### FR1.6: Mirror Bootstrap and Background Sync
-FR1.6.1: WHERE the local mirror has pre-cached artwork the system shall display it immediately (no waiting).  
-FR1.6.2: WHERE the local mirror is empty the system shall display a helpful message and begin bootstrap.  
-FR1.6.3: WHEN bootstrap begins the system shall download curated artwork in background.  
-FR1.6.4: WHEN bootstrap downloads complete the system shall add them to the rotation seamlessly.  
-FR1.6.5: AFTER initial packs download the system shall begin background sync of mirror metadata.  
-FR1.6.6: WHILE displaying artwork the system shall continue downloading additional packs in background.  
-FR1.6.7: IF offline AND pre-cached artwork exists the system shall continue displaying indefinitely.  
-FR1.6.8: IF offline AND no artwork exists the system shall provide clear instructions to user.  
-FR1.6.9: The system shall respect mirror organization (packs by year).  
-FR1.6.10: WHEN artwork is selected the system shall read associated `.16colors-meta.json` for metadata.  
-FR1.6.11: The system shall cache artwork list for performance (rebuild on mirror changes).
+### FR1.6: Mirror Integration and Random Selection
+FR1.6.1: WHEN selecting random artwork the system shall query `.index.db` for available artwork.  
+FR1.6.2: WHERE the local mirror has artwork the system shall display it immediately (no waiting).  
+FR1.6.3: WHERE the local mirror is empty the system shall display a helpful error message.  
+FR1.6.4: The system shall select from both `packs/` (archive) and `local/` (user artwork) directories.  
+FR1.6.5: The system shall respect mirror organization (packs by year).  
+FR1.6.6: WHEN artwork is selected the system shall read metadata from `.index.db`.  
+FR1.6.7: The system shall cache artwork file list for performance.  
+FR1.6.8: WHERE `.index.db` does not exist the system shall fall back to filesystem scanning.
 
-### FR1.7: Systemd/Idle Integration
-FR1.7.1: The system shall provide documentation for systemd user service integration.  
-FR1.7.2: The service template shall launch `16c screensaver` in a dedicated terminal window.  
-FR1.7.3: The service shall support activation via idle detection hooks (hypridle/swayidle).  
-FR1.7.4: The service shall respect DPMS power management settings.
+### FR1.7: Background Bootstrap (Optional Enhancement)
+FR1.7.1: WHERE `16c random` detects an empty mirror the system may offer to bootstrap curated favorites.  
+FR1.7.2: WHEN bootstrap is accepted the system shall download curated packs in background (reuses `16c download`).  
+FR1.7.3: The background download shall not block artwork display.  
+FR1.7.4: WHEN downloads complete the system shall trigger `.index.db` update (via download spec functionality).  
+FR1.7.5: IF offline the system shall continue with available artwork and skip bootstrap.
+
+### FR1.8: Systemd/Idle Integration
+FR1.8.1: The system shall provide documentation for systemd user service integration.  
+FR1.8.2: The service template shall launch `16c screensaver` in a dedicated terminal window.  
+FR1.8.3: The service shall support activation via idle detection hooks (hypridle/swayidle).  
+FR1.8.4: The service shall respect DPMS power management settings.
 
 ## Out of Scope (Dependencies)
 
@@ -117,12 +121,16 @@ These features are **explicitly out of scope** for this spec and rely on other a
 
 ### Relies on: 16colors Download/Mirror (.specs/download/)
 - `16c mirror sync` - Full archive mirroring (manual, advanced users)
-- `16c download <pack>` - Individual pack downloads (manual)
-- Local mirror structure (`~/Pictures/16colors/` or `~/.local/share/16colors/`)
-- `.16colors-meta.json` metadata format
-- SAUCE metadata extraction
+- `16c download <pack>` - Individual pack downloads (can be used by bootstrap)
+- Local mirror structure (`~/Pictures/16colors/packs/`, `local/`, `.index.db`)
+- `.index.db` - Shared SQLite database with all artwork metadata
+- SAUCE metadata extraction and database indexing
+- Mirror location discovery (platform-specific paths)
 
-**Note**: The screensaver uses the download/mirror infrastructure but adds **bootstrap** and **background sync** functionality for zero-wait user experience
+**Note**: The screensaver **reuses** the download/mirror infrastructure and adds:
+- Pre-cached artwork via post-install script
+- Random artwork selection via `.index.db` queries
+- Optional background bootstrap (calls `16c download` for curated packs)
 
 ### Relies on: Ansilust Rendering
 - **Streaming-style rendering** - The exact implementation of line-by-line or character-by-character rendering with timing control
@@ -131,7 +139,7 @@ These features are **explicitly out of scope** for this spec and rely on other a
 - **Color/font handling** - CP437, palette, iCE colors mode
 - **Aspect ratio** - Respecting DOS aspect ratio (1.35x) hints
 
-**Design Decision**: The screensaver spec focuses on **orchestration** (selecting artwork, handling terminal lifecycle, user input, background downloads) while delegating **rendering mechanics** to the core ansilust system. This maintains clean separation of concerns and ensures rendering improvements automatically benefit the screensaver.
+**Design Decision**: The screensaver spec focuses on **new functionality** (random selection, pre-caching, screensaver mode) while **reusing existing infrastructure** from `.specs/download/` (mirror structure, `.index.db`, download client). This maintains clean separation of concerns and avoids duplicating specifications.
 
 ### Zero-Wait Design Philosophy
 
@@ -146,7 +154,7 @@ Post-install script runs
     ↓
     Extract pre-cached artwork to mirror location
     ↓
-    Generate .16colors-meta.json files
+    Update .index.db with pre-cached metadata
     ↓
     User ready to run immediately
     ↓
@@ -191,77 +199,29 @@ IF user wants more artwork:
 
 ### Canvas Sizing Strategy
 
-**Problem**: BBS artwork varies widely in size (40x25 to 160x50+), and terminals vary in dimensions. We must avoid letterboxing (black bars) while preserving the artwork's visual integrity.
+**Goal**: Avoid letterboxing while preserving artwork integrity.
 
-**Solution**: Adaptive sizing based on content and terminal:
-
-```
-Terminal Dimensions (W x H)
-       ↓
-Artwork Dimensions (AW x AH) from SAUCE or detection
-       ↓
-Aspect Ratio (AR) = AW / AH
-       ↓
-┌─────────────────────────────────────┐
-│ Is artwork <= terminal dimensions?  │
-├─────────────────────────────────────┤
-│ YES → Center without scaling        │
-│ NO  → Scale to fit (maintain AR)    │
-└─────────────────────────────────────┘
-```
-
-**Scaling Algorithm** (when artwork > terminal):
-```
-Available Width = Terminal Width
-Available Height = Terminal Height - 1 (status line)
-
-Scale Factor = min(
-  Available Width / Artwork Width,
-  Available Height / Artwork Height
-)
-
-Rendered Width = Artwork Width * Scale Factor
-Rendered Height = Artwork Height * Scale Factor
-
-Center Offset X = (Available Width - Rendered Width) / 2
-Center Offset Y = (Available Height - Rendered Height) / 2
-```
-
-**SAUCE Considerations**:
-- **Columns (TInfo1)**: Use as artwork width
-- **Lines (TInfo2)**: Use as artwork height
-- **AspectRatio flags**: Apply 1.35x vertical stretch if requested
-- **Font name**: Select appropriate bitmap font for rendering
+**Approach**:
+- Detect terminal dimensions
+- Read artwork dimensions from SAUCE metadata (or auto-detect)
+- Center artwork if smaller than terminal
+- Scale to fit if larger than terminal (preserve aspect ratio)
 
 **Rendering Modes**:
-1. **Fit Mode** (default): Scale to fit, preserve aspect ratio
-2. **Fill Mode** (`--fill`): Crop to fill screen, preserve aspect ratio
-3. **Native Mode** (`--native`): Display at original size, crop if needed
+1. **Fit Mode** (default): Scale to fit, preserve aspect ratio, center
+2. **Fill Mode**: Crop to fill screen
+3. **Native Mode**: Display at original size, crop if needed
 
-### Streaming Rendering Implementation
+**Note**: Sizing and rendering implementation details are in ansilust rendering system (out of scope).
 
-**Design Dependency**: Streaming rendering is implemented by the ansilust rendering system, not the screensaver. The screensaver merely configures and invokes it.
+### Streaming Rendering
 
-**Interface to Ansilust Renderer**:
-```zig
-// Conceptual API (actual implementation in ansilust rendering system)
-const RenderOptions = struct {
-    streaming: bool = true,
-    stream_speed: StreamSpeed = .Baud2400,  // .Instant, .Baud1200, .Baud2400, .Baud9600, .Baud56k
-    terminal_width: usize,
-    terminal_height: usize,
-    center: bool = true,
-    // ... other ansilust rendering options
-};
+**Design Dependency**: Streaming rendering is implemented by the ansilust rendering system (out of scope for this spec).
 
-pub fn renderToTerminal(artwork_path: []const u8, options: RenderOptions) !void {
-    // Implementation in ansilust rendering system
-}
-```
-
-**Screensaver Responsibility**: Only to select artwork and configure render options.
-
-**Rationale**: Streaming rendering requires deep integration with ANSI escape sequence generation, UTF8/CP437 encoding, and format-specific parsers. This is core ansilust functionality, not screensaver-specific.
+**Screensaver Responsibility**: 
+- Configure streaming speed (instant, 1200 baud, 2400 baud, etc.)
+- Pass terminal dimensions for centering
+- Invoke renderer with selected artwork path
 
 ### Configuration File Format
 
@@ -321,63 +281,21 @@ mirror_check_interval = 300    # Seconds
 - **Pack**: Pack name (e.g., mist1025)
 - **Year**: Pack year or SAUCE date
 
-### Exit Handling
+### Exit Handling (Screensaver Mode Only)
 
-**Signal Handling** (similar to Omarchy pattern):
-```zig
-// Zig signal handling example
-const std = @import("std");
+**Requirements**:
+- Register signal handlers for SIGINT/SIGTERM/SIGHUP/SIGQUIT
+- Poll for keyboard input (non-blocking)
+- Exit immediately on any input
+- Restore terminal state on exit (cursor visible, alternate screen off)
 
-var running = std.atomic.Atomic(bool).init(true);
+### Fullscreen Mode (Screensaver Only)
 
-fn signalHandler(sig: c_int) callconv(.C) void {
-    _ = sig;
-    running.store(false, .SeqCst);
-}
-
-pub fn main() !void {
-    // Register signal handlers
-    try std.os.sigaction(std.os.SIG.INT, &std.os.Sigaction{
-        .handler = .{ .handler = signalHandler },
-        .mask = std.os.empty_sigset,
-        .flags = 0,
-    }, null);
-    
-    // Main screensaver loop
-    while (running.load(.SeqCst)) {
-        // Display artwork
-        // Check for keyboard input (non-blocking)
-    }
-}
-```
-
-**Cleanup on Exit**:
-1. Restore terminal state (cursor visible, alternate screen off)
-2. Clear screen
-3. Print exit message (optional)
-
-### Terminal Detection and Fullscreen
-
-**Terminal Capabilities**:
-```zig
-// Detect terminal size
-const term_width = try std.os.tcgetwinsize().ws_col;
-const term_height = try std.os.tcgetwinsize().ws_row;
-
-// Enter alternate screen buffer (optional, configurable)
-// \x1b[?1049h
-
-// Hide cursor
-// \x1b[?25l
-
-// Clear screen
-// \x1b[2J\x1b[H
-```
-
-**Fullscreen Considerations**:
-- Use alternate screen buffer to preserve user's terminal state
+**Requirements**:
+- Detect terminal dimensions
+- Enter alternate screen buffer (preserve user's terminal state)
 - Hide cursor during display
-- Restore cursor and screen buffer on exit
+- Restore cursor and exit alternate screen on exit
 
 ### Systemd Integration
 
@@ -634,20 +552,17 @@ $EDITOR ~/.config/16c/config.toml
 
 ### AC5: Zero-Wait Pre-cache
 - WHEN package is installed the post-install script shall pre-cache curated artwork
-- Pre-cached artwork shall be placed in standard mirror location
-- WHEN first run the system shall display pre-cached artwork immediately
-- Background bootstrap shall download additional packs without blocking display
-- WHEN a pack download completes the system shall add it to rotation seamlessly
-- `.16colors-meta.json` files shall be read for artist/pack/date information
-- Artwork list shall be cached for performance
-- Cache shall rebuild when mirror changes detected
+- Pre-cached artwork shall be placed in standard mirror location (`packs/YYYY/packname/`)
+- Post-install script shall update `.index.db` with pre-cached artwork metadata
+- WHEN first run the system shall query `.index.db` and display artwork immediately
+- Random selection shall use `.index.db` for instant queries (no filesystem scanning)
+- Artwork list shall be cached in memory for performance during runtime
 
 ### AC6: Offline Resilience  
 - WHEN offline the system shall work indefinitely with pre-cached artwork
-- WHERE pre-cache failed AND offline the system shall display helpful error
+- WHERE pre-cache failed AND offline the system shall display helpful error with manual setup instructions
 - Network failures shall not interrupt artwork display
-- Background downloads shall retry gracefully with exponential backoff
-- The system shall detect when network becomes available and resume bootstrap
+- WHERE `.index.db` exists the system shall function fully offline
 
 ## Success Metrics
 
@@ -707,29 +622,33 @@ $EDITOR ~/.config/16c/config.toml
 
 ## Implementation Notes
 
-### Architecture
+### High-Level Architecture
 ```
 16c random|random-1|screensaver
     ↓
-Configuration Loading (~/.config/16c/config.toml)
+1. Load config (~/.config/16c/config.toml)
     ↓
-Mirror Discovery (~/Pictures/16colors/ or ~/.local/share/16colors/)
+2. Query .index.db for available artwork (download spec)
     ↓
-Artwork Selection (random + filters)
+3. Apply filters (year/group/artist from config)
     ↓
-IF screensaver mode: Terminal Setup (fullscreen, hide cursor)
+4. IF screensaver: Enter fullscreen mode
     ↓
-Loop (or once for random-1):
-    Render Artwork (via ansilust renderer)
-    IF random|screensaver: Wait (configurable duration)
-    IF screensaver: Check Input (non-blocking, exit on any key)
+5. Loop (or once for random-1):
+    a. Select random artwork from filtered list
+    b. Render via ansilust (streaming speed from config)
+    c. Show metadata overlay (if enabled)
+    d. IF random|screensaver: Wait (artwork_duration seconds)
+    e. IF screensaver: Poll for input (exit on any key)
+    f. IF random-1: Exit after one
     ↓
-    IF random-1: Exit after one artwork
-    IF screensaver AND input detected: Exit
-    IF random: Continue loop
-    ↓
-Cleanup (restore terminal if screensaver mode)
+6. IF screensaver: Restore terminal state
 ```
+
+**Key Abstraction Layers**:
+- **Download Spec** (.specs/download/): Mirror management, `.index.db` queries, downloads
+- **Rendering System**: ANSI rendering, streaming speed, canvas sizing
+- **This Spec**: Random selection, fullscreen mode, timing, exit handling
 
 ### Technology Stack
 - **Language**: Zig (consistency with ansilust)
@@ -753,12 +672,11 @@ Cleanup (restore terminal if screensaver mode)
 - [ ] Terminal size detection
 
 ### Phase 2: Bootstrap and Background Sync
-- [ ] Bootstrap manifest download (ansilust-bootstrap.json from 16colo.rs)
-- [ ] Background thread for pack downloads (non-blocking)
-- [ ] Curated pack downloads (4-5 hand-picked favorites)
-- [ ] Seamless integration of downloaded artwork into rotation
-- [ ] Offline detection and graceful fallback to bundled artwork
-- [ ] Download throttling and rate limiting
+- [ ] Optional bootstrap prompt when mirror is empty
+- [ ] Background spawning of `16c download <packs>` (reuses download spec)
+- [ ] List of curated pack names for bootstrap
+- [ ] Periodic `.index.db` refresh to pick up new downloads
+- [ ] Offline detection and graceful handling
 - [ ] Progress indication (subtle, non-intrusive)
 
 ### Phase 3: Configuration and Filtering
@@ -786,25 +704,28 @@ Cleanup (restore terminal if screensaver mode)
 
 ## Dependencies
 
-### External Dependencies
-- **ansilust renderer**: Core rendering engine (in-repo)
-- **16colors mirror**: Local artwork repository (user-installed)
-- **Terminal**: Alacritty, Ghostty, or any modern terminal emulator
-- **systemd**: User service management (Linux)
-- **Idle detector**: hypridle, swayidle, xautolock, etc.
+### Spec Dependencies
+- **.specs/download/** - All mirror and download functionality:
+  - `.index.db` database and queries
+  - `16c download <pack>` command
+  - `16c mirror` commands
+  - `16c db` commands
+  - Mirror location discovery
+  - SAUCE metadata extraction
 
-### Internal Dependencies
-- **16c CLI**: Mirror sync and download functionality
-- **SAUCE parser**: Metadata extraction
-- **Format parsers**: ANS, ASC, XB, etc. support
+### External Dependencies
+- **Ansilust renderer**: ANSI rendering with streaming support
+- **Terminal emulator**: Alacritty, Ghostty (for fullscreen mode)
+- **systemd**: User service management (optional, Linux only)
+- **Idle detector**: hypridle, swayidle (optional, for auto-activation)
 
 ## Security Considerations
 
-- **Input validation**: Sanitize paths and config values
+- **Input validation**: Sanitize paths from `.index.db` queries and config values
 - **Resource limits**: Prevent excessive memory usage from large artwork
 - **Signal safety**: Proper signal handler cleanup
 - **File permissions**: Config file should be user-readable only
-- **No network**: Screensaver operates offline (uses local mirror)
+- **Network isolation**: Random/screensaver commands only read local mirror (bootstrap is optional, separate background process)
 
 ## Future Enhancements
 
@@ -830,307 +751,90 @@ Cleanup (restore terminal if screensaver mode)
 **Dependencies**: 16colors mirror (.specs/download/), ansilust rendering  
 **Target Audience**: Linux/Hyprland users, BBS art enthusiasts, retro computing fans
 
-### FR1.8: Pre-cached Artwork
-FR1.8.1: The installation package shall include a curated selection of artwork for pre-caching.  
-FR1.8.2: The pre-cached artwork shall represent high-quality pieces across different eras and styles.  
-FR1.8.3: The pre-cached artwork shall be hand-picked favorites suitable for first impression.  
-FR1.8.4: WHEN the package is installed a post-install script shall populate the local mirror with pre-cached artwork.  
-FR1.8.5: The pre-cached artwork shall be placed in the standard mirror location (`~/Pictures/16colors/` or `~/.local/share/16colors/`).  
-FR1.8.6: The pre-cached artwork shall be sufficient for indefinite offline usage.  
-FR1.8.7: WHERE pre-cached artwork is displayed the system shall show metadata from `.16colors-meta.json`.
+### FR1.9: Pre-cached Artwork (Package Integration)
+FR1.9.1: The installation package shall include a curated selection of artwork for pre-caching.  
+FR1.9.2: The pre-cached artwork shall represent high-quality pieces across different eras and styles.  
+FR1.9.3: The pre-cached artwork shall be hand-picked favorites suitable for first impression.  
+FR1.9.4: WHEN the package is installed a post-install script shall populate the local mirror with pre-cached artwork.  
+FR1.9.5: The pre-cached artwork shall be placed in the standard mirror location (`~/Pictures/16colors/packs/` or `~/.local/share/16colors/packs/`).  
+FR1.9.6: The pre-cached artwork shall be sufficient for indefinite offline usage.  
+FR1.9.7: WHEN pre-cache completes the post-install script shall update `.index.db` with pre-cached artwork metadata.
 
-### FR1.9: Background Download Management
-FR1.9.1: WHEN bootstrap begins the system shall download curated packs asynchronously.  
-FR1.9.2: The download process shall not block artwork display.  
-FR1.9.3: WHEN a download completes the system shall extract and index the artwork.  
-FR1.9.4: The newly available artwork shall appear in rotation on next selection cycle.  
-FR1.9.5: IF download fails the system shall continue with available artwork (bundled or previously downloaded).  
-FR1.9.6: The system shall prioritize user experience (smooth display) over download speed.  
-FR1.9.7: WHERE bandwidth is limited the system shall throttle downloads to avoid disrupting system performance.
+### FR1.10: Background Bootstrap (Optional)
+FR1.10.1: WHERE mirror is empty the system may offer to download curated favorites.  
+FR1.10.2: WHEN bootstrap is accepted the system shall spawn `16c download <packs>` in background.  
+FR1.10.3: The background download shall not block artwork display.  
+FR1.10.4: WHEN downloads complete `.index.db` updates automatically (download spec handles this).  
+FR1.10.5: The newly available artwork shall appear in rotation on next random selection.  
+FR1.10.6: IF download fails the system shall continue with available artwork.
 
-### Pre-cached Artwork Strategy
+### Pre-cached Artwork (Post-Install)
 
-**Package Structure**:
-```
-ansilust-package/
-├── bin/
-│   └── 16c                           # CLI binary
-├── share/
-│   └── ansilust/
-│       └── precache/
-│           ├── packs/
-│           │   ├── favorites.tar.zst  # Curated artwork archive
-│           │   └── manifest.json      # Pack metadata
-│           └── install.sh             # Post-install script
-```
+**Purpose**: Ship curated favorites with package for instant first-run experience.
 
-**Post-Install Script** (`install.sh`):
+**Approach**:
 ```bash
-#!/bin/bash
-# Post-install script to pre-cache artwork
-
-# Determine mirror location (platform-specific)
-if [[ "$OSTYPE" == "darwin"* ]]; then
-    MIRROR_BASE="$HOME/Pictures/16colors"
-elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    MIRROR_BASE="${XDG_DATA_HOME:-$HOME/.local/share}/16colors"
-else
-    MIRROR_BASE="$HOME/.local/share/16colors"
-fi
-
-PRECACHE_SOURCE="/usr/share/ansilust/precache"
-MIRROR_PACKS="$MIRROR_BASE/packs"
-
-# Create mirror structure
-mkdir -p "$MIRROR_PACKS"
-
-# Extract pre-cached favorites
-if [[ -f "$PRECACHE_SOURCE/packs/favorites.tar.zst" ]]; then
-    echo "Pre-caching curated artwork to $MIRROR_BASE..."
-    
-    # Extract to mirror location
-    tar --zstd -xf "$PRECACHE_SOURCE/packs/favorites.tar.zst" -C "$MIRROR_PACKS"
-    
-    # Copy metadata
-    if [[ -f "$PRECACHE_SOURCE/packs/manifest.json" ]]; then
-        cp "$PRECACHE_SOURCE/packs/manifest.json" "$MIRROR_BASE/.precache-manifest.json"
-    fi
-    
-    echo "Pre-cached $(find "$MIRROR_PACKS" -name "*.ans" -o -name "*.asc" -o -name "*.xb" | wc -l) artworks"
-    echo "Run '16c random-1' to test!"
-fi
+# Post-install script (simplified)
+MIRROR_BASE=$(16c mirror path)  # Reuses download spec
+tar -xf /usr/share/ansilust/precache/favorites.tar.zst -C "$MIRROR_BASE/packs"
+16c db rebuild  # Reuses download spec database
 ```
 
-**Curated Selection Criteria**:
-1. **High quality** - Visually impressive pieces that represent BBS art at its best
-2. **Diverse eras** - Mix of 1990s classics and modern pieces (2010s-2020s)
-3. **Varied styles** - ASCII, ANSI, block art, scene art, underground
-4. **Iconic groups** - ACiD, iCE, Blocktronics, Mistigris, etc.
-5. **Safe content** - No NSFW, suitable for professional/public display
-6. **Reasonable size** - ~50-100 pieces, compressed to ~1-2MB in package
+**Curated Selection** (~50-100 pieces, 1-2MB compressed):
+- High-quality classics: ACiD, iCE, Blocktronics, Mistigris
+- Diverse eras: 1990s and modern (2010s-2020s)
+- Safe content: No NSFW
+- Standard structure: `packs/YYYY/packname/` (matches download spec)
 
-**Pre-cache Archive Contents**:
+**Note**: All details about mirror structure, database updates, and SAUCE extraction are in `.specs/download/`. Post-install just extracts artwork and calls `16c db rebuild`.
+
+### Background Bootstrap (Optional)
+
+**Purpose**: Download more artwork in background if mirror is empty.
+
+**Approach**:
 ```
-favorites.tar.zst (compressed)
-└── packs/
-    ├── 1994/
-    │   └── acid-classics/
-    │       ├── .16colors-meta.json
-    │       ├── acid-trip.ans
-    │       ├── rad-logo.ans
-    │       └── ...
-    ├── 1995/
-    │   └── ice-favorites/
-    │       ├── .16colors-meta.json
-    │       ├── ice-logo.ans
-    │       └── ...
-    ├── 2024/
-    │   └── bloc0524/
-    │       ├── .16colors-meta.json
-    │       └── ... (selection from recent Blocktronics)
-    └── 2025/
-        └── mist1025/
-            ├── .16colors-meta.json
-            └── ... (selection from recent Mistigris)
+IF mirror empty:
+    Show helpful error
+    Offer: "Download favorites? (y/n)"
+    IF yes:
+        Spawn background: 16c download pack1 pack2 pack3
+        Continue displaying current artwork
+        .index.db updates automatically (download spec)
+        New artwork appears in next random selection
 ```
 
-**Manifest Format**:
-```json
-{
-  "version": "1.0.0",
-  "created_at": "2025-11-02T00:00:00Z",
-  "curated_by": "ansilust",
-  "description": "Hand-picked favorites for instant screensaver experience",
-  "packs": [
-    {
-      "name": "acid-classics",
-      "year": 1994,
-      "group": "ACiD",
-      "piece_count": 12,
-      "description": "Classic ACiD artwork from the golden era"
-    },
-    {
-      "name": "ice-favorites",
-      "year": 1995,
-      "group": "iCE",
-      "piece_count": 15,
-      "description": "iCE Draw masterpieces"
-    }
-  ],
-  "total_pieces": 73,
-  "total_size_bytes": 1835008
-}
+**Pack List** (hardcoded): mist1025, bloc0524, fire-96, impure90
+
+**Note**: All download functionality delegated to `.specs/download/`. Bootstrap just spawns `16c download` commands.
+
+### Random Selection
+
+**Algorithm**:
+```
+1. Query .index.db for all artwork (download spec provides database)
+2. Apply config filters (year, group, artist)
+3. SELECT random entry
+4. Return file path
+5. Render via ansilust
 ```
 
-**Package Manager Integration**:
+**Note**: `.index.db` schema and queries defined in `.specs/download/`.
 
-**Debian/Ubuntu** (`debian/postinst`):
-```bash
-#!/bin/bash
-set -e
+## Scope Clarification
 
-# Run pre-cache script for user who invoked sudo
-if [ -n "$SUDO_USER" ]; then
-    su - "$SUDO_USER" -c "/usr/share/ansilust/precache/install.sh"
-fi
-```
+### NEW in This Spec
+- `16c random`, `16c random-1`, `16c screensaver` commands
+- Random selection algorithm (queries `.index.db`)
+- Pre-cache post-install script and curated pack selection
+- Fullscreen mode (alternate screen, cursor hiding, exit-on-input)
+- Config keys: `artwork_duration`, `streaming_speed`, `show_metadata`
+- Systemd/hypridle integration docs
 
-**Arch Linux** (`PKGBUILD`):
-```bash
-post_install() {
-    echo "Ansilust installed!"
-    echo "Pre-cached artwork will be set up on first run for each user."
-    echo "Or run: /usr/share/ansilust/precache/install.sh"
-}
-```
+### REUSED from .specs/download/
+- `.index.db` database (schema, queries, auto-updates)
+- `16c download`, `16c mirror`, `16c db` commands
+- Mirror structure and platform paths
+- SAUCE extraction and metadata indexing
+- All network/download functionality
 
-**Homebrew** (`Formula/ansilust.rb`):
-```ruby
-def post_install
-  system "#{share}/ansilust/precache/install.sh"
-end
-```
-
-### Background Bootstrap Process
-
-**Bootstrap Sequence**:
-```
-WHEN no mirror exists:
-    ↓
-1. Display bundled artwork (user sees content immediately)
-    ↓
-2. Spawn background thread/process
-    ↓
-3. Check network availability
-    ↓
-    IF offline:
-        Continue with bundled artwork indefinitely
-        Periodic retry network check (every 5 min)
-    ↓
-    IF online:
-        ↓
-4. Download bootstrap manifest (small JSON file listing curated packs)
-   URL: https://16colo.rs/ansilust-bootstrap.json
-    ↓
-5. Download curated packs (async, one at a time)
-   - mist1025.zip (recent Mistigris)
-   - bloc0524.zip (recent Blocktronics)
-   - acid_classics.zip (curated ACiD collection)
-   - ice_favorites.zip (curated iCE collection)
-    ↓
-6. FOR EACH downloaded pack:
-    - Extract to mirror location
-    - Generate .16colors-meta.json
-    - Add to artwork rotation (seamless)
-    - User sees new art appear naturally
-    ↓
-7. AFTER bootstrap complete (4-5 packs):
-    - Begin background mirror sync
-    - Download additional packs (throttled, low priority)
-    - Build full mirror over hours/days
-```
-
-**Bootstrap Manifest Format**:
-```json
-{
-  "version": "1.0.0",
-  "curated_packs": [
-    {
-      "name": "mist1025",
-      "year": 2025,
-      "url": "https://16colo.rs/archive/2025/mist1025.zip",
-      "size_bytes": 5242880,
-      "checksum_sha256": "...",
-      "priority": 1,
-      "reason": "Recent high-quality Mistigris pack"
-    },
-    {
-      "name": "bloc0524",
-      "year": 2024,
-      "url": "https://16colo.rs/archive/2024/bloc0524.zip",
-      "size_bytes": 3145728,
-      "checksum_sha256": "...",
-      "priority": 2,
-      "reason": "Recent Blocktronics artpack"
-    }
-  ]
-}
-```
-
-**Download Throttling**:
-```zig
-const BootstrapDownloader = struct {
-    allocator: Allocator,
-    http_client: std.http.Client,
-    
-    const max_concurrent_downloads = 1;  // One at a time during bootstrap
-    const rate_limit_bytes_per_sec = 500_000;  // 500KB/s max
-    const retry_count = 3;
-    const timeout_seconds = 60;
-    
-    pub fn downloadPack(self: *Self, pack: Pack) !void {
-        // Download with rate limiting
-        // Extract and index
-        // Add to rotation
-        // Emit progress event (optional UI feedback)
-    }
-};
-```
-
-**Seamless Integration**:
-```zig
-const ArtworkManager = struct {
-    mirror_artwork: []ArtworkFile,
-    
-    pub fn selectRandom(self: *Self, allocator: Allocator) !ArtworkFile {
-        // Load artwork from mirror (includes pre-cached + downloaded)
-        if (self.mirror_artwork.len == 0) {
-            // Discover mirror artwork (pre-cached or synced)
-            self.mirror_artwork = try discoverMirrorArtwork(allocator);
-        }
-        
-        if (self.mirror_artwork.len == 0) {
-            // No artwork available - return error with helpful message
-            return error.NoArtworkAvailable;
-        }
-        
-        // Select random artwork from mirror
-        const idx = random.int(usize) % self.mirror_artwork.len;
-        return self.mirror_artwork[idx];
-    }
-    
-    pub fn addDownloadedPack(self: *Self, allocator: Allocator, pack: Pack) !void {
-        // Extract artwork from pack to mirror location
-        // Rebuild mirror artwork list
-        // No interruption to display loop
-        // New artwork appears in next random selection
-        self.mirror_artwork = try discoverMirrorArtwork(allocator);
-    }
-};
-```
-
-**Progress Indication** (Optional, non-blocking):
-```
-# While displaying pre-cached art, subtle indicator if downloading:
-┌──────────────────────────────────────┐
-│                                      │
-│    [Artwork rendered here]           │
-│                                      │
-└──────────────────────────────────────┘
-  Artist: RaD Man | ACiD | 1994 (pre-cached)
-  ⬇ Downloading favorites... 2/5 packs
-```
-
-**Error Handling - No Artwork Available**:
-```
-Error: No artwork found in mirror
-
-Your local 16colors mirror is empty.
-
-Quick start options:
-1. Re-run post-install: /usr/share/ansilust/precache/install.sh
-2. Download favorites:  16c bootstrap
-3. Full mirror sync:    16c mirror sync --since 2020
-
-The screensaver works best with artwork pre-cached or downloaded.
-```
