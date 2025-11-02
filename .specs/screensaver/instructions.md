@@ -76,7 +76,7 @@ FR1.4.3: The system shall support instant rendering mode via `--instant` flag.
 FR1.4.4: WHERE SAUCE metadata indicates specific rendering hints the system shall apply them.
 
 ### FR1.5: Configuration and Filtering
-FR1.5.1: The screensaver shall support a configuration file at `~/.config/16c/screensaver.conf`.  
+FR1.5.1: The screensaver shall support a configuration file at `~/.config/16c/screensaver.toml`.  
 FR1.5.2: The configuration shall support artwork filters (year, group, artist, format).  
 FR1.5.3: The configuration shall support timing settings (seconds per artwork, streaming speed).  
 FR1.5.4: The configuration shall support metadata overlay (artist, pack, date) toggle.  
@@ -192,7 +192,7 @@ pub fn renderToTerminal(artwork_path: []const u8, options: RenderOptions) !void 
 
 ### Configuration File Format
 
-**Location**: `~/.config/16c/screensaver.conf`
+**Location**: `~/.config/16c/screensaver.toml`
 
 **Format**: TOML
 ```toml
@@ -444,7 +444,7 @@ systemctl --user start 16c-screensaver.service
 16c-screensaver --init-config
 
 # Edit config
-$EDITOR ~/.config/16c/screensaver.conf
+$EDITOR ~/.config/16c/screensaver.toml
 ```
 
 ## User Stories
@@ -510,7 +510,7 @@ $EDITOR ~/.config/16c/screensaver.conf
 - Terminal resize events shall trigger re-centering
 
 ### AC3: Configuration and Filtering
-- WHEN `~/.config/16c/screensaver.conf` exists the settings shall be applied
+- WHEN `~/.config/16c/screensaver.toml` exists the settings shall be applied
 - Year/group/artist filters shall limit artwork selection
 - Streaming speed setting shall control render timing
 - Metadata overlay toggle shall show/hide artist information
@@ -592,7 +592,7 @@ $EDITOR ~/.config/16c/screensaver.conf
 ```
 16c-screensaver (CLI)
     ↓
-Configuration Loading (~/.config/16c/screensaver.conf)
+Configuration Loading (~/.config/16c/screensaver.toml)
     ↓
 Mirror Discovery (~/Pictures/16colors/ or ~/.local/share/16colors/)
     ↓
