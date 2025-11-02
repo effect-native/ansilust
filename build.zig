@@ -8,10 +8,17 @@ const std = @import("std");
 // know when a step doesn't need to be re-run).
 pub fn build(b: *std.Build) void {
     // Standard target options allow the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
+    // what target to build for. By default, uses native target.
+    // Use `-Dtarget=x86_64-linux-gnu` (or similar) to cross-compile.
+    // Supported targets:
+    // - x86_64-macos, aarch64-macos
+    // - x86_64-linux-gnu, x86_64-linux-musl
+    // - aarch64-linux-gnu, aarch64-linux-musl
+    // - armv7-linux-gnueabihf, armv7-linux-musleabihf
+    // - i386-linux-musl
+    // - x86_64-windows
     const target = b.standardTargetOptions(.{});
+
     // Standard optimization options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
@@ -48,6 +55,11 @@ pub fn build(b: *std.Build) void {
 
     parsers_mod.addImport("ansilust", mod);
     mod.addImport("parsers", parsers_mod);
+
+    const download_mod = b.addModule("download", .{
+        .root_source_file = b.path("src/download/lib.zig"),
+        .target = target,
+    });
 
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
@@ -97,6 +109,20 @@ pub fn build(b: *std.Build) void {
     // step). By default the install prefix is `zig-out/` but can be overridden
     // by passing `--prefix` or `-p`.
     b.installArtifact(exe);
+
+    // 16c CLI executable (16colors archive downloader)
+    const sixteenc_exe = b.addExecutable(.{
+        .name = "16c",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/cli/sixteenc.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "download", .module = download_mod },
+            },
+        }),
+    });
+    b.installArtifact(sixteenc_exe);
 
     // This creates a top level step. Top level steps have a name and can be
     // invoked by name when running `zig build` (e.g. `zig build run`).

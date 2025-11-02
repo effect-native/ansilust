@@ -1,8 +1,11 @@
 {
   "name": "ansilust",
   "version": "0.0.1",
-  "description": "ANSI art rendering engine (placeholder - real package coming soon)",
+  "description": "Next-generation text art processing system - convert, render, and animate ANSI art",
   "main": "index.js",
+  "bin": {
+    "ansilust": "bin/launcher.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/effect-native/ansilust.git"
@@ -13,8 +16,28 @@
     "text-art",
     "ascii",
     "bbs",
-    "ansilove"
+    "ansilove",
+    "ansilust",
+    "rendering"
   ],
   "author": "Tom Aylott <oblivious@subtlegradient.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "detect-libc": "^2.1.2"
+  },
+  "optionalDependencies": {
+    "ansilust-darwin-arm64": "0.0.1",
+    "ansilust-darwin-x64": "0.0.1",
+    "ansilust-linux-aarch64-gnu": "0.0.1",
+    "ansilust-linux-aarch64-musl": "0.0.1",
+    "ansilust-linux-arm-gnu": "0.0.1",
+    "ansilust-linux-arm-musl": "0.0.1",
+    "ansilust-linux-i386-musl": "0.0.1",
+    "ansilust-linux-x64-gnu": "file:../ansilust-linux-x64-gnu",
+    "ansilust-linux-x64-musl": "0.0.1",
+    "ansilust-win32-x64": "0.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }
