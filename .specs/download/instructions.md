@@ -151,21 +151,23 @@ FR1.4.6: Configuration schemas shall be valid JSON Schema Draft 2020-12.
 ### FR1.5: Global Archive Database (.index.db)
 FR1.5.1: The system shall store the database at `16colors/.index.db` in the 16colors root directory.  
 FR1.5.2: The database shall be shared by ALL tools (part of the community standard).  
-FR1.5.3: The canonical database shall be distributed from `https://ansilust.com/.well-known/db/.index.db`.  
-FR1.5.4: The database shall include all archive metadata (packs, files, artists, groups, SAUCE data).  
-FR1.5.5: The database shall store download URLs for both source files and pre-rendered PNGs.  
-FR1.5.6: The system shall automatically check for database updates on every `16c` invocation.  
-FR1.5.7: WHEN a new database version is available the system shall download it automatically in the background.  
-FR1.5.8: The database shall be updated via versioned SQL patch files.  
-FR1.5.9: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`).  
-FR1.5.10: Patch files shall be distributed from `https://ansilust.com/.well-known/db/patches/`.  
-FR1.5.11: The database shall contain ONLY official 16colo.rs archive content.  
-FR1.5.12: The database shall NOT track local user content or download state.  
-FR1.5.13: The database shall support FTS5 full-text search across all artwork metadata.  
-FR1.5.14: Users shall be able to search the archive instantly without FTP queries.  
-FR1.5.15: The database schema shall be versioned with a `schema_version` table.  
-FR1.5.16: WHERE database update fails the system shall continue using cached database.  
-FR1.5.17: Auto-updates shall NOT be configurable (opinionated design).
+FR1.5.3: The canonical database shall be distributed from `https://ansilust.com/16colors/.index.db`.  
+FR1.5.4: The canonical mirror structure at ansilust.com shall mirror local directory structure exactly.  
+FR1.5.5: All paths under `https://ansilust.com/16colors/*` shall correspond to local `~/Pictures/16colors/*` paths.  
+FR1.5.6: The database shall include all archive metadata (packs, files, artists, groups, SAUCE data).  
+FR1.5.7: The database shall store download URLs for both source files and pre-rendered PNGs.  
+FR1.5.8: The system shall automatically check for database updates on every `16c` invocation.  
+FR1.5.9: WHEN a new database version is available the system shall download it automatically in the background.  
+FR1.5.10: The database shall be updated via versioned SQL patch files.  
+FR1.5.11: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`).  
+FR1.5.12: Patch files shall be distributed from `https://ansilust.com/16colors/patches/`.  
+FR1.5.13: The database shall contain ONLY official 16colo.rs archive content.  
+FR1.5.14: The database shall NOT track local user content or download state.  
+FR1.5.15: The database shall support FTS5 full-text search across all artwork metadata.  
+FR1.5.16: Users shall be able to search the archive instantly without FTP queries.  
+FR1.5.17: The database schema shall be versioned with a `schema_version` table.  
+FR1.5.18: WHERE database update fails the system shall continue using cached database.  
+FR1.5.19: Auto-updates shall NOT be configurable (opinionated design).
 
 ### FR1.6: Discovery and Search
 FR1.6.1: The system shall list available artpacks by year, group, or artist.  
@@ -203,6 +205,41 @@ FR1.9.3: WHEN files are downloaded the library shall emit events for integration
 FR1.9.4: The library shall be usable independently of the CLI tools.
 
 ## Technical Specifications
+
+### Canonical Mirror Concept (ansilust.com/16colors/)
+
+**Design Principle**: `https://ansilust.com/16colors/*` mirrors the local directory structure exactly.
+
+**Path Symmetry**:
+```
+Local Mirror          →  Canonical Remote
+────────────────────────────────────────────────────────────────
+~/Pictures/16colors/                https://ansilust.com/16colors/
+├── .index.db         →             ├── .index.db
+├── patches/          →             ├── patches/
+│   ├── 0001.sql      →             │   ├── 0001-add-mist1025.sql
+│   └── 0002.sql      →             │   └── 0002-update-fire43.sql
+├── packs/            →             └── (not hosted, use 16colo.rs)
+├── local/            →             (user-specific, not hosted)
+└── collections/      →             (optional: curated sets)
+```
+
+**What ansilust.com Hosts**:
+- `16colors/.index.db` - Global archive database (essential)
+- `16colors/patches/*.sql` - Incremental update patches (essential)
+- `16colors/.index.db.version` - Version metadata for update checks (essential)
+- `16colors/collections/*` - Curated collections (optional, future)
+
+**What ansilust.com Does NOT Host**:
+- `16colors/packs/*` - Use 16colo.rs directly (they provide FTP/HTTP/RSYNC)
+- `16colors/local/*` - User-specific content (not canonical)
+
+**Benefits**:
+- **Intuitive mapping**: Local path = remote path (minus domain)
+- **Predictable**: Tools know where to fetch `16colors/.index.db`
+- **Clean URLs**: `https://ansilust.com/16colors/.index.db` (no `.well-known` needed)
+- **Extensible**: Could host curated collections at same paths
+- **Community standard**: Any compatible tool can host at `<domain>/16colors/`
 
 ### 16colo.rs API Research
 
@@ -819,16 +856,39 @@ Before implementation, we should:
 - **Incremental extraction**: Only extract changed files within updated packs
 - **16colors standard v1.0**: Formalize and document the directory standard for community adoption
 
-### Dual Database Architecture
+### Canonical Mirror at ansilust.com/16colors/
 
-#### Global Archive Database (`16colors.db`)
+**Path Symmetry**: The canonical mirror at `https://ansilust.com/16colors/` mirrors the local directory structure exactly.
+
+**URL Mapping**:
+```
+Local:  ~/Pictures/16colors/.index.db
+Remote: https://ansilust.com/16colors/.index.db
+
+Local:  ~/Pictures/16colors/patches/0001-add-mist1025.sql
+Remote: https://ansilust.com/16colors/patches/0001-add-mist1025.sql
+
+Local:  ~/Pictures/16colors/packs/2025/mist1025.zip
+Remote: https://ansilust.com/16colors/packs/2025/mist1025.zip (if we hosted full mirror)
+```
+
+**Benefits of Path Symmetry**:
+- Simple mental model: local paths = remote paths
+- Predictable: tools know where to fetch updates
+- Extensible: could host full mirror if desired
+- Clean: no `.well-known/db/` complexity
+
+**What We Host** (minimum):
+- `16colors/.index.db` - Global archive database
+- `16colors/patches/*.sql` - Incremental update patches
+- `16colors/.index.db.version` - Version metadata (for update checks)
+
+**What We Could Host** (future):
+- `16colors/packs/**/*.zip` - Full archive mirror (huge, optional)
+- `16colors/collections/*` - Curated collections
+
+#### Global Archive Database (`.index.db`)
 Canonical, version-controlled database of the entire 16colo.rs archive:
-
-**Distribution**:
-- Downloadable from: `https://ansilust.com/.well-known/db/16colors.db`
-- Updated regularly with new packs
-- Versioned with semantic versioning (e.g., `16colors-v1.2.3.db`)
-- Patch files: `https://ansilust.com/.well-known/db/patches/0001-add-mist1025.sql`
 
 **Schema** (`.index.db` - Pure Archive Index):
 ```sql
