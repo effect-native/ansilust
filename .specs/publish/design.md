@@ -97,8 +97,7 @@ ansilust/
 │   └── *.md                      # Individual changesets
 ├── .github/workflows/
 │   ├── release.yml               # Main release workflow
-│   ├── changeset-version.yml     # Version PR automation
-│   └── test.yml                  # CI testing
+│   └── changeset-version.yml     # Version PR automation
 ├── packages/                      # npm workspace packages
 │   ├── ansilust/                 # Meta package
 │   │   ├── package.json
@@ -790,50 +789,39 @@ test/e2e/:
   - Verify --version and --help
 ```
 
-**Platform-Specific**:
+**Platform-Specific Testing** (manual, as needed):
 ```
-test/platforms/:
-  ubuntu-22.04-x64/
-  debian-12-x64/
-  alpine-3.18-x64/
-  macos-13-x64/
-  macos-14-arm64/
-  windows-11-x64/
-  raspberrypi-4-arm64/
-  ios-14-arm64/ (jailbroken)
+Local Docker testing (if needed):
+  - docker run -it ubuntu:22.04 bash
+  - Test install script in container
+  - Verify binary runs
+
+Local VM testing (if available):
+  - Test install.ps1 on Windows VM
+  - Test on spare Raspberry Pi if available
+  - Test on jailbroken iOS device if available
 ```
 
-### CI/CD Testing
-
-**GitHub Actions**:
-```
-.github/workflows/test.yml:
-  - Matrix build test: Verify all platforms compile
-  - npm package test: Install meta package + verify execution
-  - Install script test: Run in Docker containers
-  - Checksum test: Verify SHA256SUMS generation
-  - Documentation test: Verify links and examples
-```
+**Testing Philosophy**:
+- **Trust yourself**: You'll test locally before pushing
+- **No CI test suite**: GitHub Actions only builds and publishes
+- **Fix forward**: If an issue slips through, patch it in next release
+- **Build = Test**: If Zig builds all targets successfully, ship it
+- **Smoke test after release**: Quick verification that npm/install work
 
 ### Validation Checklist
 
-**Pre-Release**:
-- [ ] All platform binaries build successfully
-- [ ] All checksums match
-- [ ] Meta package requires correct platform packages
-- [ ] Launcher selects correct platform
-- [ ] Install script works on all platforms
-- [ ] Homebrew formula validates
-- [ ] Container images build and run
-- [ ] Documentation is accurate
+**Pre-Release** (local):
+- [ ] `zig build` compiles successfully for all targets
+- [ ] Spot-check 1-2 binaries run and show `--version`
+- [ ] Install script syntax looks correct (bash -n install.sh)
+- [ ] Changeset file created with proper version bump
 
-**Post-Release**:
-- [ ] npm packages are published and downloadable
-- [ ] GitHub release has all artifacts
-- [ ] Install scripts download correct binaries
-- [ ] Checksums verify successfully
-- [ ] Homebrew tap is updated
-- [ ] Container images are accessible
+**Post-Release** (smoke test):
+- [ ] `npx ansilust --version` works
+- [ ] Install script accessible at ansilust.com/install
+- [ ] GitHub release created with binaries
+- [ ] npm packages published successfully
 
 ---
 
