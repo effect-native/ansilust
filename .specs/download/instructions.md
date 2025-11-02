@@ -153,12 +153,15 @@ FR1.5.1: The system shall provide a canonical `16colors.db` SQLite database of t
 FR1.5.2: The database shall be version-controlled and distributed as a single downloadable file.  
 FR1.5.3: The database shall include all archive metadata (packs, files, artists, groups, SAUCE data).  
 FR1.5.4: The database shall store download URLs for both source files and pre-rendered PNGs.  
-FR1.5.5: The system shall support incremental database updates via versioned SQL patch files.  
-FR1.5.6: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`, `0002-update-fire43.sql`).  
-FR1.5.7: The database shall NOT include local user content (only official 16colo.rs archive).  
-FR1.5.8: The database shall support FTS5 full-text search across artwork metadata.  
-FR1.5.9: Users shall be able to search the archive instantly without FTP queries.  
-FR1.5.10: The database schema shall be versioned with a `schema_version` table.
+FR1.5.5: The system shall automatically check for database updates on every `16c` invocation.  
+FR1.5.6: WHEN a new database version is available the system shall download it automatically in the background.  
+FR1.5.7: The system shall support incremental database updates via versioned SQL patch files.  
+FR1.5.8: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`, `0002-update-fire43.sql`).  
+FR1.5.9: The database shall NOT include local user content (only official 16colo.rs archive).  
+FR1.5.10: The database shall support FTS5 full-text search across artwork metadata.  
+FR1.5.11: Users shall be able to search the archive instantly without FTP queries.  
+FR1.5.12: The database schema shall be versioned with a `schema_version` table.  
+FR1.5.13: WHERE database update fails the system shall continue using cached database.
 
 ### FR1.6: Local Mirror Database Integration
 FR1.6.1: The system shall maintain a separate local database for user's mirror (`local-mirror.db`).  
@@ -576,14 +579,16 @@ All JSON files MUST include a `$schema` property. Schemas are hosted at:
 16c local import ~/Downloads/art/  # Import directory to local/
 16c local path                 # Print local/ directory path
 
-# Global archive database operations
-16c db update                  # Download latest 16colors.db from ansilust.com
+# Global archive database operations (auto-updates on every invocation!)
 16c db version                 # Show current database version
-16c db patch 0001-add-mist1025.sql  # Apply specific patch
-16c db patch --from 1.2.0 --to 1.2.3  # Apply patch range
+16c db info                    # Database info (last update, size, pack count)
 16c db query "SELECT ..."      # Direct SQL queries (read-only on global DB)
 16c db export artists.csv      # Export global database tables to CSV
 16c db stats                   # Database statistics (version, size, table counts)
+
+# Manual operations (rarely needed, auto-updates by default)
+16c db update --now            # Force immediate update check
+16c db update --disable        # Disable auto-updates (if user really wants this)
 
 # Local mirror database operations
 16c mirror rebuild             # Rebuild local-mirror.db from downloaded packs
@@ -638,32 +643,43 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - IF the pack is already in mirror THEN the system shall skip download unless --force is specified
 - The system shall verify ZIP integrity after download
 
-### AC2: File Search and Display (`16c` CLI)
-- WHEN the user requests `16c art.ans` the system shall search the entire archive for files named "art.ans"
-- The system shall display a list of matches with pack/year context
+### AC2: Automatic Database Updates
+- WHEN the user runs any `16c` command the system shall check for database updates
+- The update check shall be throttled (max once per hour)
+- The update check shall use a lightweight HEAD/metadata request (< 1KB)
+- WHEN a new version is available the system shall download it in the background
+- The system shall use the cached database immediately (non-blocking update)
+- IF the database does not exist the system shall download it on first run
+- IF update fails the system shall continue with cached database and log the error
+- The system shall NOT prompt users for update consent on every run
+
+### AC3: File Search and Display (`16c` CLI)
+- WHEN the user requests `16c art.ans` the system shall search `16colors.db` for files named "art.ans"
+- The search shall be instant (no FTP queries, no filesystem scanning)
+- The system shall display matches with pack/year/artist context and download URLs
 - The system shall download missing files on-demand
 - The system shall render all matching files using ansilust renderers
 - IF multiple matches exist THEN the system shall display them sequentially or prompt for selection
 
-### AC3: Local File Processing (`ansilust` CLI)
+### AC4: Local File Processing (`ansilust` CLI)
 - WHEN the user requests `ansilust art.ans` the system shall process `./art.ans` as a local file
 - The system shall NOT search the archive unless `--16colors` is specified
 - IF the file does not exist locally THEN the system shall return error.FileNotFound
 - The behavior shall be consistent with Unix tools like `cat`, `file`, etc.
 
-### AC4: Pack Listing (FTP) - Both CLIs
+### AC5: Pack Listing (FTP) - Both CLIs
 - The system shall support `16c list --year 2025` using FTP directory listing
 - The system shall support `ansilust --16colors list --year 2025` with identical behavior
 - The output shall show pack names, sizes, and modification dates
 - The system shall indicate which packs are already in the local 16colors mirror
 - The listing operation shall complete in < 5 seconds for a single year
 
-### AC5: Resume Support (HTTP)
+### AC6: Resume Support (HTTP)
 - WHEN a download is interrupted the system shall resume from last position
 - The system shall use Range requests for resume
 - IF resume fails THEN the system shall restart from beginning
 
-### AC6: Mirror Operations - Both CLIs
+### AC7: Mirror Operations - Both CLIs
 - The system shall support `16c mirror` to show local 16colors mirror status
 - The system shall support `16c mirror list` to show mirror contents
 - The system shall support `16c mirror verify` to check file integrity against metadata
@@ -671,20 +687,20 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - The `ansilust --16colors mirror` commands shall have identical behavior
 - The system shall report mirror size and statistics on demand
 
-### AC7: Discovery via RSS - Both CLIs
+### AC8: Discovery via RSS - Both CLIs
 - The system shall parse https://16colo.rs/rss/ for new releases
 - The system shall support `16c list --new` to show packs not yet in local mirror
 - The system shall support `ansilust --16colors list --new` with identical behavior
 - The system shall display pack metadata from RSS (title, date, description)
 
-### AC8: CLI Naming and Aliases
+### AC9: CLI Naming and Aliases
 - The primary archive CLI shall be named `16c`
 - The system shall support `16colors` as an alias to `16c`
 - The system shall support `16` as a short alias to `16c`
 - All three names shall invoke identical functionality
 - The `ansilust` CLI shall remain the primary file-processing tool
 
-### AC9: Full Archive Mirroring with Safe Defaults
+### AC10: Full Archive Mirroring with Safe Defaults
 - WHEN the user requests `16c mirror sync` the system shall download the entire 16colors archive
 - The system shall exclude NSFW content by default (unless `--include-nsfw` specified)
 - The system shall exclude executable files (*.exe, *.com, *.bat) by default (unless `--include-executables` specified)
@@ -694,14 +710,14 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - WHEN sync is run again the system shall only download new or changed packs (incremental)
 - The system shall skip already-mirrored packs unless --force is specified
 
-### AC10: Explicit Inclusion of Filtered Content
+### AC11: Explicit Inclusion of Filtered Content
 - WHEN the user requests `16c mirror sync --include-nsfw` the system shall download NSFW-tagged content
 - WHEN the user requests `16c mirror sync --include-executables` the system shall download executable files
 - WHEN the user requests `16c mirror sync --include-all` the system shall include both NSFW and executables
 - The system shall warn users when including NSFW or executables
 - The system shall track included content in mirror statistics
 
-### AC11: Additional Filtering
+### AC12: Additional Filtering
 - WHEN the user requests `16c mirror sync --since 2020` the system shall only download packs from 2020 onwards
 - WHEN the user requests `16c mirror sync --exclude-ext png,gif` the system shall also exclude those extensions (in addition to defaults)
 - WHEN the user requests `16c mirror sync --only-ext ans,asc,xb` the system shall only download those extensions (overrides defaults)
@@ -709,7 +725,7 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - WHEN sync is run without filters the system shall use previously configured filters
 - The system shall always apply default exclusions unless explicitly overridden
 
-### AC12: Mirror Management
+### AC13: Mirror Management
 - WHEN the user requests `16c mirror sync --dry-run` the system shall display what would be downloaded without downloading
 - The dry-run output shall show total size, pack count, and excluded content counts
 - The dry-run output shall indicate which defaults are active (NSFW excluded, executables excluded)
@@ -719,7 +735,7 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - The mirror stats shall include total size, pack count, file count, and oldest/newest packs
 - The mirror stats shall show both archive and local content separately
 
-### AC13: Local Artwork Management
+### AC14: Local Artwork Management
 - The system shall create a `local/` directory within the 16colors directory on first run
 - WHEN the user requests `16c local add myart.ans` the system shall copy the file to the `local/` directory
 - WHEN the user requests `16c local import ~/Downloads/art/` the system shall recursively copy the directory to `local/`
@@ -767,14 +783,17 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 ### Database & Search
 - **SM15**: Users can search the entire archive instantly without FTP queries (`16colors.db`)
 - **SM16**: Global database includes download URLs for both source files and pre-rendered PNGs
-- **SM17**: Database updates via incremental patch files (no need to re-download entire DB)
-- **SM18**: Local mirror database tracks what's downloaded without duplicating archive metadata
+- **SM17**: Database updates automatically on every `16c` invocation (zero-friction, no manual updates)
+- **SM18**: Update checks are lightweight and throttled (< 1KB, max once per hour)
+- **SM19**: Database updates are non-blocking (use cached DB while updating in background)
+- **SM20**: Database updates use incremental patches when possible (efficient bandwidth)
+- **SM21**: Local mirror database tracks what's downloaded without duplicating archive metadata
 
 ### Integration & Interoperability
-- **SM19**: Integration with ansilust parsers is seamless (files ready for processing)
-- **SM20**: The 16colors directory standard enables interoperability between multiple tools
-- **SM21**: Error handling is clear and actionable (network issues, missing packs, etc.)
-- **SM22**: Protocol selection is transparent and optimal for each operation type
+- **SM22**: Integration with ansilust parsers is seamless (files ready for processing)
+- **SM23**: The 16colors directory standard enables interoperability between multiple tools
+- **SM24**: Error handling is clear and actionable (network issues, missing packs, etc.)
+- **SM25**: Protocol selection is transparent and optimal for each operation type
 
 ## Future Considerations
 
@@ -876,15 +895,33 @@ CREATE TABLE artists (
 );
 ```
 
-**Update Mechanism**:
-```bash
-# User downloads latest database
-16c db update                           # Downloads latest 16colors.db
+**Auto-Update Mechanism**:
 
-# Or applies incremental patches
-16c db patch 0001-add-mist1025.sql     # Apply single patch
-16c db patch --from 1.2.0 --to 1.2.3   # Apply range of patches
+The database updates **automatically** on every `16c` invocation:
+
+1. **On first run**: Downloads initial `16colors.db` (or prompts for consent)
+2. **On every run**: 
+   - Checks for updates (quick HEAD request for version metadata)
+   - If new version available: downloads in background (non-blocking)
+   - Uses cached database immediately while update happens
+3. **Update frequency**: Throttled (max once per hour to avoid spam)
+4. **Update method**: 
+   - Small updates: Apply SQL patches incrementally
+   - Large updates: Download new database file
+5. **Failure handling**: Continues with cached database if update fails
+
+**User Control**:
+```bash
+16c db version                 # Show current version, check for updates
+16c db info                    # Database stats, last update time
+16c db update --now            # Force immediate update (bypass throttle)
+16c db update --disable        # Disable auto-updates permanently
+
+# Manual patch application (advanced users)
+16c db patch 0001-add-mist1025.sql
 ```
+
+**Design Philosophy**: Zero-friction updates. Users shouldn't think about database freshness. If they hate auto-updates, they can uninstall the tool.
 
 **Patch File Example** (`0001-add-mist1025.sql`):
 ```sql
