@@ -1,8 +1,12 @@
 # Ansilust Screensaver for Omarchy Linux
 
+> **Note**: Full specification available at `.specs/screensaver/instructions.md`
+
 ## Concept
 
 Create a screensaver for Omarchy Linux that continuously scrolls through classic ANSI art from the [16colo.rs](https://16colo.rs) BBS art archive, bringing retro computing aesthetics to modern Linux systems.
+
+**Status**: Specification complete (see `.specs/screensaver/`)
 
 ## Core Features
 

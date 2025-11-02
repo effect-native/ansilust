@@ -159,8 +159,8 @@ FR1.5.7: WHEN a new database version is available the system shall download it a
 FR1.5.8: The database shall be updated via versioned SQL patch files.  
 FR1.5.9: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`).  
 FR1.5.10: Patch files shall be distributed from `https://ansilust.com/.well-known/db/patches/`.  
-FR1.5.11: The database shall include both official archive content AND local user content.  
-FR1.5.12: The database shall tag entries with source_type ('archive' or 'local').  
+FR1.5.11: The database shall contain ONLY official 16colo.rs archive content.  
+FR1.5.12: The database shall NOT track local user content or download state.  
 FR1.5.13: The database shall support FTS5 full-text search across all artwork metadata.  
 FR1.5.14: Users shall be able to search the archive instantly without FTP queries.  
 FR1.5.15: The database schema shall be versioned with a `schema_version` table.  
@@ -169,10 +169,10 @@ FR1.5.17: Auto-updates shall NOT be configurable (opinionated design).
 
 ### FR1.6: Discovery and Search
 FR1.6.1: The system shall list available artpacks by year, group, or artist.  
-FR1.6.2: The system shall query `.index.db` for search operations (no FTP needed).  
+FR1.6.2: The system shall query `.index.db` for archive search operations (no FTP needed).  
 FR1.6.3: WHEN browsing packs the system shall display pack metadata (group, date, file count).  
 FR1.6.4: The system shall support filtering by file format (ANS, XB, ASC, etc.).  
-FR1.6.5: The system shall search both archive and local user content.
+FR1.6.5: To check if files are downloaded locally the system shall use filesystem operations (not database).
 
 ### FR1.7: Archive Mirroring
 FR1.7.1: The system shall support mirroring the entire 16colors archive.  
@@ -830,7 +830,7 @@ Canonical, version-controlled database of the entire 16colo.rs archive:
 - Versioned with semantic versioning (e.g., `16colors-v1.2.3.db`)
 - Patch files: `https://ansilust.com/.well-known/db/patches/0001-add-mist1025.sql`
 
-**Schema** (`16colors.db`):
+**Schema** (`.index.db` - Pure Archive Index):
 ```sql
 CREATE TABLE schema_version (
   version INTEGER PRIMARY KEY,
@@ -899,22 +899,28 @@ Estimated size for ~4000 packs with ~100,000 files:
 - ❌ Full file content (only metadata)
 - ❌ Binary data (images, executables)
 - ❌ Rendered PNG data (only URLs)
+- ❌ Local user content (only archive)
+- ❌ Download state (use filesystem instead)
+- ❌ Per-pack JSON metadata files (redundant)
 - ❌ Duplicate SAUCE fields (normalize to JSON)
-- ❌ Redundant URL patterns (use base URL + template)
 
-**What we DO store** (essential for search):
+**What we DO store** (essential for archive search):
 - ✅ Filename, artist, title (FTS5 indexed)
 - ✅ SAUCE metadata (JSON, for filtering)
 - ✅ Download URLs (source + PNG variants)
 - ✅ Pack/group/year relationships
 - ✅ File extensions and sizes (for statistics)
 
+**Checking Local Downloads**:
+- Use filesystem operations: `if exists(~/Pictures/16colors/packs/2025/mist1025/)`
+- Simple, fast, no database overhead
+- Database is for archive search, not local state tracking
+
 **Size Monitoring**:
 If database grows beyond 100MB, consider:
 - URL normalization (base URL + path template)
 - SAUCE field compression
 - Removing unnecessary FTS5 fields
-- Splitting into archive.db + local.db again
 
 **Auto-Update Mechanism**:
 
@@ -975,14 +981,9 @@ UPDATE schema_version SET version = 1;
 # Find and download
 16c get dragon.ans                      # Finds in .index.db, shows download URLs, offers to download
 
-# Filter by source
-16c search "dragon" --archive-only      # Only official archive
-16c search "dragon" --local-only        # Only user's local/ content
-
 # Statistics from database
 16c stats --artist misfit               # Instant stats from .index.db
 16c stats --group mistigris --year 1996 # Fast filtered queries
-16c stats --local                       # Stats for local/ content only
 ```
 
 **Benefits**:
@@ -990,13 +991,24 @@ UPDATE schema_version SET version = 1;
 - **No FTP queries**: Search entire archive instantly offline
 - **Download URLs included**: Know exact URLs for source and PNGs
 - **Incremental updates**: Patch files keep database current
-- **Single source of truth**: One database for archive + local content
+- **Pure archive index**: Only 16colo.rs data, no local state tracking
 - **Predictable location**: `16colors/.index.db` in the 16colors root
+
+**Local Downloads Check** (filesystem-based):
+```bash
+# Check if pack is downloaded: just look at filesystem
+if [ -d ~/Pictures/16colors/packs/2025/mist1025/ ]; then
+  echo "Already downloaded"
+fi
+
+# 16c mirrors list does this automatically
+16c list --year 2025           # Shows ✓ for downloaded packs
+```
 
 ### Integration Opportunities
 - **OpenTUI integration**: Display artwork directly from 16colors mirror
 - **SQLite-powered search**: Fast queries without scanning 4000+ packs
-- **SAUCE analytics**: Complex queries on SAUCE metadata corpus
+- **SAUCE analytics**: Complex queries on SAUCE metadata archive
 - **Format statistics**: Real-time statistics from database queries
 - **PabloDraw integration**: Recognize and use shared 16colors directory
 - **Moebius integration**: Open files from standard 16colors paths
@@ -1024,19 +1036,16 @@ UPDATE schema_version SET version = 1;
 - Download complete artpack via FTP to 16colors directory
 - Download individual file via HTTP
 - Extract ZIP archive preserving structure
-- Update `.index.db` with downloaded pack metadata
-- Verify SAUCE metadata extraction
-- Update SQLite database after pack download
-- Query SQLite database for search operations
+- Query `.index.db` for search operations (archive search)
 - FTS5 full-text search accuracy
-- Detect existing packs in 16colors mirror (avoid re-download)
+- Detect existing packs via filesystem (no database tracking)
 - Resume interrupted download
 - Network failure recovery
 - Rate limiting compliance
 - FTP directory listing
 - RSS feed parsing
-- Interoperability: Read metadata written by hypothetical other tools
-- Database rebuild from existing mirror metadata
+- Automatic database update on CLI invocation
+- Database patch application (incremental updates)
 - Database export to CSV/JSON formats
 
 ### System Tests

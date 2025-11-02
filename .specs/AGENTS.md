@@ -211,19 +211,91 @@ TC3.4: The system shall pass with -Doptimize=ReleaseSafe.
 #### Phase 3: Design Phase
 **Objective**: Technical architecture and implementation strategy
 
+**⚠️ CRITICAL**: Design phase focuses on **WHAT** to build and **HOW** it will be structured, **NOT** writing actual implementation code.
+
 **Deliverables**:
 - Create `design.md` including:
-  - **Zig Patterns**: Struct methods, comptime, error unions
-  - **Memory Safety Approach**: Allocator strategy, ownership model
-  - **Module Architecture**: Namespace organization, public API design
-  - **Error Handling Strategy**: Error sets, error union patterns
-  - **Testing Strategy**: Unit tests, integration tests, fuzz testing
-  - **Documentation Plan**: Doc comments (`///`), examples, API coverage
-  - **Code Examples**: Demonstrating key implementations
-  - **Integration Points**: How feature fits with existing codebase
-  - **Performance Considerations**: Allocations, compile-time optimization
+  - **Architecture Overview**: High-level system structure and component relationships
+  - **Module Organization**: How components are organized and interact
+  - **Data Structures**: Key data structures and their purposes (description only, not full code)
+  - **Algorithm Approaches**: High-level description of algorithms and logic flow
+  - **Error Handling Strategy**: Error sets, error propagation patterns
+  - **Memory Management Strategy**: Allocator usage patterns, ownership rules
+  - **Testing Approach**: Testing strategy and key test scenarios
+  - **Integration Points**: How feature integrates with existing codebase
+  - **Performance Considerations**: Expected performance characteristics
+  - **API Surface**: Public API design (signatures and descriptions, not implementations)
+
+**What to INCLUDE**:
+- ✅ Architecture diagrams and component relationships
+- ✅ Data structure descriptions and relationships
+- ✅ Algorithm pseudocode or flowcharts
+- ✅ Interface signatures and contracts
+- ✅ Decision rationale for design choices
+- ✅ Trade-off analysis
+
+**What to AVOID**:
+- ❌ Full implementation code
+- ❌ Complete function bodies
+- ❌ Line-by-line code examples
+- ❌ Actual Zig/JavaScript/TypeScript implementations
+
+**Code Examples** (if needed):
+- Keep minimal and illustrative only
+- Show interface signatures, not implementations
+- Demonstrate patterns, not actual working code
+- Use pseudocode or simplified examples
+
+**Example of GOOD design documentation**:
+```markdown
+### Platform Detection Module
+
+**Purpose**: Detect OS, architecture, and libc variant
+
+**Interface**:
+```typescript
+interface PlatformInfo {
+  os: 'linux' | 'darwin' | 'win32'
+  arch: 'x64' | 'arm64' | 'arm' | 'ia32'
+  libc?: 'glibc' | 'musl'  // Linux only
+}
+
+function detectPlatform(): PlatformInfo
+```
+
+**Algorithm**:
+1. Read process.platform → OS
+2. Read process.arch → architecture
+3. If Linux: detect libc using detect-libc package
+4. Return structured platform information
+
+**Error Handling**:
+- Unsupported platform → throw with helpful message
+- Missing libc detection → default to glibc
+```
+
+**Example of BAD design documentation** (too much code):
+```javascript
+// ❌ DON'T DO THIS IN DESIGN PHASE
+function detectPlatform() {
+  const { platform, arch } = process
+  let libc = 'glibc'
+  if (platform === 'linux') {
+    try {
+      const detectLibc = require('detect-libc')
+      libc = detectLibc.family || 'glibc'
+    } catch (err) {
+      // fallback to glibc
+    }
+  }
+  return { os: platform, arch, libc: platform === 'linux' ? libc : undefined }
+}
+// This belongs in IMPLEMENTATION phase, not DESIGN
+```
 
 **🔒 AUTHORIZATION GATE**: Present design.md and request user approval to proceed to Plan Phase
+
+**Remember**: Design documents the architecture and approach. Implementation writes the code. Keep them separate.
 
 ---
 

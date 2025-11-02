@@ -69,27 +69,39 @@ All functional requirements use EARS notation patterns:
 
 **FR1.2.6**: Each binary shall support `--version` and `--help` flags.
 
-### FR1.3: npm Package Requirements
+### FR1.3: npm Package Requirements (esbuild-style)
 
-**FR1.3.1**: The npm package shall be named `ansilust`.
+**FR1.3.1**: The system shall publish a meta package named `ansilust` with launcher logic.
 
-**FR1.3.2**: The npm package shall include platform-specific binaries in a `bin/` directory.
+**FR1.3.2**: The system shall publish platform-specific packages (e.g., `ansilust-linux-x64-gnu`) containing prebuilt binaries.
 
-**FR1.3.3**: The package.json shall specify binary paths for supported platforms.
+**FR1.3.3**: The meta package shall declare platform packages as optionalDependencies.
 
-**FR1.3.4**: WHEN installed globally the system shall create a `ansilust` command in the user's PATH.
+**FR1.3.4**: The meta package shall include a launcher script at `bin/launcher.js`.
 
-**FR1.3.5**: WHEN executed via npx the system shall download and cache the appropriate binary.
+**FR1.3.5**: The launcher shall use `detect-libc` to determine glibc vs musl on Linux.
 
-**FR1.3.6**: The npm package shall include a postinstall script to verify binary compatibility.
+**FR1.3.6**: The launcher shall map platform/arch/libc to the appropriate platform package name.
 
-**FR1.3.7**: IF the platform is unsupported THEN the postinstall script shall display a helpful error message.
+**FR1.3.7**: The launcher shall require() the platform package to obtain binPath.
 
-**FR1.3.8**: The npm package shall include README.md, LICENSE, and usage documentation.
+**FR1.3.8**: IF the platform package is missing THEN the launcher shall display installation instructions.
 
-**FR1.3.9**: The package.json shall specify the GitHub repository URL.
+**FR1.3.9**: The launcher shall spawn the binary using spawnSync with stdio:'inherit'.
 
-**FR1.3.10**: The npm package shall use semantic versioning (semver).
+**FR1.3.10**: WHEN installed globally the system shall create an `ansilust` command in the user's PATH.
+
+**FR1.3.11**: WHEN executed via npx the system shall run instantly without additional downloads.
+
+**FR1.3.12**: Platform packages shall specify `os` and `cpu` fields to enable npm filtering.
+
+**FR1.3.13**: Platform packages shall export binPath pointing to the embedded binary.
+
+**FR1.3.14**: All npm packages shall include README.md, LICENSE, and usage documentation.
+
+**FR1.3.15**: All npm packages shall use semantic versioning synchronized across meta and platform packages.
+
+**FR1.3.16**: The meta package shall include `detect-libc` as a dependency.
 
 ### FR1.4: Homebrew Formula Requirements
 
@@ -484,19 +496,21 @@ All functional requirements use EARS notation patterns:
 
 ### IR5.1: GitHub Actions Integration
 
-**IR5.1.1**: The release workflow shall trigger on tags matching `v*`.
+**IR5.1.1**: The system shall use Changesets (@changesets/cli, @changesets/changelog-github) for version management.
 
-**IR5.1.2**: The workflow shall use matrix builds for parallel compilation.
+**IR5.1.2**: The release workflow shall trigger on changesets version commits or tags matching `v*`.
 
-**IR5.1.3**: The workflow shall upload artifacts to GitHub releases.
+**IR5.1.3**: The workflow shall use matrix builds for parallel compilation.
 
-**IR5.1.4**: The workflow shall publish to npm registry using npm token.
+**IR5.1.4**: The workflow shall upload artifacts to GitHub releases.
 
-**IR5.1.5**: The workflow shall update Homebrew tap repository.
+**IR5.1.5**: The workflow shall publish to npm registry using Changesets automation.
 
-**IR5.1.6**: The workflow shall generate and upload checksums.
+**IR5.1.6**: The workflow shall update Homebrew tap repository.
 
-**IR5.1.7**: WHERE signing is enabled the workflow shall sign with GPG key.
+**IR5.1.7**: The workflow shall generate and upload checksums.
+
+**IR5.1.8**: WHERE signing is enabled the workflow shall sign with GPG key.
 
 ### IR5.2: Package Registry Integration
 
@@ -559,6 +573,10 @@ All functional requirements use EARS notation patterns:
 **DEP6.2.7**: shellcheck for Bash script validation
 
 **DEP6.2.8**: PSScriptAnalyzer for PowerShell script validation
+
+**DEP6.2.9**: @changesets/cli for version management and changelog generation
+
+**DEP6.2.10**: @changesets/changelog-github for GitHub-integrated changelogs
 
 ### DEP6.3: Accounts and Access
 
@@ -749,3 +767,99 @@ All requirements are:
 4. Define build system implementation details
 5. Design install script logic and platform detection
 6. Plan GitHub Actions workflow structure
+
+---
+
+## Implementation Notes
+
+### Existing npm Package Reservations
+
+The following npm package names have been successfully reserved (published as v0.0.1 placeholders):
+
+- **ansilust**: Main ANSI art rendering engine
+- **16colors**: 16colo.rs archive utilities  
+- **16c**: 16colo.rs CLI shorthand
+
+**Location**: `/packages/{ansilust,16colors,16c}/`
+
+**Status**: Placeholder packages published to prevent squatting
+
+**Next Steps**: 
+- Set up Changesets monorepo configuration
+- Migrate placeholders to real packages with binaries
+- Configure CI/CD to build Zig binaries and package them
+
+### Changesets Integration
+
+**Current Status**: Changesets dependencies mentioned but not yet configured
+
+**Required Setup**:
+1. Create root `package.json` with workspace configuration
+2. Initialize Changesets: `.changeset/config.json`
+3. Configure monorepo with packages: `ansilust`, `16colors`, `16c`
+4. Set up GitHub Actions workflow for Changesets automation
+5. Configure changelog integration with @changesets/changelog-github
+
+**Workflow**:
+1. Developer adds changeset: `npx changeset`
+2. Changesets bot creates version PR
+3. Merge version PR → triggers release workflow
+4. Workflow builds Zig binaries for all platforms
+5. Workflow packages binaries into npm packages
+6. Changesets publishes to npm
+7. GitHub release created with all platform binaries
+
+### Monorepo Structure
+
+```
+ansilust/
+├── package.json (workspace root)
+├── .changeset/
+│   └── config.json
+├── packages/
+│   ├── ansilust/
+│   │   ├── package.json
+│   │   ├── bin/ (platform binaries)
+│   │   └── index.js (binary selector)
+│   ├── 16colors/
+│   │   └── package.json
+│   └── 16c/
+│       └── package.json
+├── build.zig (Zig build system)
+└── .github/workflows/
+    ├── release.yml (build + publish)
+    └── changeset.yml (version automation)
+```
+
+### Binary Packaging Strategy for npm
+
+**Challenge**: npm packages need platform-specific binaries
+
+**Solution**:
+1. Zig builds all platform binaries in CI
+2. `ansilust` npm package includes all binaries in `bin/` directory
+
+### Binary Packaging Strategy for npm (esbuild-style)
+
+**Pattern**: esbuild-style prebuilt platform packages (RECOMMENDED)
+
+**Architecture**:
+1. **Meta package**: `ansilust` with launcher (`bin/launcher.js`)
+2. **Platform packages** (as optionalDependencies):
+   - `ansilust-darwin-arm64`, `ansilust-darwin-x64`
+   - `ansilust-linux-x64-gnu`, `ansilust-linux-x64-musl`
+   - `ansilust-linux-arm64-gnu`, `ansilust-linux-arm64-musl`
+   - `ansilust-linux-armv7-gnu`, `ansilust-linux-armv7-musl`
+   - `ansilust-linux-i386-musl` (for iSH)
+   - `ansilust-win32-x64`
+
+**Benefits** (battle-tested by esbuild, swc, @biomejs/biome):
+- ✅ Zero network delay on first `npx` run
+- ✅ Works offline after install
+- ✅ npm auto-selects correct platform
+- ✅ Fast execution (no download)
+
+**Launcher**: Detects platform/arch/libc → requires platform package → spawns binary
+**Platform pkg**: Exports `binPath` pointing to embedded Zig binary
+
+See implementation examples in design.md (Phase 3).
