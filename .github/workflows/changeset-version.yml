@@ -1,15 +1,37 @@
 name: Changeset Version
 
-# TODO: Implement full version workflow (Phase 3)
-
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  placeholder:
+  release:
+    name: Create version PR
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Version workflow - coming soon"
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Create version PR
+        uses: changesets/action@v1
+        with:
+          publish: npm run release
+          commit: 'chore: release'
+          title: 'chore(release): version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
