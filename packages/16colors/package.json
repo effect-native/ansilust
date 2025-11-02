@@ -1,0 +1,20 @@
+{
+  "name": "16colors",
+  "version": "0.0.1",
+  "description": "16colo.rs ANSI art archive utilities (placeholder - real package coming soon)",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/effect-native/ansilust.git"
+  },
+  "keywords": [
+    "16colors",
+    "16colo.rs",
+    "ansi",
+    "art",
+    "bbs",
+    "archive"
+  ],
+  "author": "Tom Aylott <oblivious@subtlegradient.com>",
+  "license": "MIT"
+}

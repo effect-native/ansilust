@@ -1,0 +1,20 @@
+{
+  "name": "ansilust",
+  "version": "0.0.1",
+  "description": "ANSI art rendering engine (placeholder - real package coming soon)",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/effect-native/ansilust.git"
+  },
+  "keywords": [
+    "ansi",
+    "art",
+    "text-art",
+    "ascii",
+    "bbs",
+    "ansilove"
+  ],
+  "author": "Tom Aylott <oblivious@subtlegradient.com>",
+  "license": "MIT"
+}

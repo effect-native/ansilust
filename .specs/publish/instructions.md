@@ -58,6 +58,10 @@ All distribution mechanisms must prioritize security, reproducibility, and maint
 
 **CR13.4**: WHERE Termux is available the project shall support installation on Android devices.
 
+**CR13.5**: The project shall support installation on jailbroken iOS devices via APT repositories (Procursus/Cydia/Sileo).
+
+**CR13.6**: The project shall support installation on non-jailbroken iOS devices via iSH terminal emulator.
+
 ### Security & Automation
 
 **CR14**: All package builds and distributions shall be automated via GitHub Actions CI/CD.
@@ -164,9 +168,12 @@ nix profile install nixpkgs#ansilust  # NixOS
 ## Technical Specifications
 
 ### Platforms & Architectures
-- **Linux**: x86_64, aarch64, armv7 (32-bit ARM for older Raspberry Pi)
+- **Linux**: x86_64, aarch64, armv7 (32-bit ARM for older Raspberry Pi), i386 (for iSH on iOS)
 - **macOS**: x86_64 (Intel), aarch64 (Apple Silicon)
 - **Windows**: x86_64
+- **iOS/iPadOS**:
+  - Jailbroken: iphoneos-arm64 (iPhone 5s+, iPad Air+), iphoneos-arm (older 32-bit devices)
+  - Non-jailbroken: i386-linux-musl (via iSH emulator)
 - **Special Environments**:
   - Docker containers (all architectures, including Alpine Linux musl)
   - VPS/Cloud providers (standard Linux distributions)
@@ -187,6 +194,7 @@ nix profile install nixpkgs#ansilust  # NixOS
 - **Nix profile**: Derivation installed to user profile
 - **Installer scripts**: Bash/PowerShell scripts that download and install binary
 - **Manual**: Binary archives (tar.gz, zip) for manual extraction
+- **APT (iOS/Debian)**: .deb packages for jailbroken iOS devices (Procursus/Cydia/Sileo)
 
 ### Domain & Hosting
 - **Domain**: ansilust.com (OWNED - confirmed)
@@ -197,17 +205,20 @@ nix profile install nixpkgs#ansilust  # NixOS
 - **Triggers**: Git tags (v*), pull requests (build only), main branch commits
 - **Workflows**:
   - Build matrix for all platforms/architectures:
-    - Linux: x86_64, aarch64, armv7 (musl and glibc variants)
+    - Linux: x86_64, aarch64, armv7 (musl and glibc variants), i386-musl (for iSH)
     - macOS: x86_64, aarch64
     - Windows: x86_64
+    - iOS: iphoneos-arm64, iphoneos-arm (jailbroken devices)
   - Run tests and validation on all architectures
   - Cross-compilation using Zig's native cross-compile support
   - Sign artifacts (checksums, GPG signatures)
   - Create GitHub releases with all architecture variants
+  - Build .deb packages for iOS APT repositories
   - Publish to npm registry
   - Update Homebrew formula repository
   - Update AUR package repository
   - Update Nix package repository (nixpkgs PR or overlay)
+  - Publish to iOS APT repository (for jailbroken devices)
 
 ---
 
@@ -257,6 +268,10 @@ powershell -c "irm ansilust.com/install.ps1 | iex"
 
 **AC17**: A user shall successfully install ansilust on Android via Termux using the bash installer.
 
+**AC17.1**: A user with a jailbroken iOS device shall successfully install ansilust via APT (Cydia/Sileo/Procursus).
+
+**AC17.2**: A user with iSH installed on iOS/iPadOS shall successfully download and run the i386-musl binary.
+
 **AC18**: WHEN explicitly installed the `ansilust` command shall be available in PATH for subsequent use.
 
 ### Security & Verification
@@ -270,6 +285,10 @@ powershell -c "irm ansilust.com/install.ps1 | iex"
 **AC22**: The install scripts shall verify checksums before extracting binaries.
 
 **AC23**: The install scripts shall fail gracefully with clear error messages on verification failures.
+
+**AC23.4**: The i386-musl binary shall run successfully in iSH on iOS/iPadOS devices.
+
+**AC23.5**: The .deb package shall install successfully on jailbroken iOS devices via Cydia, Sileo, or Procursus.
 
 ### Package Quality
 
@@ -294,6 +313,71 @@ The following are explicitly **out of scope** for this feature:
 - **Auto-Update Mechanism**: Built-in auto-updater within ansilust binary
 - **Telemetry**: Usage analytics or crash reporting
 - **Premium/Commercial Distribution**: Enterprise licensing or support tiers
+- **TV Platform Apps**: Apple TV, Android TV, Fire TV, Roku, webOS (requires full app development, not CLI distribution)
+
+## Future Considerations (Beyond CLI Distribution)
+
+### TV Platform Applications
+Native applications for smart TV platforms (out of scope for this spec, requires separate app development):
+- **Apple TV (tvOS)**: Full tvOS app with SwiftUI interface
+- **Android TV**: Android app optimized for TV interface
+- **Amazon Fire TV**: Fire OS app via Amazon App Store
+- **Roku**: BrightScript channel for Roku Channel Store
+- **LG webOS**: webOS app via LG Content Store
+- **Samsung Tizen**: Tizen app via Samsung Apps
+
+**Note**: TV apps would use ansilust as a rendering engine/library but require:
+- Full GUI application development
+- App store submission and approval processes
+- Platform-specific UI/UX design
+- Remote control navigation
+- Platform SDK integration
+- Separate specification and development cycle
+
+### Bootable ISO / Kiosk Mode (Side Quest)
+Dedicated bootable operating system for art display appliances (requires separate specification):
+
+**Concept**: Flash an ISO onto a device, plug into TV, get infinite art forever.
+
+**Use Cases**:
+- Art galleries and exhibitions
+- Digital signage displays
+- Lobby/waiting room displays
+- Home ambient art displays
+- Maker space installations
+
+**Potential Features**:
+- Minimal Linux distribution (Alpine, Buildroot, or custom)
+- Auto-boot into ansilust rendering mode
+- Configuration via USB drive or web interface
+- Playlist/shuffle modes for art collections
+- Customization options (colors, speed, effects)
+- Remote management (optional)
+- Low power consumption optimizations
+- Support for various HDMI displays
+
+**Target Devices**:
+- Raspberry Pi (all models)
+- Intel NUC / mini PCs
+- Old laptops repurposed as displays
+- Single-board computers (Orange Pi, Rock Pi, etc.)
+- Thin clients
+
+**Technical Requirements**:
+- Bootable ISO/IMG format
+- Automatic display detection and configuration
+- Read-only filesystem (prevent corruption)
+- Network configuration (Ethernet/WiFi)
+- Update mechanism
+- Hardware acceleration support
+
+**Distribution**:
+- ISO images for x86/x64
+- IMG images for ARM (Raspberry Pi)
+- USB/SD card flashing instructions
+- Balena Etcher / Raspberry Pi Imager compatible
+
+**Status**: Requires separate specification - tracked in side quests
 
 ---
 
@@ -301,7 +385,7 @@ The following are explicitly **out of scope** for this feature:
 
 **SM1**: Ansilust is executable via at least 5 direct execution methods (npx, bunx, deno, nix run, docker/podman).
 
-**SM1.1**: Ansilust is installable via at least 6 explicit installation methods (npm global, brew, AUR, nix profile, bash script, PowerShell script).
+**SM1.1**: Ansilust is installable via at least 7 explicit installation methods (npm global, brew, AUR, nix profile, bash script, PowerShell script, iOS APT).
 
 **SM2**: GitHub Actions workflows successfully build and publish releases for all platforms on every tagged version.
 
@@ -323,6 +407,22 @@ The following are explicitly **out of scope** for this feature:
 - Container images (Docker Hub, GitHub Container Registry)
 - Additional ARM platforms (RISC-V, other embedded devices)
 - WebAssembly builds for browser execution
+
+### Testing Device Acquisition
+**Action items for comprehensive platform testing**:
+- Acquire old jailbroken iPhones for testing (already owned)
+- Purchase oldest compatible iPad for iOS testing (iPad 2 or later for 32-bit ARM testing)
+- iPad Air or later for 64-bit ARM testing
+- Consider iPad mini (original) for additional 32-bit coverage
+- Test on various iOS versions (iOS 9-17+)
+- Document minimum iOS/iPadOS version requirements
+
+**Target test matrix**:
+- iPhone 5s (iphoneos-arm64, earliest arm64 device)
+- iPhone 5 or earlier (iphoneos-arm, 32-bit testing)
+- iPad 2/3/4 (iphoneos-arm, 32-bit)
+- iPad Air/Air 2 (iphoneos-arm64)
+- Latest iPad for iSH testing (non-jailbroken)
 
 ### Enhanced Security
 - GPG signature verification for all packages
@@ -363,6 +463,9 @@ The following are explicitly **out of scope** for this feature:
 - Debian 12 (Linux/x86_64)
 - Arch Linux (latest) (Linux/x86_64)
 - macOS 13 (Intel), macOS 14 (Apple Silicon)
+- iOS 9+ (jailbroken, iphoneos-arm for 32-bit devices)
+- iOS 12+ (jailbroken, iphoneos-arm64 for 64-bit devices)
+- iOS/iPadOS 15+ (non-jailbroken via iSH)
 - Windows 11 (x86_64)
 - Raspberry Pi OS (armv7, aarch64)
 - Alpine Linux (x86_64, aarch64) for Docker/minimal environments
@@ -381,6 +484,12 @@ The following are explicitly **out of scope** for this feature:
 **PT5**: Installation shall be tested in Docker containers:
 - `ubuntu:latest`, `debian:slim`, `alpine:latest`
 - Multi-arch containers (x86_64, aarch64, armv7)
+
+**PT6**: Installation shall be tested on iOS/iPadOS devices:
+- Jailbroken iPhone 5s or later (iphoneos-arm64 via APT)
+- Jailbroken iPhone 5 or earlier (iphoneos-arm via APT, if available)
+- Jailbroken iPad Air or later (iphoneos-arm64 via APT)
+- iPad with iSH installed (i386-musl binary, non-jailbroken)
 
 ### Security Testing
 
@@ -419,6 +528,7 @@ The following are explicitly **out of scope** for this feature:
 ### External Services
 - **npm Registry**: For npm package publishing
 - **Homebrew**: Tap repository for formula hosting
+- **iOS APT Repository**: Procursus, Chariz, or self-hosted APT repo for jailbroken devices
 - **AUR**: User repository access for package publishing
 - **Nix**: nixpkgs repository or personal overlay
 - **Domain Registrar**: For ansilust.com domain
@@ -426,9 +536,10 @@ The following are explicitly **out of scope** for this feature:
 
 ### Tooling
 - **GitHub Actions**: CI/CD orchestration
-- **Zig**: Cross-compilation for all platforms
+- **Zig**: Cross-compilation for all platforms including iOS targets
 - **GPG/SHA256**: Artifact signing and verification
 - **tar/zip**: Archive creation for distribution
+- **dpkg-deb**: .deb package creation for iOS APT distribution
 
 ### Accounts & Access
 - npm account with publishing permissions
@@ -437,6 +548,8 @@ The following are explicitly **out of scope** for this feature:
 - ansilust.com domain (OWNED) with hosting configured
 - GPG keys for signing
 - GitHub repository with Actions enabled
+- iOS APT repository access (Procursus submission or self-hosted)
+- Jailbroken test devices for validation
 
 ---
 
@@ -517,6 +630,36 @@ All install scripts served from ansilust.com shall include header comments with 
 - Scripts should be in version control at predictable paths (e.g., `scripts/install.sh`, `scripts/install.ps1`)
 - Consider adding script version/hash in comments for traceability
 
+### iOS/iPadOS Distribution Notes
+
+**Jailbroken Devices (APT)**:
+- Target repositories: Procursus (preferred), Chariz, BigBoss, or self-hosted APT repo
+- Package format: `.deb` with proper control file and dependencies
+- Architectures: `iphoneos-arm64` (iPhone 5s+, iPad Air+), `iphoneos-arm` (older 32-bit devices)
+- Terminal apps: NewTerm 2, NewTerm 3, MTerminal, or SSH via OpenSSH
+- Testing: Requires actual jailbroken devices (cannot be emulated)
+- Distribution: Submit to Procursus via GitHub PR or host own APT repository
+
+**Non-Jailbroken Devices (iSH)**:
+- iSH emulates Alpine Linux x86 userland on iOS/iPadOS
+- Binary target: `i386-linux-musl` (32-bit x86 static binary)
+- Performance: Slower than native ARM (emulated), but functional
+- Installation: Manual download via `wget` or `curl` within iSH
+- No `curl | bash` possible from iOS Safari (must download into iSH first)
+- Storage location: Within iSH's sandboxed filesystem
+
+**iOS Minimum Versions**:
+- iphoneos-arm (32-bit): iOS 6.0 - iOS 10.3.3 (iPhone 5, iPad 4, etc.)
+- iphoneos-arm64 (64-bit): iOS 7.0+ (iPhone 5s+, iPad Air+)
+- iSH: iOS 13+ for App Store version, iOS 11+ for TestFlight
+
+**Zig Cross-Compilation Targets**:
+```bash
+zig build -Dtarget=aarch64-ios      # iOS arm64 (for jailbroken)
+zig build -Dtarget=arm-ios          # iOS arm (for old jailbroken)
+zig build -Dtarget=i386-linux-musl  # For iSH emulator
+```
+
 ---
 
 ## Risk Assessment
@@ -567,3 +710,13 @@ All install scripts served from ansilust.com shall include header comments with 
 - **Termux**: Android support via Termux requires aarch64 or armv7 binaries
 - **Install Script Intelligence**: Detect platform, architecture, and libc variant automatically
 - **Binary Variants**: May need separate builds for glibc (standard Linux) and musl (Alpine/embedded)
+
+---
+
+## Related Side Quests
+
+Projects that build upon this distribution infrastructure (tracked separately):
+
+- **Bootable Kiosk ISO** (`TODO/bootable-kiosk-iso.md`): Dedicated OS image for art display appliances
+- **TV Platform Apps** (future spec needed): Native apps for Apple TV, Android TV, Fire TV, Roku
+- **Screensaver Integration** (`TODO/screensaver.md`): Desktop screensaver using installed ansilust binary
