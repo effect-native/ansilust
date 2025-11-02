@@ -1,3 +1,26 @@
 /target
 .zig-cache
 zig-out
+
+# Node.js and npm
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-error.log*
+
+# Platform package binaries
+packages/*/bin/
+packages/ansilust-*/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+.DS_Store
+
+# Changesets
+.changeset/*.md
+!.changeset/config.json
+!.changeset/README.md

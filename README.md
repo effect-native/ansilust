@@ -13,6 +13,57 @@ zig build
 ./zig-out/bin/ansilust path/to/artwork.ans
 ```
 
+## 📦 Installation
+
+### npm (Cross-Platform)
+
+```bash
+# Install globally
+npm install -g ansilust
+
+# Or run directly without installing
+npx ansilust path/to/artwork.ans
+```
+
+### Bash Installer (Linux/macOS)
+
+```bash
+curl -fsSL https://ansilust.com/install | bash
+```
+
+### PowerShell Installer (Windows)
+
+```powershell
+irm https://ansilust.com/install.ps1 | iex
+```
+
+### AUR (Arch Linux)
+
+```bash
+yay -S ansilust
+```
+
+### Nix (All Platforms)
+
+```bash
+nix run github:effect-native/ansilust -- path/to/artwork.ans
+```
+
+### Docker
+
+```bash
+docker run ghcr.io/effect-native/ansilust:latest path/to/artwork.ans
+```
+
+### From Source
+
+```bash
+git clone https://github.com/effect-native/ansilust.git
+cd ansilust
+zig build -Doptimize=ReleaseSafe
+./zig-out/bin/ansilust path/to/artwork.ans
+```
+
 ## 📊 Current Status
 
 ### ✅ What's Implemented (Ready to Use)
@@ -75,6 +126,45 @@ zig build
 - Ansimation playback (ANSI animations)
 - Frame-by-frame rendering
 - Timing control
+
+## 📁 Repository Structure
+
+This is a monorepo managed with npm workspaces. The `packages/` directory contains:
+
+### Main Package
+
+- **`packages/ansilust/`** - Meta package (platform launcher)
+  - Detects your OS and CPU architecture
+  - Automatically uses the correct native binary
+  - Single `ansilust` command works across all platforms
+
+### Platform Packages (Published Separately)
+
+- **`packages/ansilust-darwin-arm64/`** - macOS Apple Silicon
+- **`packages/ansilust-darwin-x64/`** - macOS Intel
+- **`packages/ansilust-linux-x64-gnu/`** - Linux x64 (glibc)
+- **`packages/ansilust-linux-x64-musl/`** - Linux x64 (musl)
+- **`packages/ansilust-linux-arm64-gnu/`** - Linux ARM64 (glibc)
+- **`packages/ansilust-linux-arm64-musl/`** - Linux ARM64 (musl)
+- **`packages/ansilust-linux-armv7-gnu/`** - Linux ARMv7 (glibc)
+- **`packages/ansilust-linux-armv7-musl/`** - Linux ARMv7 (musl)
+- **`packages/ansilust-linux-i386-musl/`** - Linux i386 (musl)
+- **`packages/ansilust-win32-x64/`** - Windows x64
+
+Each platform package contains a pre-built native binary for that architecture.
+
+### Development
+
+```bash
+# Install all workspace packages
+npm install
+
+# List all workspaces
+npm ls --workspaces
+
+# Run build for all packages
+npm run build --workspaces
+```
 
 ## Project Architecture
 
