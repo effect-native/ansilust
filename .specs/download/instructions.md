@@ -1,24 +1,119 @@
-# 16colo.rs Download Client - Instructions
+# 16colors CLI & Download Client - Instructions
 
 ## Overview
 
-A specialized command-line tool and library API for the **16colo.rs archive** (and API-compatible mirrors). This client provides efficient downloading of artpacks and individual artwork files with intelligent caching, metadata preservation, and multi-protocol support.
+A specialized command-line tool and library API for the **16colo.rs archive** (and API-compatible mirrors). This provides **two complementary CLI experiences**:
+
+### Dual CLI Design
+
+**`16c` / `16colors` CLI** - Archive-first interface:
+- Assumes you're working with the 16colors archive
+- Commands implicitly reference the remote archive and local mirror
+- Example: `16c art.ans` searches all packs for files named "art.ans" and displays them
+- Example: `16c download mist1025` downloads the pack
+- Example: `16c list --year 2025` lists 2025 packs
+
+**`ansilust` CLI** - File-first interface:
+- Assumes you're working with local files (like `cat`, `grep`, etc.)
+- Requires explicit context for archive operations
+- Example: `ansilust art.ans` renders local `./art.ans` file
+- Example: `ansilust --16colors download mist1025` downloads from archive
+- Example: `ansilust --16colors search art.ans` searches archive
+
+**Design Rationale**: 
+- `16c` is optimized for browsing/downloading the archive
+- `ansilust` is optimized for processing local files (with archive integration available)
+- Both share the same underlying library and mirror structure
 
 **Design Focus**: This is explicitly a **16colo.rs-specific client**, not a generic download manager. We will first explore and understand what the 16colo.rs APIs offer (HTTP, FTP, RSYNC) before making implementation decisions. The final solution will likely combine multiple protocols for optimal performance.
 
 **Open Standard**: We define a **community-standard directory structure** for local 16colors mirrors (`~/Pictures/16colors/`). This is **not ansilust-specific** - any tool (PabloDraw, Moebius, ansilove, etc.) can discover and share this standardized artwork repository. We are merely one of many tools that will read and write this format.
 
-## User Story
+## Design Rationale: Why Two CLIs?
 
-**As a** text art enthusiast, developer, or researcher  
-**I want to** download artpacks and individual artwork from the 16colo.rs archive  
+### The Context Ambiguity Problem
+
+When a user types a command with a filename, there's ambiguity:
+- Does `art.ans` mean `./art.ans` (local file)?
+- Does `art.ans` mean "search the 16colors archive for art.ans"?
+
+**Traditional approach** (single CLI with flags):
+```bash
+ansilust art.ans              # Ambiguous! Local or archive?
+ansilust --local art.ans      # Explicit local
+ansilust --archive art.ans    # Explicit archive
+```
+This requires constant mental overhead and flag typing.
+
+### The Dual CLI Solution
+
+**Separate CLIs with clear default context**:
+```bash
+ansilust art.ans              # Unambiguous: always local (like cat, file, etc.)
+16c art.ans                   # Unambiguous: always archive search
+```
+
+**Benefits**:
+1. **Zero ambiguity**: Command name declares the context
+2. **Muscle memory**: Archive users type `16c`, file users type `ansilust`
+3. **Scriptability**: Scripts are clearer (`16c download ...` vs `ansilust --16colors download ...`)
+4. **Discoverability**: `16c` command is self-documenting (obviously about 16colors)
+5. **Unix philosophy**: Each tool does one thing well with clear defaults
+
+**When to use which**:
+- **Use `16c`**: When your mental model is "I'm browsing the 16colors archive"
+- **Use `ansilust`**: When your mental model is "I'm processing local ANSI files"
+
+**Escape hatches**:
+- `ansilust --16colors <cmd>`: Archive operations from the file-processor CLI
+- `16c local <file>`: Process local file from the archive CLI (if needed)
+
+### Real-World Analogies
+
+This pattern exists in many successful tools:
+
+| Archive-First CLI | File-First CLI | Shared Backend |
+|-------------------|----------------|----------------|
+| `16c` | `ansilust` | 16colors library |
+| `npm` (package registry) | `node` (local JS files) | Node.js runtime |
+| `git` (repository ops) | `diff` (local file diff) | Git plumbing |
+| `apt` (package repos) | `dpkg` (local .deb files) | APT library |
+
+Users understand: different CLIs for different mental models, shared infrastructure.
+
+## User Stories
+
+### Archive Browser Persona
+
+**As a** text art collector browsing the 16colors archive  
+**I want to** use `16c <filename>` to search and display any artwork  
 **So that** I can:
-- Process artwork offline with ansilust parsers
-- Build collections for analysis or display
-- Cache frequently accessed artwork locally
-- Share a standardized corpus across multiple applications
+- Quickly find and view artwork without knowing which pack it's in
+- Browse the archive like a unified collection
+- Download packs on-demand as I discover interesting artwork
+- Use a simple, memorable CLI (`16c`) that assumes archive context
+
+**Example**: `16c dragon.ans` finds all files named "dragon.ans" across all 4000+ packs and displays them.
+
+### Local File Processor Persona
+
+**As a** developer processing local ANSI files  
+**I want to** use `ansilust <filename>` to work with local files by default  
+**So that** I can:
+- Process files in my current directory without ambiguity
+- Use ansilust like familiar Unix tools (`cat`, `file`, etc.)
+- Integrate with shell pipes and scripts naturally
+- Explicitly opt-in to archive operations when needed (`--16colors`)
+
+**Example**: `ansilust art.ans` processes `./art.ans`, while `ansilust --16colors art.ans` searches the archive.
+
+### Shared Goals (Both Personas)
+
+- Build a local mirror following the community 16colors standard
+- Share the mirror with other tools (PabloDraw, Moebius, etc.)
 - Preserve SAUCE metadata and original file formats
 - Avoid redundant downloads with smart caching
+- Process artwork offline with ansilust parsers
 
 ## Core Requirements (EARS Notation)
 
@@ -55,11 +150,30 @@ FR1.5.2: The system shall query the 16colo.rs archive for search results.
 FR1.5.3: WHEN browsing packs the system shall display pack metadata (group, date, file count).  
 FR1.5.4: The system shall support filtering by file format (ANS, XB, ASC, etc.).
 
-### FR1.6: Integration
-FR1.6.1: The system shall provide a Zig library API for programmatic access.  
-FR1.6.2: The system shall provide a command-line interface for interactive use.  
-FR1.6.3: The system shall integrate with ansilust parsers for format validation.  
-FR1.6.4: WHEN files are downloaded the system shall emit events for integration hooks.
+### FR1.6: Archive Mirroring
+FR1.6.1: The system shall support mirroring the entire 16colors archive.  
+FR1.6.2: The system shall support incremental mirror sync (only download new/changed packs).  
+FR1.6.3: The system shall support filtering mirrors by year range (e.g., --since 2020).  
+FR1.6.4: The system shall support excluding NSFW content from mirrors.  
+FR1.6.5: The system shall support filtering by file extension (include or exclude specific types).  
+FR1.6.6: The system shall support excluding specific groups from mirrors.  
+FR1.6.7: The system shall support dry-run mode to preview mirror operations.  
+FR1.6.8: WHERE rsync is available the system shall support bandwidth limiting.  
+FR1.6.9: The system shall persist mirror configuration for subsequent sync operations.  
+FR1.6.10: The system shall support pruning orphaned packs (removed from remote).
+
+### FR1.7: CLI Interface
+FR1.7.1: The system shall provide a `16c` (or `16colors`) CLI for archive-first operations.  
+FR1.7.2: The system shall provide archive integration in the `ansilust` CLI via `--16colors` flag.  
+FR1.7.3: The `16c` CLI shall assume archive context for all commands.  
+FR1.7.4: The `ansilust` CLI shall assume local file context unless `--16colors` is specified.  
+FR1.7.5: Both CLIs shall share the same underlying library implementation.
+
+### FR1.8: Library Integration
+FR1.8.1: The system shall provide a Zig library API for programmatic access.  
+FR1.8.2: The library shall integrate with ansilust parsers for format validation.  
+FR1.8.3: WHEN files are downloaded the library shall emit events for integration hooks.  
+FR1.8.4: The library shall be usable independently of the CLI tools.
 
 ## Technical Specifications
 
@@ -141,7 +255,9 @@ Different operations may benefit from different protocols:
 | Single pack download | **HTTP** | Resume support, progress tracking |
 | Individual file download | **HTTP** | Direct URL access |
 | Pack listing (year/artist/group) | **FTP** | Avoid HTML scraping |
-| Bulk mirroring | **RSYNC** (TBD) | Efficient sync, checksums |
+| Full archive mirroring | **RSYNC** (preferred) | Incremental sync, checksums, bandwidth control |
+| Full archive mirroring (fallback) | **FTP** | Batch downloads, directory listings |
+| Filtered mirroring | **HTTP + FTP** | Need metadata for filtering |
 | Search | **HTTP** | Web scraping or RSS feed |
 | Discovery (new packs) | **RSS** over HTTP | Structured feed |
 
@@ -218,6 +334,31 @@ Platform-specific storage following OS conventions:
 }
 ```
 
+**Mirror Configuration Format** (`.16colors-mirror-config.json`):
+```json
+{
+  "schema_version": "1.0",
+  "mirror_mode": "filtered",
+  "last_sync": "2025-11-01T23:30:00Z",
+  "filters": {
+    "year_range": {
+      "since": 2020,
+      "until": null
+    },
+    "exclude_nsfw": true,
+    "exclude_extensions": ["png", "gif", "jpg"],
+    "include_extensions": null,
+    "exclude_groups": ["acdu"],
+    "include_groups": null
+  },
+  "sync_stats": {
+    "total_packs": 127,
+    "total_size_bytes": 524288000,
+    "last_duration_seconds": 1834
+  }
+}
+```
+
 **Rationale**: 
 - **Shared standard**: Any tool can discover `~/Pictures/16colors/` or `~/.local/share/16colors/`
 - **User-browsable**: Artists and enthusiasts can manually explore their collection
@@ -225,6 +366,7 @@ Platform-specific storage following OS conventions:
 - **Tool-specific cache**: Each tool manages its own cache under `16colors-tools/<toolname>/`
 - **Predictable paths**: Scripts and automation can rely on consistent structure
 - **Multi-tool friendly**: PabloDraw, Moebius, ansilove, ansilust can all share this archive
+- **Persistent filters**: Mirror sync configuration survives across invocations
 
 ### Network Protocol Requirements
 
@@ -254,63 +396,224 @@ Must handle extraction and validation for:
 - **Metadata**: SAUCE records embedded in files
 - **Misc**: DIZ, NFO, TXT (info files), PNG/GIF (rendered previews)
 
+## CLI Usage Examples
+
+### `16c` CLI - Archive-First Interface
+
+**Download operations**:
+```bash
+# Download a pack by name (auto-detects year)
+16c download mist1025
+
+# Download multiple packs
+16c download mist1025 fire-43 impure90
+
+# Download all packs from a year
+16c download --year 2025
+
+# Download all packs from a group
+16c download --group mistigris
+
+# Mirror the entire archive (full local copy)
+16c mirror sync                           # Sync entire archive
+16c mirror sync --year 2025               # Sync only 2025
+16c mirror sync --since 2020              # Sync 2020-present
+16c mirror sync --exclude-nsfw            # Exclude NSFW content
+16c mirror sync --exclude-ext png,gif     # Exclude file types
+16c mirror sync --only-ext ans,asc,xb     # Only specific types
+16c mirror sync --exclude-group acdu      # Exclude specific groups
+16c mirror sync --dry-run                 # Preview what would be downloaded
+16c mirror sync --bandwidth 1M            # Limit bandwidth (rsync)
+```
+
+**Search and discovery**:
+```bash
+# Search for files by name across the entire archive
+16c art.ans                    # Find all files named "art.ans" and display them
+16c search "dragon"            # Full-text search across all artwork
+16c search --artist cthulu     # Search by artist
+
+# List packs
+16c list --year 2025           # List 2025 packs
+16c list --group mistigris     # List mistigris packs
+16c list --new                 # Show new packs (from RSS)
+```
+
+**Display operations**:
+```bash
+# Display file from archive (searches and renders)
+16c mist1025/CXC-STICK.ASC              # Display specific file
+16c show mist1025/CXC-STICK.ASC         # Explicit show command
+16c show mist1025/CXC-STICK.ASC --raw   # Show raw ANSI (no rendering)
+```
+
+**Mirror management**:
+```bash
+# Show local mirror status
+16c mirror                     # Show mirror path and stats
+16c mirror list                # List all cached packs
+16c mirror verify              # Verify integrity
+16c mirror path                # Print mirror directory path
+16c mirror stats               # Detailed statistics (size, count, by year/group)
+16c mirror prune               # Remove packs not on remote (clean orphans)
+16c mirror config              # Show mirror configuration (filters, exclusions)
+```
+
+### `ansilust` CLI - File-First Interface
+
+**Local file operations** (default behavior):
+```bash
+# Process local files (current directory)
+ansilust art.ans               # Render ./art.ans (like cat)
+ansilust parse art.ans         # Parse and show IR
+ansilust validate art.ans      # Validate format
+
+# Explicit local paths
+ansilust ./art.ans
+ansilust /path/to/art.ans
+```
+
+**Archive operations** (via `--16colors` flag):
+```bash
+# Download from archive
+ansilust --16colors download mist1025
+
+# Search archive
+ansilust --16colors search "dragon"
+
+# Render file from archive
+ansilust --16colors mist1025/CXC-STICK.ASC
+
+# List archive contents
+ansilust --16colors list --year 2025
+```
+
+**Combined workflows**:
+```bash
+# Download and immediately process
+ansilust --16colors download mist1025 && ansilust ~/Pictures/16colors/packs/2025/mist1025/*.ANS
+
+# Search archive, download matches, then process
+ansilust --16colors search "dragon" | ansilust --16colors download --from-search | xargs ansilust parse
+```
+
 ## Acceptance Criteria (EARS Patterns)
 
-### AC1: Basic Pack Download (HTTP)
-- WHEN the user requests `ansilust download pack mist1025` the system shall download from `/archive/2025/mist1025.zip`
-- The system shall extract files to cache directory preserving structure
+### AC1: Basic Pack Download (HTTP) - Both CLIs
+- WHEN the user requests `16c download mist1025` the system shall download from `/archive/2025/mist1025.zip`
+- WHEN the user requests `ansilust --16colors download mist1025` the system shall perform the same operation
+- The system shall extract files to 16colors mirror directory preserving structure
 - The system shall display download progress (bytes, percentage, speed, ETA)
-- IF the pack is already cached THEN the system shall skip download unless --force is specified
+- IF the pack is already in mirror THEN the system shall skip download unless --force is specified
 - The system shall verify ZIP integrity after download
 
-### AC2: Individual File Download (HTTP)
-- WHEN the user requests a specific file the system shall download from `/pack/packname/filename.ext`
-- The system shall preserve the original filename and SAUCE metadata
-- IF the file exists in cache THEN the system shall verify integrity and skip download if valid
+### AC2: File Search and Display (`16c` CLI)
+- WHEN the user requests `16c art.ans` the system shall search the entire archive for files named "art.ans"
+- The system shall display a list of matches with pack/year context
+- The system shall download missing files on-demand
+- The system shall render all matching files using ansilust renderers
+- IF multiple matches exist THEN the system shall display them sequentially or prompt for selection
 
-### AC3: Pack Listing (FTP)
-- The system shall support `ansilust list packs --year 2025` using FTP directory listing
+### AC3: Local File Processing (`ansilust` CLI)
+- WHEN the user requests `ansilust art.ans` the system shall process `./art.ans` as a local file
+- The system shall NOT search the archive unless `--16colors` is specified
+- IF the file does not exist locally THEN the system shall return error.FileNotFound
+- The behavior shall be consistent with Unix tools like `cat`, `file`, etc.
+
+### AC4: Pack Listing (FTP) - Both CLIs
+- The system shall support `16c list --year 2025` using FTP directory listing
+- The system shall support `ansilust --16colors list --year 2025` with identical behavior
 - The output shall show pack names, sizes, and modification dates
 - The system shall indicate which packs are already in the local 16colors mirror
 - The listing operation shall complete in < 5 seconds for a single year
 
-### AC4: Resume Support (HTTP)
+### AC5: Resume Support (HTTP)
 - WHEN a download is interrupted the system shall resume from last position
 - The system shall use Range requests for resume
 - IF resume fails THEN the system shall restart from beginning
 
-### AC5: Mirror Operations
-- The system shall support `ansilust mirror list` to show local 16colors mirror contents
-- The system shall support `ansilust mirror verify` to check file integrity against metadata
-- The system shall support `ansilust mirror path` to display the 16colors directory location
+### AC6: Mirror Operations - Both CLIs
+- The system shall support `16c mirror` to show local 16colors mirror status
+- The system shall support `16c mirror list` to show mirror contents
+- The system shall support `16c mirror verify` to check file integrity against metadata
+- The system shall support `16c mirror path` to display the 16colors directory location
+- The `ansilust --16colors mirror` commands shall have identical behavior
 - The system shall report mirror size and statistics on demand
 
-### AC6: Discovery via RSS
+### AC7: Discovery via RSS - Both CLIs
 - The system shall parse https://16colo.rs/rss/ for new releases
-- The system shall support `ansilust discover --new` to show packs not yet in local mirror
+- The system shall support `16c list --new` to show packs not yet in local mirror
+- The system shall support `ansilust --16colors list --new` with identical behavior
 - The system shall display pack metadata from RSS (title, date, description)
+
+### AC8: CLI Naming and Aliases
+- The primary archive CLI shall be named `16c`
+- The system shall support `16colors` as an alias to `16c`
+- The system shall support `16` as a short alias to `16c`
+- All three names shall invoke identical functionality
+- The `ansilust` CLI shall remain the primary file-processing tool
+
+### AC9: Full Archive Mirroring
+- WHEN the user requests `16c mirror sync` the system shall download the entire 16colors archive
+- The system shall use the optimal protocol (RSYNC > FTP > HTTP) based on availability
+- The system shall display progress for the overall mirror operation (packs downloaded, total size, ETA)
+- WHEN sync is run again the system shall only download new or changed packs (incremental)
+- The system shall skip already-mirrored packs unless --force is specified
+
+### AC10: Filtered Mirroring
+- WHEN the user requests `16c mirror sync --exclude-nsfw` the system shall skip NSFW-tagged content
+- WHEN the user requests `16c mirror sync --since 2020` the system shall only download packs from 2020 onwards
+- WHEN the user requests `16c mirror sync --exclude-ext png,gif` the system shall skip files with those extensions
+- WHEN the user requests `16c mirror sync --only-ext ans,asc,xb` the system shall only download files with those extensions
+- The system shall persist filter configuration in `.16colors-mirror-config.json`
+- WHEN sync is run without filters the system shall use previously configured filters
+
+### AC11: Mirror Management
+- WHEN the user requests `16c mirror sync --dry-run` the system shall display what would be downloaded without downloading
+- The dry-run output shall show total size and pack count
+- WHEN the user requests `16c mirror prune` the system shall remove local packs that no longer exist on remote
+- The system shall support `16c mirror stats` to show breakdown by year, group, file type
+- The mirror stats shall include total size, pack count, file count, and oldest/newest packs
 
 ## Out of Scope
 
 - **Generic download manager**: This is 16colo.rs-specific only
-- **Full archive mirroring**: Users can use native FTP/RSYNC tools for complete mirrors
 - **Upload functionality**: Publishing to 16colo.rs (separate feature)
 - **Web interface**: Browser-based download manager (CLI only for now)
 - **Format conversion**: Rendering/conversion (handled by existing parsers/renderers)
 - **Social features**: Comments, ratings, favorites (use 16colo.rs website)
-- **Automatic updates**: Background sync daemon (manual refresh only)
+- **Automatic updates**: Background sync daemon (manual refresh only, use cron/systemd for automation)
 - **Search implementation**: Full-text search (defer to 16colo.rs website for now)
+- **Content filtering logic**: NSFW detection (rely on 16colo.rs tags/metadata)
+- **Deduplication**: Handling duplicate files across packs (future enhancement)
 
 ## Success Metrics
 
-- **SM1**: Users can download any artpack from 16colo.rs with a single command
-- **SM2**: Downloaded files follow the community 16colors standard with no unnecessary re-downloads
-- **SM3**: Storage follows platform conventions and artpacks are easily discoverable by users and other tools
-- **SM4**: Integration with ansilust parsers is seamless (files ready for processing)
-- **SM5**: Network usage is reasonable (progress display, resumable downloads, rate limiting)
-- **SM6**: Error handling is clear and actionable (network issues, missing packs, etc.)
-- **SM7**: Protocol selection is transparent and optimal for each operation type
-- **SM8**: The 16colors directory standard enables interoperability between multiple tools
+### CLI Usability
+- **SM1**: Archive users can find and display any artwork with `16c <filename>` without knowing the pack
+- **SM2**: File users can process local files with `ansilust <filename>` without ambiguity
+- **SM3**: Both CLIs feel natural for their respective use cases (archive-first vs file-first)
+- **SM4**: The `16c` CLI name is memorable and clearly associated with 16colors
+- **SM5**: Archive operations in `ansilust` via `--16colors` flag are discoverable and intuitive
+
+### Download & Storage
+- **SM6**: Users can download any artpack from 16colo.rs with a single command
+- **SM7**: Downloaded files follow the community 16colors standard with no unnecessary re-downloads
+- **SM8**: Storage follows platform conventions and artpacks are easily discoverable by users and other tools
+- **SM9**: Network usage is reasonable (progress display, resumable downloads, rate limiting)
+
+### Mirroring
+- **SM10**: Users can mirror the entire 16colors archive with `16c mirror sync`
+- **SM11**: Incremental sync only downloads new/changed packs (efficient bandwidth usage)
+- **SM12**: Users can easily filter mirrors by year, group, content type, or file format
+- **SM13**: Mirror configuration persists across sync operations (no need to re-specify filters)
+- **SM14**: Dry-run mode provides accurate preview of mirror operations before download
+
+### Integration & Interoperability
+- **SM15**: Integration with ansilust parsers is seamless (files ready for processing)
+- **SM16**: The 16colors directory standard enables interoperability between multiple tools
+- **SM17**: Error handling is clear and actionable (network issues, missing packs, etc.)
+- **SM18**: Protocol selection is transparent and optimal for each operation type
 
 ## Future Considerations
 
@@ -325,11 +628,14 @@ Before Phase 2 (Requirements), we should:
 
 ### Phase 2 Enhancements
 - **Corpus building**: Automated download of curated sets for research (stored in `corpus/`)
-- **Watch mode**: Monitor RSS feed for new releases and auto-download
+- **Watch mode**: Monitor RSS feed for new releases and auto-download to mirror
 - **Collection management**: User-defined collections with metadata
 - **Mirror failover**: Automatic fallback to FTP/RSYNC if HTTP fails
-- **Parallel downloads**: Concurrent downloads with connection pooling
+- **Parallel downloads**: Concurrent pack downloads with connection pooling
 - **Checksum verification**: SHA256 validation against published manifests
+- **Smart filtering**: NSFW detection beyond tags (analyze SAUCE/content)
+- **Deduplication**: Handle duplicate files across packs
+- **Incremental extraction**: Only extract changed files within updated packs
 - **16colors standard v1.0**: Formalize and document the directory standard for community adoption
 
 ### Integration Opportunities
@@ -370,7 +676,13 @@ Before Phase 2 (Requirements), we should:
 
 ### System Tests
 - End-to-end download workflow via CLI
-- Mirror operations (list, verify, path)
+- Mirror operations (list, verify, path, stats)
+- Full archive mirror sync (small subset for testing)
+- Filtered mirror sync (year range, extensions, NSFW)
+- Incremental mirror sync (only new packs)
+- Mirror prune (remove orphaned packs)
+- Dry-run accuracy (compare preview to actual)
+- Mirror configuration persistence
 - Discovery operations (RSS, FTP listings)
 - Integration with existing ansilust parsers
 - Cross-platform compatibility (Linux, macOS, Windows)
@@ -381,8 +693,12 @@ Before Phase 2 (Requirements), we should:
 - FTP listing performance (all years, ~4000+ packs)
 - Mirror lookup performance (thousands of files)
 - Memory usage during extraction
-- HTTP vs FTP performance comparison
+- HTTP vs FTP vs RSYNC performance comparison
+- Full mirror sync performance (time to mirror entire archive)
+- Incremental sync performance (detect and download only new packs)
+- Filter evaluation performance (large archive with complex filters)
 - Metadata read/write performance (`.16colors-meta.json`)
+- Mirror stats calculation performance (thousands of packs)
 
 ## Dependencies
 

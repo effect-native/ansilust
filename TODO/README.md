@@ -35,6 +35,16 @@ An ansilust-powered screensaver for Omarchy Linux. Features include:
 - Local caching with offline mode support
 - XScreenSaver/systemd integration for Linux desktop environments
 
+### bootable-kiosk-iso.md
+A bootable operating system image that transforms any device into a dedicated ANSI art display appliance. Features include:
+- Zero-configuration boot directly into art rendering mode
+- Support for Raspberry Pi, Intel NUC, old laptops, and thin clients
+- Multiple display modes (shuffle, playlist, slideshow, infinite scroll)
+- USB/web-based configuration interface
+- Network content downloads from 16colo.rs
+- Read-only filesystem for reliability and power-loss protection
+- Perfect for art galleries, digital signage, and home installations
+
 ## Contributing Ideas
 
 When adding new project ideas to this folder:
