@@ -133,78 +133,74 @@ FR1.2.5: IF a protocol fails THEN the system shall attempt fallback to alternati
 
 ### FR1.3: Storage Management
 FR1.3.1: The system shall store artpacks in the community-standard 16colors directory structure.  
-FR1.3.2: The system shall write metadata in the standard `.16colors-meta.json` format.  
+FR1.3.2: The system shall store all metadata in `.index.db` (no per-pack JSON files).  
 FR1.3.3: The system shall discover existing 16colors directories created by other tools.  
 FR1.3.4: The system shall store tool-specific cache in `16colors-tools/ansilust/` subdirectories.  
 FR1.3.5: The system shall store artpacks in user-browsable locations (Pictures directory on macOS/Windows).  
 FR1.3.6: The system shall create a `local/` directory for user-managed artwork (sideloaded, created, downloaded).  
-FR1.3.7: The system shall distinguish between official archive content (`packs/`) and user content (`local/`).
+FR1.3.7: The system shall distinguish between official archive content (`packs/`) and user content (`local/`) in the database.
 
 ### FR1.4: Metadata Preservation
 FR1.4.1: The system shall preserve original filenames from artpacks.  
-FR1.4.2: The system shall extract and store SAUCE metadata when present.  
+FR1.4.2: The system shall extract and store SAUCE metadata in `.index.db`.  
 FR1.4.3: The system shall maintain artpack structure (directory hierarchy).  
-FR1.4.4: WHEN multiple versions of a file exist the system shall support version tracking.  
-FR1.4.5: All JSON metadata files shall include a `$schema` property pointing to ansilust.com schemas.  
-FR1.4.6: The system shall write JSON schemas that validate against published JSON Schema specifications.
+FR1.4.4: WHEN multiple versions of a file exist the system shall support version tracking in the database.  
+FR1.4.5: WHERE JSON configuration files exist they shall include a `$schema` property.  
+FR1.4.6: Configuration schemas shall be valid JSON Schema Draft 2020-12.
 
-### FR1.5: Global Archive Database (16colors.db)
-FR1.5.1: The system shall provide a canonical `16colors.db` SQLite database of the entire 16colo.rs archive.  
-FR1.5.2: The database shall be version-controlled and distributed as a single downloadable file.  
-FR1.5.3: The database shall include all archive metadata (packs, files, artists, groups, SAUCE data).  
-FR1.5.4: The database shall store download URLs for both source files and pre-rendered PNGs.  
-FR1.5.5: The system shall automatically check for database updates on every `16c` invocation.  
-FR1.5.6: WHEN a new database version is available the system shall download it automatically in the background.  
-FR1.5.7: The system shall support incremental database updates via versioned SQL patch files.  
-FR1.5.8: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`, `0002-update-fire43.sql`).  
-FR1.5.9: The database shall NOT include local user content (only official 16colo.rs archive).  
-FR1.5.10: The database shall support FTS5 full-text search across artwork metadata.  
-FR1.5.11: Users shall be able to search the archive instantly without FTP queries.  
-FR1.5.12: The database schema shall be versioned with a `schema_version` table.  
-FR1.5.13: WHERE database update fails the system shall continue using cached database.
+### FR1.5: Global Archive Database (.index.db)
+FR1.5.1: The system shall store the database at `16colors/.index.db` in the 16colors root directory.  
+FR1.5.2: The database shall be shared by ALL tools (part of the community standard).  
+FR1.5.3: The canonical database shall be distributed from `https://ansilust.com/.well-known/db/.index.db`.  
+FR1.5.4: The database shall include all archive metadata (packs, files, artists, groups, SAUCE data).  
+FR1.5.5: The database shall store download URLs for both source files and pre-rendered PNGs.  
+FR1.5.6: The system shall automatically check for database updates on every `16c` invocation.  
+FR1.5.7: WHEN a new database version is available the system shall download it automatically in the background.  
+FR1.5.8: The database shall be updated via versioned SQL patch files.  
+FR1.5.9: Patch files shall be numbered sequentially (e.g., `0001-add-mist1025.sql`).  
+FR1.5.10: Patch files shall be distributed from `https://ansilust.com/.well-known/db/patches/`.  
+FR1.5.11: The database shall include both official archive content AND local user content.  
+FR1.5.12: The database shall tag entries with source_type ('archive' or 'local').  
+FR1.5.13: The database shall support FTS5 full-text search across all artwork metadata.  
+FR1.5.14: Users shall be able to search the archive instantly without FTP queries.  
+FR1.5.15: The database schema shall be versioned with a `schema_version` table.  
+FR1.5.16: WHERE database update fails the system shall continue using cached database.  
+FR1.5.17: Auto-updates shall NOT be configurable (opinionated design).
 
-### FR1.6: Local Mirror Database Integration
-FR1.6.1: The system shall maintain a separate local database for user's mirror (`local-mirror.db`).  
-FR1.6.2: The local mirror database shall index both downloaded packs and local user content.  
-FR1.6.3: The local database shall reference the global `16colors.db` for archive metadata.  
-FR1.6.4: WHEN mirror sync completes the system shall update the local database incrementally.  
-FR1.6.5: The local database shall track which packs/files are downloaded locally.  
-FR1.6.6: The system shall support complex queries combining global archive data with local availability.
-
-### FR1.7: Discovery and Search
+### FR1.6: Discovery and Search
 FR1.6.1: The system shall list available artpacks by year, group, or artist.  
-FR1.6.2: The system shall query the 16colo.rs archive for search results.  
+FR1.6.2: The system shall query `.index.db` for search operations (no FTP needed).  
 FR1.6.3: WHEN browsing packs the system shall display pack metadata (group, date, file count).  
 FR1.6.4: The system shall support filtering by file format (ANS, XB, ASC, etc.).  
-FR1.6.5: WHERE SQLite database exists the system shall use database queries for search operations.
+FR1.6.5: The system shall search both archive and local user content.
 
-### FR1.8: Archive Mirroring
-FR1.6.1: The system shall support mirroring the entire 16colors archive.  
-FR1.6.2: The system shall support incremental mirror sync (only download new/changed packs).  
-FR1.6.3: The system shall support filtering mirrors by year range (e.g., --since 2020).  
-FR1.6.4: The system shall exclude NSFW content by default.  
-FR1.6.5: The system shall exclude executable files (*.exe, *.com, *.bat) by default.  
-FR1.6.6: WHERE the user specifies --include-nsfw the system shall download NSFW content.  
-FR1.6.7: WHERE the user specifies --include-executables the system shall download executable files.  
-FR1.6.8: The system shall support filtering by file extension (include or exclude specific types).  
-FR1.6.9: The system shall support excluding specific groups from mirrors.  
-FR1.6.10: The system shall support dry-run mode to preview mirror operations.  
-FR1.6.11: WHERE rsync is available the system shall support bandwidth limiting.  
-FR1.6.12: The system shall persist mirror configuration for subsequent sync operations.  
-FR1.6.13: The system shall support pruning orphaned packs (removed from remote).
+### FR1.7: Archive Mirroring
+FR1.7.1: The system shall support mirroring the entire 16colors archive.  
+FR1.7.2: The system shall support incremental mirror sync (only download new/changed packs).  
+FR1.7.3: The system shall support filtering mirrors by year range (e.g., --since 2020).  
+FR1.7.4: The system shall exclude NSFW content by default.  
+FR1.7.5: The system shall exclude executable files (*.exe, *.com, *.bat) by default.  
+FR1.7.6: WHERE the user specifies --include-nsfw the system shall download NSFW content.  
+FR1.7.7: WHERE the user specifies --include-executables the system shall download executable files.  
+FR1.7.8: The system shall support filtering by file extension (include or exclude specific types).  
+FR1.7.9: The system shall support excluding specific groups from mirrors.  
+FR1.7.10: The system shall support dry-run mode to preview mirror operations.  
+FR1.7.11: WHERE rsync is available the system shall support bandwidth limiting.  
+FR1.7.12: The system shall persist mirror configuration for subsequent sync operations.  
+FR1.7.13: The system shall support pruning orphaned packs (removed from remote).
 
-### FR1.9: CLI Interface
-FR1.7.1: The system shall provide a `16c` (or `16colors`) CLI for archive-first operations.  
-FR1.7.2: The system shall provide archive integration in the `ansilust` CLI via `--16colors` flag.  
-FR1.7.3: The `16c` CLI shall assume archive context for all commands.  
-FR1.7.4: The `ansilust` CLI shall assume local file context unless `--16colors` is specified.  
-FR1.7.5: Both CLIs shall share the same underlying library implementation.
+### FR1.8: CLI Interface
+FR1.8.1: The system shall provide a `16c` (or `16colors`) CLI for archive-first operations.  
+FR1.8.2: The system shall provide archive integration in the `ansilust` CLI via `--16colors` flag.  
+FR1.8.3: The `16c` CLI shall assume archive context for all commands.  
+FR1.8.4: The `ansilust` CLI shall assume local file context unless `--16colors` is specified.  
+FR1.8.5: Both CLIs shall share the same underlying library implementation.
 
-### FR1.10: Library Integration
-FR1.8.1: The system shall provide a Zig library API for programmatic access.  
-FR1.8.2: The library shall integrate with ansilust parsers for format validation.  
-FR1.8.3: WHEN files are downloaded the library shall emit events for integration hooks.  
-FR1.8.4: The library shall be usable independently of the CLI tools.
+### FR1.9: Library Integration
+FR1.9.1: The system shall provide a Zig library API for programmatic access.  
+FR1.9.2: The library shall integrate with ansilust parsers for format validation.  
+FR1.9.3: WHEN files are downloaded the library shall emit events for integration hooks.  
+FR1.9.4: The library shall be usable independently of the CLI tools.
 
 ## Technical Specifications
 
@@ -325,17 +321,17 @@ Platform-specific storage following OS conventions:
 **Standard Directory Structure** (shown with Linux paths, adapt per platform):
 ```
 ~/.local/share/16colors/           (or ~/Pictures/16colors/ on macOS/Windows)
+├── .index.db                      # Global archive database (ALL tools share this!)
 ├── packs/                         # Official 16colo.rs artpack archive
 │   ├── 1990/
 │   ├── 1996/
 │   ├── 2025/
 │   │   ├── mist1025.zip           # Original artpack (preserved)
 │   │   └── mist1025/              # Extracted contents
-│   │       ├── .16colors-meta.json  # Standard metadata format
-│   │       ├── FILE_ID.DIZ
+│   │       ├── FILE_ID.DIZ        # Original pack files
 │   │       ├── MIST1025.NFO.ANS
 │   │       └── [artwork files]
-│   └── ...
+│   │   └── ...
 ├── local/                         # User's own artwork (sideloaded, created, etc.)
 │   ├── my-art/                    # User-created artwork
 │   │   ├── dragon.ans
@@ -344,17 +340,30 @@ Platform-specific storage following OS conventions:
 │   │   └── random-art.ans
 │   ├── screenshots/               # BBS screenshots, etc.
 │   └── ...
-├── corpus/                        # Curated collections for research
+├── collections/                   # Curated collections for research
 │   ├── ansi-1990s/                # User-organized collections
 │   ├── ice-colors-examples/
 │   └── ...
-└── .16colors-manifest.json        # Global manifest (optional)
+└── .16colors-config.json          # Global configuration (optional)
 
 ~/.cache/16colors-tools/ansilust/  (tool-specific cache, not shared)
 ├── download-queue.json
-├── http-cache/
-└── index.db                       # ansilust-specific index
+└── http-cache/
 ```
+
+**Shared Database** (`.index.db`):
+- **Location**: `~/Pictures/16colors/.index.db` (or platform equivalent)
+- **Shared by ALL tools**: ansilust, 16c-screensaver, hypothetical PabloDraw plugin, etc.
+- **Contains**: Global 16colo.rs archive metadata + local user artwork index
+- **Auto-updated**: Any tool can update it (first-write-wins with version check)
+- **Read-only for most tools**: Screensaver reads, download client writes
+
+**Why `.index.db` in 16colors root**:
+- Predictable location for all tools
+- Part of the community standard
+- No tool-specific cache paths needed for search
+- Screensaver can instantly query for random artwork
+- Single source of truth for all 16colors data
 
 **Directory Purposes**:
 - **`packs/`**: Official 16colo.rs archive (managed by download client)
@@ -376,24 +385,12 @@ Platform-specific storage following OS conventions:
 - Separating `local/` from `packs/` prevents conflicts with official archive
 - Database can distinguish archive vs user content while providing unified search
 
-**Standard Metadata Format** (`.16colors-meta.json`):
-```json
-{
-  "$schema": "https://ansilust.com/.well-known/schemas/16colors-meta-v1.json",
-  "source": "https://16colo.rs",
-  "pack_name": "mist1025",
-  "year": 2025,
-  "group": "mistigris",
-  "downloaded_at": "2025-11-01T23:30:00Z",
-  "downloaded_by": "ansilust/0.1.0",
-  "source_url": "https://16colo.rs/archive/2025/mist1025.zip",
-  "zip_checksum": "sha256:...",
-  "file_count": 43,
-  "extracted_at": "2025-11-01T23:30:05Z"
-}
-```
-
-**Schema URL**: `https://ansilust.com/.well-known/schemas/16colors-meta-v1.json`
+**Database as Single Source of Truth**:
+- **No per-pack JSON files**: `.index.db` contains all metadata
+- **Simpler**: Fewer files, single source of truth
+- **Faster**: No JSON parsing, direct SQL queries
+- **Smaller**: No redundant metadata files in every pack directory
+- **Consistent**: All tools query same database, no sync issues
 
 **Mirror Configuration Format** (`.16colors-mirror-config.json`):
 ```json
@@ -429,32 +426,27 @@ Platform-specific storage following OS conventions:
 
 **Schema URL**: `https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json`
 
-**JSON Schema Registry**:
+**JSON Schema for Configuration** (`.16colors-config.json` only):
 
-All JSON files MUST include a `$schema` property. Schemas are hosted at:
+The `.16colors-config.json` file (if present) uses:
+- **Schema URL**: `https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json`
+- **Purpose**: Mirror sync configuration (filters, preferences)
+- **Optional**: Only created when users configure mirror filters
 
-| Format | Schema URL | Purpose |
-|--------|-----------|---------|
-| Pack Metadata | `https://ansilust.com/.well-known/schemas/16colors-meta-v1.json` | Artpack download metadata |
-| Mirror Config | `https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json` | Mirror sync configuration |
-
-**Schema Hosting**:
-- Schemas MUST be hosted at `https://ansilust.com/.well-known/schemas/`
-- Schema URLs MUST include version suffix (e.g., `-v1.json`)
-- Schemas MUST be valid JSON Schema Draft 2020-12
-- Schemas MUST include `$id` property matching the canonical URL
-- Schema updates MUST use new version numbers (no breaking changes to published schemas)
+**No per-pack metadata files**: 
+- Database (`.index.db`) is the single source of truth
+- No `.16colors-meta.json` files in pack directories
+- Simpler, faster, less redundant
 
 **Rationale**: 
-- **Validation**: IDEs and tools can validate JSON files against published schemas
-- **Shared standard**: Any tool can discover `~/Pictures/16colors/` or `~/.local/share/16colors/`
+- **Single source of truth**: `.index.db` contains all metadata, no redundant JSON files
+- **Shared standard**: Any tool can discover `~/Pictures/16colors/` and `.index.db`
 - **User-browsable**: Artists and enthusiasts can manually explore their collection
-- **Tool-agnostic**: Metadata format is tool-independent (`.16colors-meta.json`)
+- **Tool-agnostic**: Database format is tool-independent
 - **Tool-specific cache**: Each tool manages its own cache under `16colors-tools/<toolname>/`
 - **Predictable paths**: Scripts and automation can rely on consistent structure
-- **Multi-tool friendly**: PabloDraw, Moebius, ansilove, ansilust can all share this archive
+- **Multi-tool friendly**: PabloDraw, Moebius, ansilove, ansilust all query `.index.db`
 - **Persistent filters**: Mirror sync configuration survives across invocations
-- **Version tracking**: Schema URLs include version for backward compatibility
 
 ### Network Protocol Requirements
 
@@ -587,11 +579,10 @@ All JSON files MUST include a `$schema` property. Schemas are hosted at:
 16c db stats                   # Database statistics (version, size, table counts)
 
 # Manual operations (rarely needed, auto-updates by default)
-16c db update --now            # Force immediate update check
-16c db update --disable        # Disable auto-updates (if user really wants this)
+16c db update --now            # Force immediate update (bypass throttle)
 
 # Local mirror database operations
-16c mirror rebuild             # Rebuild local-mirror.db from downloaded packs
+16c mirror rebuild             # Rebuild .index.db from downloaded packs and local content
 16c mirror verify              # Verify local files match global database
 ```
 
@@ -895,6 +886,36 @@ CREATE TABLE artists (
 );
 ```
 
+**Database Size Optimization**:
+
+Estimated size for ~4000 packs with ~100,000 files:
+- Packs table: ~4000 rows × ~200 bytes = ~800KB
+- Files table: ~100,000 rows × ~300 bytes = ~30MB
+- FTS5 index: ~10-20MB (filename/artist/title only, not full content)
+- Groups/Artists: ~1MB
+- **Total estimate**: ~40-50MB (acceptable for auto-download)
+
+**What we DON'T store** (to avoid bloat):
+- ❌ Full file content (only metadata)
+- ❌ Binary data (images, executables)
+- ❌ Rendered PNG data (only URLs)
+- ❌ Duplicate SAUCE fields (normalize to JSON)
+- ❌ Redundant URL patterns (use base URL + template)
+
+**What we DO store** (essential for search):
+- ✅ Filename, artist, title (FTS5 indexed)
+- ✅ SAUCE metadata (JSON, for filtering)
+- ✅ Download URLs (source + PNG variants)
+- ✅ Pack/group/year relationships
+- ✅ File extensions and sizes (for statistics)
+
+**Size Monitoring**:
+If database grows beyond 100MB, consider:
+- URL normalization (base URL + path template)
+- SAUCE field compression
+- Removing unnecessary FTS5 fields
+- Splitting into archive.db + local.db again
+
 **Auto-Update Mechanism**:
 
 The database updates **automatically** on every `16c` invocation:
@@ -910,18 +931,21 @@ The database updates **automatically** on every `16c` invocation:
    - Large updates: Download new database file
 5. **Failure handling**: Continues with cached database if update fails
 
-**User Control**:
+**User Control** (informational only, no opt-out):
 ```bash
-16c db version                 # Show current version, check for updates
+16c db version                 # Show current database version
 16c db info                    # Database stats, last update time
 16c db update --now            # Force immediate update (bypass throttle)
-16c db update --disable        # Disable auto-updates permanently
 
-# Manual patch application (advanced users)
+# Manual patch application (advanced users, rarely needed)
 16c db patch 0001-add-mist1025.sql
 ```
 
-**Design Philosophy**: Zero-friction updates. Users shouldn't think about database freshness. If they hate auto-updates, they can uninstall the tool.
+**Design Philosophy**: 
+- **Zero-friction**: Updates just work, users don't think about it
+- **No opt-out**: Auto-updates are core functionality, not optional
+- **If users hate this**: They can uninstall and use native FTP/RSYNC tools instead
+- **Opinionated design**: We believe auto-updates are the right default
 
 **Patch File Example** (`0001-add-mist1025.sql`):
 ```sql
@@ -943,59 +967,31 @@ INSERT INTO files (pack_id, relative_path, filename, extension, artist, source_u
 UPDATE schema_version SET version = 1;
 ```
 
-#### Local Mirror Database (`local-mirror.db`)
-User-specific database tracking local downloads and user content:
-
-**Location**: `~/.cache/16colors-tools/ansilust/local-mirror.db`
-
-**Schema** (`local-mirror.db`):
-```sql
-CREATE TABLE downloaded_packs (
-  pack_name TEXT PRIMARY KEY,
-  downloaded_at TEXT NOT NULL,
-  local_path TEXT NOT NULL,
-  file_count INTEGER
-);
-
-CREATE TABLE downloaded_files (
-  file_id INTEGER REFERENCES files(id) IN 16colors.db,  -- Foreign key to global DB
-  local_path TEXT NOT NULL,
-  downloaded_at TEXT NOT NULL
-);
-
-CREATE TABLE local_files (
-  id INTEGER PRIMARY KEY,
-  relative_path TEXT NOT NULL,
-  filename TEXT NOT NULL,
-  extension TEXT,
-  size INTEGER,
-  artist TEXT,
-  added_at TEXT NOT NULL
-);
-```
-
 **Use Cases**:
 ```bash
-# Search global archive (no FTP needed!)
-16c search "dragon" --artist cthulu     # Queries 16colors.db
+# Search entire archive + local content (no FTP needed!)
+16c search "dragon" --artist cthulu     # Queries .index.db
 
 # Find and download
-16c get dragon.ans                      # Finds in 16colors.db, shows download URLs, offers to download
+16c get dragon.ans                      # Finds in .index.db, shows download URLs, offers to download
 
-# Check if already downloaded
-16c search "dragon" --local-only        # Queries local-mirror.db
+# Filter by source
+16c search "dragon" --archive-only      # Only official archive
+16c search "dragon" --local-only        # Only user's local/ content
 
-# Statistics from global archive
-16c stats --artist misfit               # Instant stats from 16colors.db
+# Statistics from database
+16c stats --artist misfit               # Instant stats from .index.db
 16c stats --group mistigris --year 1996 # Fast filtered queries
+16c stats --local                       # Stats for local/ content only
 ```
 
 **Benefits**:
+- **Shared by all tools**: Screensaver, viewers, editors all use same `.index.db`
 - **No FTP queries**: Search entire archive instantly offline
 - **Download URLs included**: Know exact URLs for source and PNGs
 - **Incremental updates**: Patch files keep database current
-- **Version controlled**: Database itself is versioned and distributed
-- **Separation**: Global archive (read-only) vs local mirror (user-specific)
+- **Single source of truth**: One database for archive + local content
+- **Predictable location**: `16colors/.index.db` in the 16colors root
 
 ### Integration Opportunities
 - **OpenTUI integration**: Display artwork directly from 16colors mirror
@@ -1011,7 +1007,7 @@ CREATE TABLE local_files (
 
 ### Unit Tests
 - 16colors directory path resolution (platform-specific)
-- `.16colors-meta.json` metadata format serialization/deserialization
+- `.index.db` database schema and operations
 - JSON Schema validation (`$schema` property)
 - URL construction for 16colo.rs endpoints
 - FTP directory listing parser
@@ -1028,7 +1024,7 @@ CREATE TABLE local_files (
 - Download complete artpack via FTP to 16colors directory
 - Download individual file via HTTP
 - Extract ZIP archive preserving structure
-- Write valid `.16colors-meta.json` metadata with `$schema`
+- Update `.index.db` with downloaded pack metadata
 - Verify SAUCE metadata extraction
 - Update SQLite database after pack download
 - Query SQLite database for search operations
@@ -1066,7 +1062,7 @@ CREATE TABLE local_files (
 - Full mirror sync performance (time to mirror entire archive)
 - Incremental sync performance (detect and download only new packs)
 - Filter evaluation performance (large archive with complex filters)
-- Metadata read/write performance (`.16colors-meta.json`)
+- Database write performance (.index.db updates)
 - Mirror stats calculation performance (thousands of packs)
 
 ## Dependencies
