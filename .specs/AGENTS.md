@@ -23,6 +23,29 @@ Each feature specification follows a standardized structure within its own direc
 - **`design.md`** - Technical design and architectural decisions
 - **`plan.md`** - Implementation roadmap with progress tracking
 
+### 🚨 CRITICAL FILE DISCIPLINE 🚨
+
+**ONLY create the four standard files above unless explicitly instructed otherwise.**
+
+**FORBIDDEN Files** (do not create unless explicitly requested):
+- ❌ `README.md` - Information belongs in the standard phase files
+- ❌ `ARCHITECTURE.md` - Architecture details belong in `design.md`
+- ❌ `DESIGN_DECISIONS.md` - Design decisions belong in `design.md`
+- ❌ `NOTES.md`, `SUMMARY.md`, `OVERVIEW.md` - Content belongs in appropriate phase file
+- ❌ Any other non-standard files
+
+**Rationale**: 
+- The four standard files provide complete coverage of all specification needs
+- Additional files fragment information and make specs harder to navigate
+- Standard structure ensures consistency across all features
+- All design decisions, architecture, summaries, and notes fit naturally within the standard files
+
+**When to use each standard file**:
+- `instructions.md` - User stories, initial requirements, acceptance criteria
+- `requirements.md` - Formal EARS requirements, constraints, success criteria
+- `design.md` - Architecture, data structures, algorithms, design decisions, API surface
+- `plan.md` - Implementation tasks, progress tracking, validation checkpoints
+
 ### Workflow
 
 The specification-driven development process follows three key phases:
@@ -67,7 +90,7 @@ This workflow is **ONLY** for substantial new features. For other types of work:
 **Deliverables**:
 - Create feature branch: `feature/[feature-name]`
 - Create `.specs/[feature-name]/` directory
-- Create `instructions.md` with:
+- Create **ONLY** `instructions.md` with:
   - Overview and User Story
   - Core Requirements (written in EARS notation when applicable)
   - Technical Specifications
@@ -94,6 +117,11 @@ IF invalid input is detected THEN the component shall return an appropriate erro
 WHERE feature X is enabled the system shall apply additional validation.
 ```
 
+**🚨 FILE DISCIPLINE CHECK**:
+- [ ] Only `instructions.md` exists in `.specs/[feature-name]/`
+- [ ] No additional files created (README, ARCHITECTURE, NOTES, etc.)
+- [ ] All content fits within instructions.md structure
+
 **🔒 AUTHORIZATION GATE**: Present instructions.md and request user approval to proceed to Requirements Phase
 
 ---
@@ -102,7 +130,7 @@ WHERE feature X is enabled the system shall apply additional validation.
 **Objective**: Structured analysis and formal specifications using EARS notation
 
 **Deliverables**:
-- Create `requirements.md` with hierarchical numbering and EARS notation:
+- Create **ONLY** `requirements.md` with hierarchical numbering and EARS notation:
   - **FR1.x**: Functional Requirements (EARS notation MANDATORY)
   - **NFR2.x**: Non-Functional Requirements (performance, memory usage)
   - **TC3.x**: Technical Constraints (Zig version, dependencies)
@@ -204,6 +232,11 @@ TC3.3: The system shall not use global mutable state.
 TC3.4: The system shall pass with -Doptimize=ReleaseSafe.
 ```
 
+**🚨 FILE DISCIPLINE CHECK**:
+- [ ] Only `instructions.md` and `requirements.md` exist
+- [ ] No supplementary files created
+- [ ] All requirements properly structured within requirements.md
+
 **🔒 AUTHORIZATION GATE**: Present requirements.md with EARS notation and request user approval to proceed to Design Phase
 
 ---
@@ -214,7 +247,7 @@ TC3.4: The system shall pass with -Doptimize=ReleaseSafe.
 **⚠️ CRITICAL**: Design phase focuses on **WHAT** to build and **HOW** it will be structured, **NOT** writing actual implementation code.
 
 **Deliverables**:
-- Create `design.md` including:
+- Create **ONLY** `design.md` including:
   - **Architecture Overview**: High-level system structure and component relationships
   - **Module Organization**: How components are organized and interact
   - **Data Structures**: Key data structures and their purposes (description only, not full code)
@@ -293,6 +326,12 @@ function detectPlatform() {
 // This belongs in IMPLEMENTATION phase, not DESIGN
 ```
 
+**🚨 FILE DISCIPLINE CHECK**:
+- [ ] Only `instructions.md`, `requirements.md`, and `design.md` exist
+- [ ] Architecture details in design.md, not separate ARCHITECTURE.md
+- [ ] Design decisions in design.md, not separate DESIGN_DECISIONS.md
+- [ ] No README.md or other supplementary files
+
 **🔒 AUTHORIZATION GATE**: Present design.md and request user approval to proceed to Plan Phase
 
 **Remember**: Design documents the architecture and approach. Implementation writes the code. Keep them separate.
@@ -303,13 +342,18 @@ function detectPlatform() {
 **Objective**: Implementation roadmap with progress tracking
 
 **Deliverables**:
-- Create `plan.md` with:
+- Create **ONLY** `plan.md` with:
   - **5-Phase Implementation Structure** with checkboxes
   - **Task Hierarchies** with clear objectives
   - **Validation Checkpoints**: build, test, fmt, docs
   - **Risk Mitigation Strategies**
   - **Success Criteria Validation**
   - **Progress Tracking System**
+
+**🚨 FILE DISCIPLINE CHECK**:
+- [ ] All four standard files exist: instructions.md, requirements.md, design.md, plan.md
+- [ ] No additional files created
+- [ ] Spec directory clean and well-organized
 
 **🔒 AUTHORIZATION GATE**: Present plan.md and request user approval to proceed to Implementation Phase
 
