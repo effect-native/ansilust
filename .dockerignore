@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+.gitmodules
+
+# Node
+node_modules/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+
+# Build artifacts
+zig-cache/
+zig-out/
+build/
+dist/
+
+# Documentation
+README.md
+.specs/
+.github/
+docs/
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+*.swp
+*.swo
+
+# Other
+.DS_Store
+*.o
+*.a
+*.so
+.env
+.env.local

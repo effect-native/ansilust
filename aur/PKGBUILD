@@ -1,0 +1,39 @@
+# Maintainer: Tom Calloway <tom at effect-native.com>
+pkgname=ansilust
+pkgver=0.0.1
+pkgrel=1
+pkgdesc="Next-generation text art processing system"
+arch=('x86_64' 'aarch64' 'armv7h')
+url="https://github.com/effect-native/ansilust"
+license=('MIT')
+depends=()
+makedepends=()
+optdepends=()
+provides=('ansilust')
+conflicts=()
+replaces=()
+
+# Download binaries from GitHub releases
+# Format: source_ARCH=("url")
+source_x86_64=("https://github.com/effect-native/ansilust/releases/download/v${pkgver}/ansilust-linux-x64-gnu.tar.gz")
+source_aarch64=("https://github.com/effect-native/ansilust/releases/download/v${pkgver}/ansilust-linux-arm64-gnu.tar.gz")
+source_armv7h=("https://github.com/effect-native/ansilust/releases/download/v${pkgver}/ansilust-linux-armv7-gnu.tar.gz")
+
+# SHA256 checksums - will be updated by CI on release
+# Format: sha256sums_ARCH=("hash")
+sha256sums_x86_64=('PLACEHOLDER_X64_CHECKSUM')
+sha256sums_aarch64=('PLACEHOLDER_ARM64_CHECKSUM')
+sha256sums_armv7h=('PLACEHOLDER_ARMV7_CHECKSUM')
+
+# No build phase needed - we're using pre-built binaries
+build() {
+  return 0
+}
+
+package() {
+  # Install binary to /usr/bin/
+  install -Dm755 "ansilust" "${pkgdir}/usr/bin/ansilust"
+  
+  # Install license (downloaded from GitHub repo)
+  install -Dm644 /dev/null "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

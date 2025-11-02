@@ -1,0 +1,17 @@
+pkgbase = ansilust
+	pkgdesc = Next-generation text art processing system
+	pkgver = 0.0.1
+	pkgrel = 1
+	url = https://github.com/effect-native/ansilust
+	arch = x86_64
+	arch = aarch64
+	arch = armv7h
+	license = MIT
+	source_x86_64 = https://github.com/effect-native/ansilust/releases/download/v0.0.1/ansilust-linux-x64-gnu.tar.gz
+	sha256sums_x86_64 = PLACEHOLDER_X64_CHECKSUM
+	source_aarch64 = https://github.com/effect-native/ansilust/releases/download/v0.0.1/ansilust-linux-arm64-gnu.tar.gz
+	sha256sums_aarch64 = PLACEHOLDER_ARM64_CHECKSUM
+	source_armv7h = https://github.com/effect-native/ansilust/releases/download/v0.0.1/ansilust-linux-armv7-gnu.tar.gz
+	sha256sums_armv7h = PLACEHOLDER_ARMV7_CHECKSUM
+
+pkgname = ansilust
