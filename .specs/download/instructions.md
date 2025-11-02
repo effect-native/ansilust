@@ -142,34 +142,50 @@ FR1.3.5: The system shall store artpacks in user-browsable locations (Pictures d
 FR1.4.1: The system shall preserve original filenames from artpacks.  
 FR1.4.2: The system shall extract and store SAUCE metadata when present.  
 FR1.4.3: The system shall maintain artpack structure (directory hierarchy).  
-FR1.4.4: WHEN multiple versions of a file exist the system shall support version tracking.
+FR1.4.4: WHEN multiple versions of a file exist the system shall support version tracking.  
+FR1.4.5: All JSON metadata files shall include a `$schema` property pointing to ansilust.com schemas.  
+FR1.4.6: The system shall write JSON schemas that validate against published JSON Schema specifications.
 
-### FR1.5: Discovery and Search
-FR1.5.1: The system shall list available artpacks by year, group, or artist.  
-FR1.5.2: The system shall query the 16colo.rs archive for search results.  
-FR1.5.3: WHEN browsing packs the system shall display pack metadata (group, date, file count).  
-FR1.5.4: The system shall support filtering by file format (ANS, XB, ASC, etc.).
+### FR1.5: SQLite Database Integration
+FR1.5.1: The system shall maintain a SQLite database of all mirror metadata.  
+FR1.5.2: The system shall aggregate all `.16colors-meta.json` files into the database.  
+FR1.5.3: The system shall extract and index SAUCE metadata for all files.  
+FR1.5.4: The system shall support FTS5 full-text search across artwork metadata.  
+FR1.5.5: WHEN mirror sync completes the system shall update the database incrementally.  
+FR1.5.6: The database shall support complex queries (artist + year + format combinations).  
+FR1.5.7: The system shall generate statistics from database queries.  
+FR1.5.8: The database schema shall be versioned and support migrations.
 
-### FR1.6: Archive Mirroring
+### FR1.6: Discovery and Search
+FR1.6.1: The system shall list available artpacks by year, group, or artist.  
+FR1.6.2: The system shall query the 16colo.rs archive for search results.  
+FR1.6.3: WHEN browsing packs the system shall display pack metadata (group, date, file count).  
+FR1.6.4: The system shall support filtering by file format (ANS, XB, ASC, etc.).  
+FR1.6.5: WHERE SQLite database exists the system shall use database queries for search operations.
+
+### FR1.7: Archive Mirroring
 FR1.6.1: The system shall support mirroring the entire 16colors archive.  
 FR1.6.2: The system shall support incremental mirror sync (only download new/changed packs).  
 FR1.6.3: The system shall support filtering mirrors by year range (e.g., --since 2020).  
-FR1.6.4: The system shall support excluding NSFW content from mirrors.  
-FR1.6.5: The system shall support filtering by file extension (include or exclude specific types).  
-FR1.6.6: The system shall support excluding specific groups from mirrors.  
-FR1.6.7: The system shall support dry-run mode to preview mirror operations.  
-FR1.6.8: WHERE rsync is available the system shall support bandwidth limiting.  
-FR1.6.9: The system shall persist mirror configuration for subsequent sync operations.  
-FR1.6.10: The system shall support pruning orphaned packs (removed from remote).
+FR1.6.4: The system shall exclude NSFW content by default.  
+FR1.6.5: The system shall exclude executable files (*.exe, *.com, *.bat) by default.  
+FR1.6.6: WHERE the user specifies --include-nsfw the system shall download NSFW content.  
+FR1.6.7: WHERE the user specifies --include-executables the system shall download executable files.  
+FR1.6.8: The system shall support filtering by file extension (include or exclude specific types).  
+FR1.6.9: The system shall support excluding specific groups from mirrors.  
+FR1.6.10: The system shall support dry-run mode to preview mirror operations.  
+FR1.6.11: WHERE rsync is available the system shall support bandwidth limiting.  
+FR1.6.12: The system shall persist mirror configuration for subsequent sync operations.  
+FR1.6.13: The system shall support pruning orphaned packs (removed from remote).
 
-### FR1.7: CLI Interface
+### FR1.8: CLI Interface
 FR1.7.1: The system shall provide a `16c` (or `16colors`) CLI for archive-first operations.  
 FR1.7.2: The system shall provide archive integration in the `ansilust` CLI via `--16colors` flag.  
 FR1.7.3: The `16c` CLI shall assume archive context for all commands.  
 FR1.7.4: The `ansilust` CLI shall assume local file context unless `--16colors` is specified.  
 FR1.7.5: Both CLIs shall share the same underlying library implementation.
 
-### FR1.8: Library Integration
+### FR1.9: Library Integration
 FR1.8.1: The system shall provide a Zig library API for programmatic access.  
 FR1.8.2: The library shall integrate with ansilust parsers for format validation.  
 FR1.8.3: WHEN files are downloaded the library shall emit events for integration hooks.  
@@ -320,7 +336,7 @@ Platform-specific storage following OS conventions:
 **Standard Metadata Format** (`.16colors-meta.json`):
 ```json
 {
-  "schema_version": "1.0",
+  "$schema": "https://ansilust.com/.well-known/schemas/16colors-meta-v1.json",
   "source": "https://16colo.rs",
   "pack_name": "mist1025",
   "year": 2025,
@@ -334,19 +350,26 @@ Platform-specific storage following OS conventions:
 }
 ```
 
+**Schema URL**: `https://ansilust.com/.well-known/schemas/16colors-meta-v1.json`
+
 **Mirror Configuration Format** (`.16colors-mirror-config.json`):
 ```json
 {
-  "schema_version": "1.0",
+  "$schema": "https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json",
   "mirror_mode": "filtered",
   "last_sync": "2025-11-01T23:30:00Z",
+  "defaults": {
+    "exclude_nsfw": true,
+    "exclude_executables": true
+  },
   "filters": {
     "year_range": {
       "since": 2020,
       "until": null
     },
-    "exclude_nsfw": true,
-    "exclude_extensions": ["png", "gif", "jpg"],
+    "include_nsfw": false,
+    "include_executables": false,
+    "exclude_extensions": ["png", "gif"],
     "include_extensions": null,
     "exclude_groups": ["acdu"],
     "include_groups": null
@@ -354,12 +377,33 @@ Platform-specific storage following OS conventions:
   "sync_stats": {
     "total_packs": 127,
     "total_size_bytes": 524288000,
-    "last_duration_seconds": 1834
+    "last_duration_seconds": 1834,
+    "nsfw_excluded_count": 23,
+    "executables_excluded_count": 47
   }
 }
 ```
 
+**Schema URL**: `https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json`
+
+**JSON Schema Registry**:
+
+All JSON files MUST include a `$schema` property. Schemas are hosted at:
+
+| Format | Schema URL | Purpose |
+|--------|-----------|---------|
+| Pack Metadata | `https://ansilust.com/.well-known/schemas/16colors-meta-v1.json` | Artpack download metadata |
+| Mirror Config | `https://ansilust.com/.well-known/schemas/16colors-mirror-config-v1.json` | Mirror sync configuration |
+
+**Schema Hosting**:
+- Schemas MUST be hosted at `https://ansilust.com/.well-known/schemas/`
+- Schema URLs MUST include version suffix (e.g., `-v1.json`)
+- Schemas MUST be valid JSON Schema Draft 2020-12
+- Schemas MUST include `$id` property matching the canonical URL
+- Schema updates MUST use new version numbers (no breaking changes to published schemas)
+
 **Rationale**: 
+- **Validation**: IDEs and tools can validate JSON files against published schemas
 - **Shared standard**: Any tool can discover `~/Pictures/16colors/` or `~/.local/share/16colors/`
 - **User-browsable**: Artists and enthusiasts can manually explore their collection
 - **Tool-agnostic**: Metadata format is tool-independent (`.16colors-meta.json`)
@@ -367,6 +411,7 @@ Platform-specific storage following OS conventions:
 - **Predictable paths**: Scripts and automation can rely on consistent structure
 - **Multi-tool friendly**: PabloDraw, Moebius, ansilove, ansilust can all share this archive
 - **Persistent filters**: Mirror sync configuration survives across invocations
+- **Version tracking**: Schema URLs include version for backward compatibility
 
 ### Network Protocol Requirements
 
@@ -390,11 +435,21 @@ Platform-specific storage following OS conventions:
 - **Incremental**: Only transfer changed files
 
 ### File Format Support
-Must handle extraction and validation for:
+
+**Included by default**:
 - **Archives**: ZIP (primary format used by 16colo.rs)
 - **Text Art**: ANS, ASC, XB, ICE, BIN, PCB, TND, ADF, IDF, RIP, LIT, DRK
-- **Metadata**: SAUCE records embedded in files
-- **Misc**: DIZ, NFO, TXT (info files), PNG/GIF (rendered previews)
+- **Metadata**: SAUCE records, DIZ, NFO, TXT (info files)
+- **Images**: PNG, GIF (rendered previews)
+
+**Excluded by default** (require explicit flags):
+- **Executables**: EXE, COM, BAT (require `--include-executables`)
+- **NSFW Content**: Tagged NSFW (require `--include-nsfw`)
+
+**Rationale**: 
+- **Security**: Executables from 1990s BBSs pose potential security risks
+- **Safety**: NSFW content excluded by default for public/institutional use
+- **Explicit opt-in**: Users must consciously choose to include potentially problematic content
 
 ## CLI Usage Examples
 
@@ -415,28 +470,45 @@ Must handle extraction and validation for:
 16c download --group mistigris
 
 # Mirror the entire archive (full local copy)
-16c mirror sync                           # Sync entire archive
+16c mirror sync                           # Sync entire archive (excludes NSFW & executables by default)
 16c mirror sync --year 2025               # Sync only 2025
 16c mirror sync --since 2020              # Sync 2020-present
-16c mirror sync --exclude-nsfw            # Exclude NSFW content
-16c mirror sync --exclude-ext png,gif     # Exclude file types
-16c mirror sync --only-ext ans,asc,xb     # Only specific types
+
+# Include content excluded by default
+16c mirror sync --include-nsfw            # Include NSFW content
+16c mirror sync --include-executables     # Include .exe, .com, .bat files
+16c mirror sync --include-all             # Include everything (NSFW + executables)
+
+# Additional filters (on top of defaults)
+16c mirror sync --exclude-ext png,gif     # Also exclude image types
+16c mirror sync --only-ext ans,asc,xb     # Only specific types (overrides defaults)
 16c mirror sync --exclude-group acdu      # Exclude specific groups
+
+# Mirror options
 16c mirror sync --dry-run                 # Preview what would be downloaded
 16c mirror sync --bandwidth 1M            # Limit bandwidth (rsync)
+16c mirror sync --force                   # Re-download everything
 ```
 
-**Search and discovery**:
+**Search and discovery** (SQLite-powered):
 ```bash
 # Search for files by name across the entire archive
 16c art.ans                    # Find all files named "art.ans" and display them
-16c search "dragon"            # Full-text search across all artwork
-16c search --artist cthulu     # Search by artist
+16c search "dragon"            # Full-text search across all artwork (uses FTS5)
+16c search --artist cthulu     # Search by artist (database query)
+16c search --artist cthulu --year 1996  # Complex queries from database
 
-# List packs
+# List packs (fast database queries)
 16c list --year 2025           # List 2025 packs
 16c list --group mistigris     # List mistigris packs
 16c list --new                 # Show new packs (from RSS)
+16c list --artist misfit       # All packs with artwork by artist
+
+# Statistics and analytics (from SQLite database)
+16c stats --artist cthulu      # Artist statistics (file count, years active, groups)
+16c stats --group mistigris    # Group statistics (pack count, active years)
+16c stats --year 1996          # Year statistics (groups, artists, formats)
+16c stats --format ans         # Format statistics (count by year, top artists)
 ```
 
 **Display operations**:
@@ -457,6 +529,12 @@ Must handle extraction and validation for:
 16c mirror stats               # Detailed statistics (size, count, by year/group)
 16c mirror prune               # Remove packs not on remote (clean orphans)
 16c mirror config              # Show mirror configuration (filters, exclusions)
+
+# Database operations
+16c db rebuild                 # Rebuild SQLite database from mirror metadata
+16c db query "SELECT ..."      # Direct SQL queries for advanced users
+16c db export artists.csv      # Export database tables to CSV
+16c db stats                   # Database statistics (size, table counts, index info)
 ```
 
 ### `ansilust` CLI - File-First Interface
@@ -553,26 +631,38 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - All three names shall invoke identical functionality
 - The `ansilust` CLI shall remain the primary file-processing tool
 
-### AC9: Full Archive Mirroring
+### AC9: Full Archive Mirroring with Safe Defaults
 - WHEN the user requests `16c mirror sync` the system shall download the entire 16colors archive
+- The system shall exclude NSFW content by default (unless `--include-nsfw` specified)
+- The system shall exclude executable files (*.exe, *.com, *.bat) by default (unless `--include-executables` specified)
 - The system shall use the optimal protocol (RSYNC > FTP > HTTP) based on availability
 - The system shall display progress for the overall mirror operation (packs downloaded, total size, ETA)
+- The system shall show how many files were excluded due to default filters
 - WHEN sync is run again the system shall only download new or changed packs (incremental)
 - The system shall skip already-mirrored packs unless --force is specified
 
-### AC10: Filtered Mirroring
-- WHEN the user requests `16c mirror sync --exclude-nsfw` the system shall skip NSFW-tagged content
+### AC10: Explicit Inclusion of Filtered Content
+- WHEN the user requests `16c mirror sync --include-nsfw` the system shall download NSFW-tagged content
+- WHEN the user requests `16c mirror sync --include-executables` the system shall download executable files
+- WHEN the user requests `16c mirror sync --include-all` the system shall include both NSFW and executables
+- The system shall warn users when including NSFW or executables
+- The system shall track included content in mirror statistics
+
+### AC11: Additional Filtering
 - WHEN the user requests `16c mirror sync --since 2020` the system shall only download packs from 2020 onwards
-- WHEN the user requests `16c mirror sync --exclude-ext png,gif` the system shall skip files with those extensions
-- WHEN the user requests `16c mirror sync --only-ext ans,asc,xb` the system shall only download files with those extensions
+- WHEN the user requests `16c mirror sync --exclude-ext png,gif` the system shall also exclude those extensions (in addition to defaults)
+- WHEN the user requests `16c mirror sync --only-ext ans,asc,xb` the system shall only download those extensions (overrides defaults)
 - The system shall persist filter configuration in `.16colors-mirror-config.json`
 - WHEN sync is run without filters the system shall use previously configured filters
+- The system shall always apply default exclusions unless explicitly overridden
 
-### AC11: Mirror Management
+### AC12: Mirror Management
 - WHEN the user requests `16c mirror sync --dry-run` the system shall display what would be downloaded without downloading
-- The dry-run output shall show total size and pack count
+- The dry-run output shall show total size, pack count, and excluded content counts
+- The dry-run output shall indicate which defaults are active (NSFW excluded, executables excluded)
 - WHEN the user requests `16c mirror prune` the system shall remove local packs that no longer exist on remote
 - The system shall support `16c mirror stats` to show breakdown by year, group, file type
+- The mirror stats shall include excluded content statistics (NSFW count, executable count)
 - The mirror stats shall include total size, pack count, file count, and oldest/newest packs
 
 ## Out of Scope
@@ -586,6 +676,7 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - **Search implementation**: Full-text search (defer to 16colo.rs website for now)
 - **Content filtering logic**: NSFW detection (rely on 16colo.rs tags/metadata)
 - **Deduplication**: Handling duplicate files across packs (future enhancement)
+- **Schema hosting infrastructure**: Initial implementation will assume schemas exist (separate deployment concern)
 
 ## Success Metrics
 
@@ -638,34 +729,102 @@ Before Phase 2 (Requirements), we should:
 - **Incremental extraction**: Only extract changed files within updated packs
 - **16colors standard v1.0**: Formalize and document the directory standard for community adoption
 
+### SQLite Database Integration
+- **Full mirror database**: Build comprehensive SQLite database of all mirror metadata
+  - Aggregate all `.16colors-meta.json` files into single queryable database
+  - Schema: `16colors-mirror.db` with tables for packs, files, artists, groups, tags
+  - Enable fast searching without scanning filesystem
+  - Support FTS5 full-text search across artwork content
+  - Track SAUCE metadata for all files in queryable format
+  - Enable complex queries: "All ANSI files by artist X from year Y"
+  - Generate statistics: most active groups, artists, years, file formats
+  - Location: `~/.cache/16colors-tools/ansilust/16colors-mirror.db`
+
+**Database Schema** (conceptual):
+```sql
+CREATE TABLE packs (
+  id INTEGER PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  year INTEGER NOT NULL,
+  group_name TEXT,
+  download_date TEXT,
+  file_count INTEGER,
+  total_size INTEGER,
+  nsfw BOOLEAN DEFAULT 0
+);
+
+CREATE TABLE files (
+  id INTEGER PRIMARY KEY,
+  pack_id INTEGER REFERENCES packs(id),
+  filename TEXT NOT NULL,
+  extension TEXT,
+  size INTEGER,
+  artist TEXT,
+  title TEXT,
+  sauce_data JSON,
+  content_fts TEXT  -- For FTS5 full-text search
+);
+
+CREATE VIRTUAL TABLE files_fts USING fts5(filename, artist, title, content);
+
+CREATE TABLE groups (
+  name TEXT PRIMARY KEY,
+  pack_count INTEGER,
+  first_pack_year INTEGER,
+  last_pack_year INTEGER
+);
+
+CREATE TABLE artists (
+  name TEXT PRIMARY KEY,
+  file_count INTEGER,
+  first_seen TEXT,
+  last_seen TEXT,
+  groups TEXT  -- JSON array
+);
+```
+
+**Use Cases**:
+- `16c search "dragon" --artist cthulu` - Query database instead of filesystem
+- `16c stats --artist misfit` - Instant statistics from database
+- `16c list --group mistigris --year 1996` - Fast filtered queries
+- Export data for research: `sqlite3 16colors-mirror.db .dump`
+
 ### Integration Opportunities
 - **OpenTUI integration**: Display artwork directly from 16colors mirror
-- **Database indexing**: Full-text search of local mirror content
-- **SAUCE database**: Aggregate metadata from `.16colors-meta.json` files for analysis
-- **Format statistics**: Analyze corpus by format, year, group, etc.
+- **SQLite-powered search**: Fast queries without scanning 4000+ packs
+- **SAUCE analytics**: Complex queries on SAUCE metadata corpus
+- **Format statistics**: Real-time statistics from database queries
 - **PabloDraw integration**: Recognize and use shared 16colors directory
 - **Moebius integration**: Open files from standard 16colors paths
 - **BBS software**: Mount 16colors mirror as art file repository
+- **Research exports**: Export database to CSV, JSON for academic analysis
 
 ## Testing Requirements
 
 ### Unit Tests
 - 16colors directory path resolution (platform-specific)
 - `.16colors-meta.json` metadata format serialization/deserialization
+- JSON Schema validation (`$schema` property)
 - URL construction for 16colo.rs endpoints
 - FTP directory listing parser
 - RSS feed parser
 - File integrity verification (checksums)
 - Error handling for all failure modes
 - Discovery of existing 16colors directories from other tools
+- SQLite database schema creation and migrations
+- SQLite query builders for complex searches
+- SAUCE metadata extraction and indexing
 
 ### Integration Tests
 - Download complete artpack via HTTP to 16colors directory
 - Download complete artpack via FTP to 16colors directory
 - Download individual file via HTTP
 - Extract ZIP archive preserving structure
-- Write valid `.16colors-meta.json` metadata
+- Write valid `.16colors-meta.json` metadata with `$schema`
 - Verify SAUCE metadata extraction
+- Update SQLite database after pack download
+- Query SQLite database for search operations
+- FTS5 full-text search accuracy
 - Detect existing packs in 16colors mirror (avoid re-download)
 - Resume interrupted download
 - Network failure recovery
@@ -673,6 +832,8 @@ Before Phase 2 (Requirements), we should:
 - FTP directory listing
 - RSS feed parsing
 - Interoperability: Read metadata written by hypothetical other tools
+- Database rebuild from existing mirror metadata
+- Database export to CSV/JSON formats
 
 ### System Tests
 - End-to-end download workflow via CLI
@@ -709,9 +870,15 @@ Before Phase 2 (Requirements), we should:
 - **FTP client**: Custom implementation or library (to be determined)
 - **Platform directories**: Cross-platform path resolution (XDG on Linux, AppSupport/Pictures on macOS, AppData/Pictures on Windows)
 
+### Strongly Recommended
+- **SQLite**: Full mirror database with FTS5 search capabilities
+  - Consider: `sqlite3` C library via Zig FFI
+  - Consider: Pure Zig SQLite implementation (if available)
+  - FTS5 extension for full-text search
+  - JSON1 extension for SAUCE metadata storage
+
 ### Optional
 - **RSYNC wrapper**: Shell out to system rsync (Phase 3)
-- **SQLite**: For cache index (can start with JSON/filesystem only)
 - **libansilove integration**: For format validation after download
 - **TLS**: System TLS for HTTPS (Zig std or OpenSSL/LibreSSL)
 
@@ -719,6 +886,8 @@ Before Phase 2 (Requirements), we should:
 - **FTP library**: Does Zig have FTP support? Need custom implementation?
 - **HTML scraping**: If needed for search, what's the best approach?
 - **XML parsing**: For RSS feed (Zig std or external?)
+- **SQLite bindings**: Best approach for Zig/SQLite integration?
+- **JSON Schema validation**: Zig library for validating `$schema` compliance?
 
 ## Development Notes
 
