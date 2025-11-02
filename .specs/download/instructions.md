@@ -136,7 +136,9 @@ FR1.3.1: The system shall store artpacks in the community-standard 16colors dire
 FR1.3.2: The system shall write metadata in the standard `.16colors-meta.json` format.  
 FR1.3.3: The system shall discover existing 16colors directories created by other tools.  
 FR1.3.4: The system shall store tool-specific cache in `16colors-tools/ansilust/` subdirectories.  
-FR1.3.5: The system shall store artpacks in user-browsable locations (Pictures directory on macOS/Windows).
+FR1.3.5: The system shall store artpacks in user-browsable locations (Pictures directory on macOS/Windows).  
+FR1.3.6: The system shall create a `local/` directory for user-managed artwork (sideloaded, created, downloaded).  
+FR1.3.7: The system shall distinguish between official archive content (`packs/`) and user content (`local/`).
 
 ### FR1.4: Metadata Preservation
 FR1.4.1: The system shall preserve original filenames from artpacks.  
@@ -152,9 +154,11 @@ FR1.5.2: The system shall aggregate all `.16colors-meta.json` files into the dat
 FR1.5.3: The system shall extract and index SAUCE metadata for all files.  
 FR1.5.4: The system shall support FTS5 full-text search across artwork metadata.  
 FR1.5.5: WHEN mirror sync completes the system shall update the database incrementally.  
-FR1.5.6: The database shall support complex queries (artist + year + format combinations).  
-FR1.5.7: The system shall generate statistics from database queries.  
-FR1.5.8: The database schema shall be versioned and support migrations.
+FR1.5.6: The system shall index both `packs/` (official archive) and `local/` (user content) directories.  
+FR1.5.7: The database shall tag entries with source type (archive vs local).  
+FR1.5.8: The database shall support complex queries (artist + year + format combinations).  
+FR1.5.9: The system shall generate statistics from database queries.  
+FR1.5.10: The database schema shall be versioned and support migrations.
 
 ### FR1.6: Discovery and Search
 FR1.6.1: The system shall list available artpacks by year, group, or artist.  
@@ -310,7 +314,7 @@ Platform-specific storage following OS conventions:
 **Standard Directory Structure** (shown with Linux paths, adapt per platform):
 ```
 ~/.local/share/16colors/           (or ~/Pictures/16colors/ on macOS/Windows)
-├── packs/                         # Complete artpack archive
+├── packs/                         # Official 16colo.rs artpack archive
 │   ├── 1990/
 │   ├── 1996/
 │   ├── 2025/
@@ -320,6 +324,14 @@ Platform-specific storage following OS conventions:
 │   │       ├── FILE_ID.DIZ
 │   │       ├── MIST1025.NFO.ANS
 │   │       └── [artwork files]
+│   └── ...
+├── local/                         # User's own artwork (sideloaded, created, etc.)
+│   ├── my-art/                    # User-created artwork
+│   │   ├── dragon.ans
+│   │   └── logo.xb
+│   ├── downloads/                 # Manually downloaded files
+│   │   └── random-art.ans
+│   ├── screenshots/               # BBS screenshots, etc.
 │   └── ...
 ├── corpus/                        # Curated collections for research
 │   ├── ansi-1990s/                # User-organized collections
@@ -332,6 +344,26 @@ Platform-specific storage following OS conventions:
 ├── http-cache/
 └── index.db                       # ansilust-specific index
 ```
+
+**Directory Purposes**:
+- **`packs/`**: Official 16colo.rs archive (managed by download client)
+- **`local/`**: User's own artwork (not from 16colo.rs, manually managed)
+- **`corpus/`**: Curated collections (can contain symlinks to packs/ or local/)
+
+**Use Cases for `local/`**:
+- User creates artwork in PabloDraw/Moebius and saves to `local/my-art/`
+- User downloads artwork from BBS, web, Discord and saves to `local/downloads/`
+- **Screensaver** (`16c-screensaver`) displays from both `packs/` and `local/` directories
+- **TUI viewers** can browse all artwork in one unified location
+- **Search tools** index both `packs/` and `local/` for complete coverage
+- **BBS software** can serve artwork from both official archive and user content
+- **SQLite database** includes entries from both directories with source tagging
+
+**Why `local/` is Part of the Standard**:
+- Other tools (screensavers, viewers, BBSes) need a predictable location for user artwork
+- Users should have one central place for all text art (archive + their own)
+- Separating `local/` from `packs/` prevents conflicts with official archive
+- Database can distinguish archive vs user content while providing unified search
 
 **Standard Metadata Format** (`.16colors-meta.json`):
 ```json
@@ -530,8 +562,15 @@ All JSON files MUST include a `$schema` property. Schemas are hosted at:
 16c mirror prune               # Remove packs not on remote (clean orphans)
 16c mirror config              # Show mirror configuration (filters, exclusions)
 
-# Database operations
-16c db rebuild                 # Rebuild SQLite database from mirror metadata
+# Local artwork management (user's own content)
+16c local add myart.ans        # Add file to local/ directory
+16c local list                 # List all files in local/ directory
+16c local import ~/Downloads/art/  # Import directory to local/
+16c local path                 # Print local/ directory path
+
+# Database operations (indexes both packs/ and local/)
+16c db rebuild                 # Rebuild SQLite database from all artwork
+16c db rebuild --local-only    # Rebuild only local/ entries
 16c db query "SELECT ..."      # Direct SQL queries for advanced users
 16c db export artists.csv      # Export database tables to CSV
 16c db stats                   # Database statistics (size, table counts, index info)
@@ -664,6 +703,17 @@ ansilust --16colors search "dragon" | ansilust --16colors download --from-search
 - The system shall support `16c mirror stats` to show breakdown by year, group, file type
 - The mirror stats shall include excluded content statistics (NSFW count, executable count)
 - The mirror stats shall include total size, pack count, file count, and oldest/newest packs
+- The mirror stats shall show both archive and local content separately
+
+### AC13: Local Artwork Management
+- The system shall create a `local/` directory within the 16colors directory on first run
+- WHEN the user requests `16c local add myart.ans` the system shall copy the file to the `local/` directory
+- WHEN the user requests `16c local import ~/Downloads/art/` the system shall recursively copy the directory to `local/`
+- The system shall support `16c local list` to show all files in the `local/` directory
+- The SQLite database shall index files from both `packs/` and `local/` directories
+- Search and display operations shall include results from `local/` by default
+- The database shall tag entries with source_type='local' for user-managed content
+- Statistics shall distinguish between archive and local content
 
 ## Out of Scope
 
@@ -745,7 +795,8 @@ Before Phase 2 (Requirements), we should:
 CREATE TABLE packs (
   id INTEGER PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
-  year INTEGER NOT NULL,
+  source_type TEXT NOT NULL,  -- 'archive' or 'local'
+  year INTEGER,
   group_name TEXT,
   download_date TEXT,
   file_count INTEGER,
@@ -756,13 +807,16 @@ CREATE TABLE packs (
 CREATE TABLE files (
   id INTEGER PRIMARY KEY,
   pack_id INTEGER REFERENCES packs(id),
+  source_type TEXT NOT NULL,  -- 'archive' or 'local'
+  relative_path TEXT NOT NULL, -- Path within packs/ or local/
   filename TEXT NOT NULL,
   extension TEXT,
   size INTEGER,
   artist TEXT,
   title TEXT,
   sauce_data JSON,
-  content_fts TEXT  -- For FTS5 full-text search
+  content_fts TEXT,  -- For FTS5 full-text search
+  added_date TEXT
 );
 
 CREATE VIRTUAL TABLE files_fts USING fts5(filename, artist, title, content);
