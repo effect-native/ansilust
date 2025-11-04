@@ -343,16 +343,41 @@ function detectPlatform() {
 
 **Deliverables**:
 - Create **ONLY** `plan.md` with:
-  - **5-Phase Implementation Structure** with checkboxes
-  - **Task Hierarchies** with clear objectives
+  - **Work Packages (WP)**: Each with stable anchor ID `WP-<AREA>-<NNN>`
+  - **Brief intent + acceptance** at spec level (not granular task status)
+  - **Linked tasks**: List `tracker/tasks/*.md` IDs per WP
   - **Validation Checkpoints**: build, test, fmt, docs
   - **Risk Mitigation Strategies**
   - **Success Criteria Validation**
-  - **Progress Tracking System**
+  - **Phase/Milestone Structure** with checkboxes
+
+**Work Package Format**:
+```markdown
+### [WP-PARS-001] Binary Parser
+
+**Intent**: Implement 160x25 binary format parser with attribute byte support
+
+**Acceptance**:
+- All tests in binary_test.zig pass
+- iCE colors mode behavior verified
+- Round-trip through IR to renderer
+
+**Tasks**: GAP-PARS-001, GAP-PARS-005
+
+**Status**: [ ] Pending / [ ] In Progress / [x] Complete
+```
+
+**Plan.md ↔ Tracker Contract**:
+- `plan.md` defines work packages (WHAT, at spec level)
+- `tracker/tasks/` owns all executable work (HOW/WHEN, atomic tasks + status)
+- Each task includes `spec_ref: [.specs/<domain>/plan.md#wp-<area>-<nnn>]`
+- Tracker is single source of truth for per-task status
+- Update plan WP checkboxes only when ALL linked tasks complete
 
 **🚨 FILE DISCIPLINE CHECK**:
 - [ ] All four standard files exist: instructions.md, requirements.md, design.md, plan.md
-- [ ] No additional files created
+- [ ] Work packages have stable anchor IDs
+- [ ] No per-task status duplication in plan.md
 - [ ] Spec directory clean and well-organized
 
 **🔒 AUTHORIZATION GATE**: Present plan.md and request user approval to proceed to Implementation Phase

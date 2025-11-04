@@ -1,5 +1,9 @@
 # Ansilust TODO
 
+> **Note**: This file contains historical context and long-term vision.  
+> **For active tasks**, see `tracker/` directory (single source of truth).  
+> **Quick start**: `tracker/index.md` lists open tasks by priority.
+
 ## Critical Issues
 
 ### UTF8ANSI Renderer - Use 24-bit Colors by Default
