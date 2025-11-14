@@ -13,7 +13,7 @@ zig build
 ./zig-out/bin/ansilust path/to/artwork.ans
 ```
 
-## 📦 Installation
+## 📦 Installation (COMING SOON)
 
 ### npm (Cross-Platform)
 
