@@ -22,3 +22,5 @@ packages/ansilust-*/
 
 # Changesets (commit *.md files, not node_modules)
 .changeset/node_modules/
+.opencode
+
