@@ -298,16 +298,17 @@ This plan follows Kent Beck's Extreme Programming red/green/refactor cycle:
 - [x] Cycle 3: Glyph Mapping ✅ (CP437→Unicode table in ansi.zig, tested)
 - [x] Cycle 4: Color Emission ✅ (24-bit truecolor, DOS_PALETTE_RGB table)
 - [ ] Cycle 5: Style Batching ⬜ (not started)
-- [ ] Cycle 6: CLI Integration ⬜ **BLOCKER** ← needed for first visual render
+- [x] Cycle 6: CLI Integration ✅ (`main.zig` calls `renderToUtf8Ansi`, TTY detection, stdout output)
 - [x] Cycle 7: 256-color Support ✅ (DOS_TO_ANSI_256 mapping table exists)
-- [ ] Cycle 8: File Mode ⬜ (not validated)
-- [ ] Cycle 9: Bramwell Iteration 1 ⬜ (blocked on CLI integration)
+- [x] Cycle 8: File Mode ✅ (TerminalGuard respects is_tty, file redirect works)
+- [ ] Cycle 9: Bramwell Iteration 1 ⬜ (ready for visual QA)
 
 ### Implementation Status
 
 **Files**:
 - `src/renderers/utf8ansi.zig` - Main renderer (TerminalGuard, color emission, render pipeline)
 - `src/renderers/utf8ansi_test.zig` - Test suite
+- `src/main.zig` - CLI entry point with renderer integration
 
 **Completed Features**:
 - TerminalGuard with TTY vs file mode distinction
@@ -315,18 +316,20 @@ This plan follows Kent Beck's Extreme Programming red/green/refactor cycle:
 - Cursor hide/show sequences (ESC[?25l/ESC[?25h)
 - DOS VGA palette as 24-bit RGB table (16 colors)
 - 256-color fallback mapping table
-- Basic render structure
+- Full render pipeline (parse → IR → render → stdout)
+- CLI integration via `ansilust <file.ans>` command
+- TTY detection with `std.posix.isatty()`
+- File redirect support (`ansilust file.ans > output.utf8ansi`)
 
 **Gaps**:
-- CLI integration (`main.zig` doesn't call renderer yet)
-- Style batching optimization
+- Style batching optimization (Cycle 5)
 - Hyperlink rendering (OSC 8)
-- File mode validation testing
+- Bramwell visual QA iteration (Cycle 9)
 
 **Next Steps**:
-1. **CRITICAL**: Wire renderer into `src/main.zig` CLI (Cycle 6)
-2. Add style batching to reduce SGR sequence overhead
-3. Validate file mode output is replayable
+1. Add style batching to reduce SGR sequence overhead (Cycle 5)
+2. Run Bramwell visual QA on corpus files (Cycle 9)
+3. Address any color/glyph/layout issues from QA feedback
 
 ### Validation Gates (Run after each GREEN phase)
 
