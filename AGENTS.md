@@ -1,6 +1,29 @@
-current date: 2025-10-26
+# Ansilust - Quick Reference
 
-# Ansilust Project
+## Build & Test Commands
+```bash
+zig build              # Build all executables (output: zig-out/bin/)
+zig build test         # Run all tests (3 modules: ansilust, parsers, exe)
+zig build run -- arg   # Run main executable with args
+```
+
+## Code Style (Zig)
+- **Imports**: `const std = @import("std");` first, then project modules via `@import("module_name")`
+- **Naming**: snake_case for functions/variables, PascalCase for types/structs, SCREAMING_CASE for constants
+- **Doc comments**: Use `///` for public API docs, `//!` for module-level docs
+- **Error handling**: Return `error.ErrorName` from error sets, use `!` for error unions
+- **Types**: Explicit union(enum) for variants, packed structs for bit fields
+- **Module imports**: Use build.zig module deps (`@import("ansilust")`) not relative paths
+
+## Key Directories
+- `src/ir/` - Intermediate representation (cell grid, colors, attributes)
+- `src/parsers/` - ANSI/BBS format parsers
+- `src/renderers/` - Output renderers (UTF8ANSI)
+- `reference/` - Prior art (ghostty, libansilove) - see subdirectory AGENTS.md files
+
+---
+
+# Ansilust Project (Detailed)
 
 Inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project, ansilust is a next-generation text art processing system split into multiple modules. Keep `.specs/ir/prior-art-notes.md` close; it lists the exact files from Ghostty, Bun, and ansilove to re-read before refreshing IR decisions.
 

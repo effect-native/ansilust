@@ -292,16 +292,41 @@ This plan follows Kent Beck's Extreme Programming red/green/refactor cycle:
 
 ## Progress Tracking
 
-### Completed Cycles
-- [ ] Cycle 1: TerminalGuard
-- [ ] Cycle 2: Minimal Pipeline
-- [ ] Cycle 3: Glyph Mapping
-- [ ] Cycle 4: Color Emission
-- [ ] Cycle 5: Style Batching
-- [ ] Cycle 6: CLI Integration ← **FIRST VISUAL RENDER**
-- [ ] Cycle 7: Truecolor Support
-- [ ] Cycle 8: File Mode
-- [ ] Cycle 9: Bramwell Iteration 1
+### Completed Cycles (2025-11-27)
+- [x] Cycle 1: TerminalGuard ✅ (TerminalGuard struct with is_tty flag, DECAWM control)
+- [x] Cycle 2: Minimal Pipeline ✅ (render function, row iteration, cursor positioning)
+- [x] Cycle 3: Glyph Mapping ✅ (CP437→Unicode table in ansi.zig, tested)
+- [x] Cycle 4: Color Emission ✅ (24-bit truecolor, DOS_PALETTE_RGB table)
+- [ ] Cycle 5: Style Batching ⬜ (not started)
+- [ ] Cycle 6: CLI Integration ⬜ **BLOCKER** ← needed for first visual render
+- [x] Cycle 7: 256-color Support ✅ (DOS_TO_ANSI_256 mapping table exists)
+- [ ] Cycle 8: File Mode ⬜ (not validated)
+- [ ] Cycle 9: Bramwell Iteration 1 ⬜ (blocked on CLI integration)
+
+### Implementation Status
+
+**Files**:
+- `src/renderers/utf8ansi.zig` - Main renderer (TerminalGuard, color emission, render pipeline)
+- `src/renderers/utf8ansi_test.zig` - Test suite
+
+**Completed Features**:
+- TerminalGuard with TTY vs file mode distinction
+- DECAWM toggle sequences (ESC[?7l/ESC[?7h)
+- Cursor hide/show sequences (ESC[?25l/ESC[?25h)
+- DOS VGA palette as 24-bit RGB table (16 colors)
+- 256-color fallback mapping table
+- Basic render structure
+
+**Gaps**:
+- CLI integration (`main.zig` doesn't call renderer yet)
+- Style batching optimization
+- Hyperlink rendering (OSC 8)
+- File mode validation testing
+
+**Next Steps**:
+1. **CRITICAL**: Wire renderer into `src/main.zig` CLI (Cycle 6)
+2. Add style batching to reduce SGR sequence overhead
+3. Validate file mode output is replayable
 
 ### Validation Gates (Run after each GREEN phase)
 

@@ -698,18 +698,42 @@ pub fn displayArtwork(path: []const u8) !void {
 
 | Task | Status | Notes |
 |------|--------|-------|
-| 5.1.1 Database Interface | ⬜ Not Started | |
-| 5.1.2 Hardcoded Implementation | ⬜ Not Started | |
-| 5.1.3 Platform Paths | ⬜ Not Started | |
-| 5.1.4 HTTP Download | ⬜ Not Started | |
-| 5.1.5 Storage Module | ⬜ Not Started | |
-| 5.1.6 CLI Entry Point | ⬜ Not Started | |
-| 5.1.7 Integration | ⬜ Not Started | |
-| 5.1.8 Renderer Integration | ⬜ Not Started | |
-| 5.1.9 Build Configuration | ⬜ Not Started | |
-| 5.1.10 Testing | ⬜ Not Started | |
+| 5.1.1 Database Interface | ✅ Complete | `src/download/database/interface.zig` with tests |
+| 5.1.2 Hardcoded Implementation | ✅ Complete | `src/download/database/hardcoded.zig` with curated files |
+| 5.1.3 Platform Paths | ✅ Complete | `src/download/storage/paths.zig` with tests (paths_test.zig) |
+| 5.1.4 HTTP Download | ✅ Complete | `src/download/protocols/http.zig` with tests (http_test.zig) |
+| 5.1.5 Storage Module | ✅ Complete | `src/download/storage/files.zig` with tests (files_test.zig) |
+| 5.1.6 CLI Entry Point | ✅ Complete | `src/cli/sixteenc.zig` builds as `16c` binary |
+| 5.1.7 Integration | ✅ Complete | `src/download/commands/random.zig` wires all modules |
+| 5.1.8 Renderer Integration | 🔄 In Progress | Stubbed - awaiting UTF8ANSI renderer CLI integration |
+| 5.1.9 Build Configuration | ✅ Complete | `16c` executable in build.zig with download module |
+| 5.1.10 Testing | 🔄 In Progress | Unit tests pass, end-to-end validation pending |
 
 **Legend**: ⬜ Not Started | 🔄 In Progress | ✅ Complete | ❌ Blocked
+
+---
+
+## Current Status Summary (2025-11-27)
+
+**Implementation**: Phase 5.1 ~90% complete
+
+**Completed**:
+- Full download client infrastructure (database, HTTP, storage, paths)
+- `16c` CLI executable with `random-1` command
+- Platform path detection (Linux, macOS, Windows)
+- Hardcoded database with curated artwork entries
+- HTTP download with error handling
+- File storage with timestamp naming and cleanup
+
+**Gaps**:
+- Renderer integration (displays file path only, not artwork)
+- End-to-end cross-platform testing
+- Full validation suite
+
+**Next Steps**:
+1. Integrate UTF8ANSI renderer into random command (blocked on renderer CLI integration)
+2. Complete end-to-end testing on Linux/macOS/Windows
+3. Begin Phase 5.2 (direct pack downloads)
 
 ---
 

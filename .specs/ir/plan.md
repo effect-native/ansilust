@@ -295,15 +295,32 @@ src/parsers/tests/
 
 ### Phase 5 Tracking Table
 ```
-| Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Cycle6 | Cycle7 | Integration |
-|---------|-------|--------|--------|--------|--------|--------|--------|--------|-------------|
-| ANSI    | 5A    | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ⬜️          |
-| UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
-| SAUCE   | 5C    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
-| Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
-| XBin    | 5E    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
-| ArtWorx | 5F    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
-| PCBoard | 5G    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️          |
+| Parser  | Phase | Cycle1 | Cycle2 | Cycle3 | Cycle4 | Cycle5 | Cycle6 | Cycle7 | Cycle8-10 | Integration |
+|---------|-------|--------|--------|--------|--------|--------|--------|--------|-----------|-------------|
+| ANSI    | 5A    | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ✅     | ✅        | ⬜️          |
+| UTF8ANSI| 5B    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     |        |           |             |
+| SAUCE   | 5C    | ✅     | ✅     | ✅     | (integrated into ANSI parser) |
+| Binary  | 5D    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     |        |           |             |
+| XBin    | 5E    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     |        |           |             |
+| ArtWorx | 5F    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     |        |           |             |
+| PCBoard | 5G    | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     | ⬜️     |        |           |             |
 ```
 
-(remaining sections unchanged...)
+---
+
+## Current Status Summary (2025-11-27)
+
+**Tests**: 127/127 passing (`zig build test --summary all`)
+- 81 tests in ansilust module (IR, cell grid, colors, attributes, SAUCE, animation)
+- 46 tests in parsers module (ANSI parser, SGR, cursor, erase, hyperlinks)
+
+**ANSI Parser (Phase 5A)**: ~95% complete
+- All 10 cycles implemented (plain text, SGR, cursor, erase, SAUCE, dimensions, roundtrip, hyperlinks, ansimation)
+- Missing: Golden corpus regression tests
+
+**Other Parsers**: Not started (5B-5G)
+
+**Next Steps**:
+1. Complete ANSI integration tests with sixteencolors corpus
+2. Begin UTF8ANSI parser (Phase 5B) for modern terminal output parsing
+3. Begin Binary parser (Phase 5D) for raw BBS art files
