@@ -8,9 +8,11 @@ package-lock.json
 npm-debug.log*
 yarn-error.log*
 
-# Platform package binaries
-packages/*/bin/
+# Platform package binaries (but not the launcher.js in ansilust/bin/)
 packages/ansilust-*/
+!packages/ansilust/
+!packages/ansilust/bin/
+!packages/ansilust/bin/launcher.js
 
 # Build artifacts
 *.o
