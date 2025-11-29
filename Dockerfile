@@ -1,11 +1,11 @@
 # Multi-stage build for minimal container image
 # Uses pre-built binaries from CI artifacts
 
-# We use alpine as base for the final image (for shell access if needed)
-# ARG is used to select the correct binary based on target platform
-ARG TARGETPLATFORM
-
 FROM alpine:latest
+
+# TARGETPLATFORM is automatically set by Docker buildx for multi-platform builds
+# Must be declared after FROM to use in this stage
+ARG TARGETPLATFORM
 
 # Install minimal runtime dependencies (if any needed in future)
 # Currently ansilust is statically linked, so none needed
