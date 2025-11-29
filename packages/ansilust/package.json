@@ -1,6 +1,6 @@
 {
   "name": "ansilust",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Next-generation text art processing system - convert, render, and animate ANSI art",
   "main": "index.js",
   "bin": {
@@ -26,16 +26,16 @@
     "detect-libc": "^2.1.2"
   },
   "optionalDependencies": {
-    "ansilust-darwin-arm64": "0.0.1",
-    "ansilust-darwin-x64": "0.0.1",
-    "ansilust-linux-aarch64-gnu": "0.0.1",
-    "ansilust-linux-aarch64-musl": "0.0.1",
-    "ansilust-linux-arm-gnu": "0.0.1",
-    "ansilust-linux-arm-musl": "0.0.1",
-    "ansilust-linux-i386-musl": "0.0.1",
-    "ansilust-linux-x64-gnu": "0.0.1",
-    "ansilust-linux-x64-musl": "0.0.1",
-    "ansilust-win32-x64": "0.0.1"
+    "ansilust-darwin-arm64": "0.2.0",
+    "ansilust-darwin-x64": "0.2.0",
+    "ansilust-linux-aarch64-gnu": "0.2.0",
+    "ansilust-linux-aarch64-musl": "0.2.0",
+    "ansilust-linux-arm-gnu": "0.2.0",
+    "ansilust-linux-arm-musl": "0.2.0",
+    "ansilust-linux-i386-musl": "0.2.0",
+    "ansilust-linux-x64-gnu": "0.2.0",
+    "ansilust-linux-x64-musl": "0.2.0",
+    "ansilust-win32-x64": "0.2.0"
   },
   "engines": {
     "node": ">=14.0.0"

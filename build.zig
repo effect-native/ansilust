@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const version = "0.2.0";
+
 // Although this function looks imperative, it does not perform the build
 // directly and instead it mutates the build graph (`b`) that will be then
 // executed by an external runner. The functions in `std.Build` implement a DSL
@@ -77,6 +79,10 @@ pub fn build(b: *std.Build) void {
     //
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
+    // Create build options module to pass version to the executable
+    const build_options = b.addOptions();
+    build_options.addOption([]const u8, "version", version);
+
     const exe = b.addExecutable(.{
         .name = "ansilust",
         .root_module = b.createModule(.{
@@ -100,6 +106,7 @@ pub fn build(b: *std.Build) void {
                 // importing modules from different packages).
                 .{ .name = "ansilust", .module = mod },
                 .{ .name = "parsers", .module = parsers_mod },
+                .{ .name = "build_options", .module = build_options.createModule() },
             },
         }),
     });
