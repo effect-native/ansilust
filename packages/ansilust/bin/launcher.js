@@ -34,24 +34,24 @@ function getPlatform() {
     }
   }
   
-  // Map Zig architecture names to npm package names
-  let zipArch = arch;
-  if (arch === 'x64') zipArch = 'x64';
-  else if (arch === 'ia32') zipArch = 'i386';
-  else if (arch === 'arm') zipArch = 'arm';
-  else if (arch === 'arm64') zipArch = 'aarch64';
-  
-  // Map process.platform to os names for packages
-  let pkgPlatform = platform;
-  if (platform === 'darwin') pkgPlatform = 'darwin';
-  else if (platform === 'linux') pkgPlatform = 'linux';
-  else if (platform === 'win32') pkgPlatform = 'win32';
+  // Map Node.js arch names to npm package arch names
+  // Darwin uses arm64, Linux uses aarch64 in package names
+  let pkgArch = arch;
+  if (arch === 'x64') pkgArch = 'x64';
+  else if (arch === 'ia32') pkgArch = 'i386';
+  else if (arch === 'arm') pkgArch = 'arm';
+  else if (arch === 'arm64') {
+    // Darwin packages use 'arm64', Linux packages use 'aarch64'
+    pkgArch = (platform === 'darwin') ? 'arm64' : 'aarch64';
+  }
   
   // Build package name
+  // Format: {os}-{arch}[-{libc}]
+  // Examples: darwin-arm64, linux-x64-gnu, linux-aarch64-musl
   if (libcType) {
-    return `${pkgPlatform}-${zipArch}-${libcType}`;
+    return `${platform}-${pkgArch}-${libcType}`;
   } else {
-    return `${pkgPlatform}-${zipArch}`;
+    return `${platform}-${pkgArch}`;
   }
 }
 

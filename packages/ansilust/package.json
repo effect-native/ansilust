@@ -33,7 +33,7 @@
     "ansilust-linux-arm-gnu": "0.0.1",
     "ansilust-linux-arm-musl": "0.0.1",
     "ansilust-linux-i386-musl": "0.0.1",
-    "ansilust-linux-x64-gnu": "file:../ansilust-linux-x64-gnu",
+    "ansilust-linux-x64-gnu": "0.0.1",
     "ansilust-linux-x64-musl": "0.0.1",
     "ansilust-win32-x64": "0.0.1"
   },
