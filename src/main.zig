@@ -4,6 +4,11 @@ const build_options = @import("build_options");
 
 const version = build_options.version;
 
+// Helper for managed ArrayList in Zig 0.15
+fn ArrayList(comptime T: type) type {
+    return std.array_list.AlignedManaged(T, null);
+}
+
 fn printVersion() void {
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
     stdout_file.writeAll("ansilust " ++ version ++ "\n") catch {};
@@ -63,25 +68,30 @@ pub fn main() !void {
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
     const stderr_file = std.fs.File{ .handle = std.posix.STDERR_FILENO };
 
-    var file_count: usize = 0;
+    var file_paths = ArrayList([]const u8).init(allocator);
+    defer file_paths.deinit();
+
     var show_help = false;
     var show_version = false;
 
+    // Parse all arguments first, collect file paths
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
             show_help = true;
         } else if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--version")) {
             show_version = true;
         } else if (std.mem.startsWith(u8, arg, "-")) {
-            std.debug.print("error: unknown option '{s}'\n", .{arg});
+            var buf: [256]u8 = undefined;
+            const msg = std.fmt.bufPrint(&buf, "error: unknown option '{s}'\n", .{arg}) catch "error: unknown option\n";
+            stderr_file.writeAll(msg) catch {};
             stderr_file.writeAll("Try 'ansilust --help' for more information.\n") catch {};
             std.process.exit(1);
         } else {
-            try processFile(allocator, arg);
-            file_count += 1;
+            try file_paths.append(arg);
         }
     }
 
+    // Handle flags before processing files
     if (show_version) {
         printVersion();
         return;
@@ -92,8 +102,13 @@ pub fn main() !void {
         return;
     }
 
-    if (file_count == 0) {
+    if (file_paths.items.len == 0) {
         printHelp(stderr_file);
         std.process.exit(1);
+    }
+
+    // Process files after all argument parsing is complete
+    for (file_paths.items) |path| {
+        try processFile(allocator, path);
     }
 }
