@@ -132,15 +132,15 @@ const PLATFORM_TO_DIR = {
 // Main assembly function
 function assemble() {
   const rootDir = path.join(__dirname, '..');
-  // Support both local builds (zig-out/bin/) and CI builds (platform-binaries/{platform}/)
+  // Support both local builds (zig-out/bin/) and CI builds (artifacts/{platform}/)
   const localBinDir = path.join(rootDir, 'zig-out', 'bin');
-  const platformBinDir = path.join(rootDir, 'platform-binaries');
+  const artifactsDir = path.join(rootDir, 'artifacts');
   const packagesDir = path.join(rootDir, 'packages');
   const licenseFile = path.join(rootDir, 'LICENSE');
 
-  // Detect if we're in CI mode (platform-binaries exists) or local mode
-  const isCI = fs.existsSync(platformBinDir);
-  console.log(`Mode: ${isCI ? 'CI (platform-binaries)' : 'Local (zig-out/bin)'}`);
+  // Detect if we're in CI mode (artifacts exists) or local mode
+  const isCI = fs.existsSync(artifactsDir);
+  console.log(`Mode: ${isCI ? 'CI (artifacts/)' : 'Local (zig-out/bin)'}`);
 
   // Get version from environment or package.json
   let version = process.env.PACKAGE_VERSION || '0.0.1';
@@ -153,7 +153,7 @@ function assemble() {
     console.warn('Warning: Could not read root package.json, using version', version);
   }
 
-  console.log(`📦 Assembling ansilust npm packages (v${version})`);
+  console.log(`Assembling ansilust npm packages (v${version})`);
   console.log('');
 
   let successCount = 0;
@@ -165,10 +165,10 @@ function assemble() {
     if (isCI) {
       const platformDir = PLATFORM_TO_DIR[packageName];
       if (!platformDir) {
-        console.log(`⏭️  Skipping ${packageName} (no platform directory mapping)`);
+        console.log(`  Skipping ${packageName} (no platform directory mapping)`);
         continue;
       }
-      binaryPath = path.join(platformBinDir, platformDir, 'ansilust');
+      binaryPath = path.join(artifactsDir, platformDir, 'ansilust');
     } else {
       binaryPath = path.join(localBinDir, 'ansilust');
     }
@@ -180,7 +180,7 @@ function assemble() {
       // Check if binary exists
       if (!fs.existsSync(binaryPath)) {
         // For cross-compilation targets, the binary might not exist if not built
-        console.log(`⏭️  Skipping ${packageName} (binary not found for ${zigTarget})`);
+        console.log(`  Skipping ${packageName} (binary not found for ${zigTarget})`);
         continue;
       }
 

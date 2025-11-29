@@ -16,60 +16,59 @@ env:
 
 jobs:
   build:
-    name: Build binaries
+    name: Build all binaries (Zig cross-compile)
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux builds
-          - target: x86_64-linux-gnu
-            platform: linux-x64-gnu
-          - target: x86_64-linux-musl
-            platform: linux-x64-musl
-          - target: aarch64-linux-gnu
-            platform: linux-arm64-gnu
-          - target: aarch64-linux-musl
-            platform: linux-arm64-musl
-          - target: arm-linux-gnueabihf
-            platform: linux-arm-gnu
-          - target: arm-linux-musleabihf
-            platform: linux-arm-musl
-          # macOS builds
-          - target: x86_64-macos
-            platform: darwin-x64
-          - target: aarch64-macos
-            platform: darwin-arm64
-          # Windows - DISABLED: POSIX API usage needs fixing
-          # - target: x86_64-windows
-          #   platform: win32-x64
-          # i386 - DISABLED: Low priority, test after v1.0.0
-          # - target: i386-linux-musl
-          #   platform: linux-i386-musl
     steps:
       - uses: actions/checkout@v4
       
       - name: Install Zig
         uses: mlugg/setup-zig@v1
       
-      - name: Build ${{ matrix.platform }}
+      - name: Build all platforms
         run: |
-          zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
-      
-      - name: Package binary
-        run: |
-          mkdir -p release/${{ matrix.platform }}
-          if [ "${{ matrix.platform }}" = "win32-x64" ]; then
-            cp zig-out/bin/ansilust.exe release/${{ matrix.platform }}/
-          else
-            cp zig-out/bin/ansilust release/${{ matrix.platform }}/
-          fi
+          # Zig cross-compiles for any platform from any platform
+          # No need for matrix - build everything on one runner
+          
+          TARGETS=(
+            "x86_64-linux-gnu:linux-x64-gnu"
+            "x86_64-linux-musl:linux-x64-musl"
+            "aarch64-linux-gnu:linux-arm64-gnu"
+            "aarch64-linux-musl:linux-arm64-musl"
+            "arm-linux-gnueabihf:linux-arm-gnu"
+            "arm-linux-musleabihf:linux-arm-musl"
+            "x86_64-macos:darwin-x64"
+            "aarch64-macos:darwin-arm64"
+            # Windows - DISABLED: POSIX API usage needs fixing
+            # "x86_64-windows:win32-x64"
+            # i386 - DISABLED: Low priority, test after v1.0.0
+            # "i386-linux-musl:linux-i386-musl"
+          )
+          
+          for entry in "${TARGETS[@]}"; do
+            IFS=':' read -r target platform <<< "$entry"
+            echo "=== Building $platform (zig target: $target) ==="
+            
+            zig build -Dtarget="$target" -Doptimize=ReleaseSafe
+            
+            mkdir -p "release/$platform"
+            if [[ "$platform" == win32* ]]; then
+              cp zig-out/bin/ansilust.exe "release/$platform/"
+            else
+              cp zig-out/bin/ansilust "release/$platform/"
+            fi
+            
+            # Clean for next build
+            rm -rf zig-out zig-cache
+          done
+          
+          echo "=== All builds complete ==="
+          find release -type f
       
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binaries-${{ matrix.platform }}
-          path: release/${{ matrix.platform }}/
+          name: binaries-all
+          path: release/
           retention-days: 1
 
   assemble-npm:
@@ -84,27 +83,16 @@ jobs:
         with:
           node-version: '20'
       
-      - name: Download all artifacts
+      - name: Download binaries artifact
         uses: actions/download-artifact@v4
         with:
+          name: binaries-all
           path: artifacts/
       
-      - name: Organize binaries by platform
+      - name: Show artifact structure
         run: |
-          # Each artifact directory contains the binary for that platform
-          # We need to organize them so the assembly script can find them
-          for platform_dir in artifacts/binaries-*/; do
-            platform=$(basename "$platform_dir" | sed 's/binaries-//')
-            mkdir -p "platform-binaries/$platform"
-            for binary in "$platform_dir"ansilust*; do
-              if [ -f "$binary" ]; then
-                echo "Found binary: $binary for platform: $platform"
-                cp "$binary" "platform-binaries/$platform/"
-              fi
-            done
-          done
-          echo "Platform binaries organized:"
-          find platform-binaries -type f
+          echo "=== Artifact structure ==="
+          find artifacts -type f
       
       - name: Install dependencies
         run: npm install
@@ -187,38 +175,44 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Download all artifacts
+      - name: Download binaries artifact
         uses: actions/download-artifact@v4
         with:
+          name: binaries-all
           path: artifacts/
       
       - name: Prepare release artifacts
         run: |
           mkdir -p release-artifacts
           
-          # Copy and organize binaries
-          find artifacts -name "ansilust*" -type f | while read file; do
-            platform=$(basename "$file" | sed 's/ansilust-//' | sed 's/.exe$//')
+          # Iterate through platform directories
+          for platform_dir in artifacts/*/; do
+            platform=$(basename "$platform_dir")
+            binary="$platform_dir/ansilust"
+            binary_exe="$platform_dir/ansilust.exe"
             
-            if [[ "$platform" == "win32"* ]]; then
+            if [[ -f "$binary_exe" ]]; then
               # Windows: create zip
-              mkdir -p "temp/$platform/bin"
-              cp "$file" "temp/$platform/bin/"
+              mkdir -p "temp/ansilust-$platform"
+              cp "$binary_exe" "temp/ansilust-$platform/"
               cd temp
-              zip -r "../release-artifacts/ansilust-$platform.zip" "$platform/"
+              zip -r "../release-artifacts/ansilust-$platform.zip" "ansilust-$platform/"
               cd ..
               rm -rf temp
-            else
+            elif [[ -f "$binary" ]]; then
               # Unix: create tar.gz
-              mkdir -p "temp/$platform/bin"
-              cp "$file" "temp/$platform/bin/ansilust"
-              chmod +x "temp/$platform/bin/ansilust"
+              mkdir -p "temp/ansilust-$platform"
+              cp "$binary" "temp/ansilust-$platform/"
+              chmod +x "temp/ansilust-$platform/ansilust"
               cd temp
-              tar -czf "../release-artifacts/ansilust-$platform.tar.gz" "$platform/"
+              tar -czf "../release-artifacts/ansilust-$platform.tar.gz" "ansilust-$platform/"
               cd ..
               rm -rf temp
             fi
           done
+          
+          echo "=== Release artifacts ==="
+          ls -la release-artifacts/
       
       - name: Generate checksums
         run: bash scripts/generate-checksums.sh release-artifacts/
@@ -287,9 +281,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Download all artifacts
+      - name: Download binaries artifact
         uses: actions/download-artifact@v4
         with:
+          name: binaries-all
           path: artifacts/
       
       - name: Set up Docker Buildx
