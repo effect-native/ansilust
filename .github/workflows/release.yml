@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write  # Required for npm OIDC provenance
 
 env:
   REGISTRY: ghcr.io
@@ -125,9 +126,12 @@ jobs:
           retention-days: 1
 
   publish-npm:
-    name: Publish to npm
+    name: Publish to npm (OIDC)
     needs: assemble-npm
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for npm OIDC publishing (no NPM_TOKEN needed)
     steps:
       - uses: actions/checkout@v4
       
@@ -137,28 +141,44 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+      
       - name: Download npm packages
         uses: actions/download-artifact@v4
         with:
           name: npm-packages
           path: packages/
       
-      - name: Publish platform packages
+      - name: OIDC preflight - ensure no auth tokens
+        run: |
+          echo "=== OIDC Preflight ==="
+          # Remove any existing auth tokens to ensure OIDC is used
+          for npmrc in "$NPM_CONFIG_USERCONFIG" ~/.npmrc .npmrc; do
+            if [ -n "$npmrc" ] && [ -f "$npmrc" ]; then
+              echo "Cleaning $npmrc of any existing auth tokens..."
+              sed -i -E '/\/\/registry\.npmjs\.org\/:(_authToken|_auth)\s*=/d' "$npmrc" 2>/dev/null || true
+              sed -i -E '/^\s*(_authToken|_auth)\s*=/d' "$npmrc" 2>/dev/null || true
+            fi
+          done
+          
+          echo "Verifying npm registry connectivity..."
+          npm ping || exit 1
+          echo "Registry: $(npm config get registry)"
+      
+      - name: Publish platform packages with OIDC
         run: |
           for pkg in packages/ansilust-*/; do
             if [ -f "$pkg/package.json" ]; then
+              echo "Publishing $pkg..."
               cd "$pkg"
-              npm publish
+              npm publish --provenance --access public
               cd - > /dev/null
             fi
           done
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       
-      - name: Publish meta package
-        run: npm publish packages/ansilust/
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish meta package with OIDC
+        run: npm publish packages/ansilust/ --provenance --access public
 
   create-release:
     name: Create GitHub release
