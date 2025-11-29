@@ -1,6 +1,9 @@
 # First Publish Analysis - Summary
 
-## Current State (2025-11-28)
+## Current State (2025-11-29)
+
+### Branch: `feat/publish-v1`
+Pushed to: https://github.com/effect-native/ansilust/tree/feat/publish-v1
 
 ### What Works
 - **Zig build** produces working binaries for Linux and macOS
@@ -12,11 +15,11 @@
 - **Install scripts** exist (install.sh is complete, install.ps1 exists)
 
 ### What's Broken/Missing
-1. **Windows build fails** - POSIX API usage in code
-2. **NPM_TOKEN secret not configured** - need to add before first publish
-3. **AUR_SSH_KEY secret not configured** - needed for AUR updates
-4. **Platform packages not created** - need to run assembly script
-5. **No GitHub release yet** - need tag to trigger workflow
+1. **Windows build fails** - POSIX API usage in code (deferred to v1.1.0)
+2. **NPM_TOKEN secret not configured** - see MANUAL-STEPS.md
+3. **AUR_SSH_KEY secret not configured** - can skip for v1.0.0
+4. **Platform packages created by CI** - assembly script ready
+5. **No GitHub release yet** - waiting on NPM_TOKEN
 
 ### Critical Path to v1.0.0
 
@@ -46,15 +49,31 @@
 | win32-x64 | BLOCKED | POSIX API usage |
 | linux-i386-musl | UNTESTED | Low priority |
 
-### Files Modified Today
+### Commits on feat/publish-v1
 
-1. `packages/ansilust-linux-x64-gnu/` - Created for local testing
-2. `packages/ansilust/package.json` - Fixed file: reference
-3. `.specs/publish/first/PREP/` - Created analysis documents
+1. **9e1c37e** - PREP analysis for v1.0.0 release strategy
+2. **dcb786a** - Fix ARM64 arch naming (Darwin=arm64, Linux=aarch64)
+3. **dab17f6** - Add manual steps documentation
 
-### Next Session Actions
+### Files Modified
 
-1. Fix Windows build (replace POSIX APIs)
-2. Add NPM_TOKEN to GitHub secrets
-3. Test release workflow with dry-run tag
-4. Create and merge v1.0.0 changeset
+- `.github/workflows/release.yml` - Disabled Windows, improved artifact handling
+- `packages/ansilust/package.json` - Fixed file: reference in optionalDeps
+- `packages/ansilust/bin/launcher.js` - Fixed ARM64 architecture naming
+- `scripts/assemble-npm-packages.js` - Added CI/local mode support
+- `.gitignore` - Allow launcher.js to be tracked
+- `.specs/publish/first/` - PREP analysis and specs
+
+### Immediate Next Steps
+
+1. **[MANUAL]** Add NPM_TOKEN to GitHub secrets (see MANUAL-STEPS.md)
+2. **[OPTIONAL]** Test release with `v0.0.2-test.1` tag
+3. **[MANUAL]** Create PR and merge feat/publish-v1 to main
+4. **[MANUAL]** Create changeset for v1.0.0
+5. **[AUTO]** Release workflow builds and publishes
+
+### Later (v1.1.0)
+
+- Fix Windows POSIX API usage
+- Add linux-i386-musl build
+- Set up AUR SSH key for automatic updates
