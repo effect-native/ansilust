@@ -15,63 +15,69 @@ A next-generation text art processing system inspired by the legendary [ansilove
 ## 🚀 Quick Start
 
 ```bash
-# Render classic ANSI art to your terminal
-zig build run -- path/to/artwork.ans
+# Run with Docker (easiest)
+docker run ghcr.io/effect-native/ansilust artwork.ans
 
-# Or build and use the binary
-zig build
-./zig-out/bin/ansilust path/to/artwork.ans
+# Or build from source
+zig build run -- artwork.ans
 ```
 
-## 📦 Installation (COMING SOON)
+## 📦 Installation
 
-### npm (Cross-Platform)
+### Docker (Recommended)
 
 ```bash
-# Install globally
-npm install -g ansilust
+# Run directly
+docker run ghcr.io/effect-native/ansilust artwork.ans
 
-# Or run directly without installing
-npx ansilust path/to/artwork.ans
+# Or with a local file
+docker run -v $(pwd):/data ghcr.io/effect-native/ansilust /data/artwork.ans
+
+# Show help
+docker run ghcr.io/effect-native/ansilust --help
 ```
 
-### Bash Installer (Linux/macOS)
-
-```bash
-curl -fsSL https://ansilust.com/install | bash
-```
-
-### PowerShell Installer (Windows)
-
-```powershell
-irm https://ansilust.com/install.ps1 | iex
-```
-
-### AUR (Arch Linux)
-
-```bash
-yay -S ansilust
-```
-
-### Nix (All Platforms)
-
-```bash
-nix run github:effect-native/ansilust -- path/to/artwork.ans
-```
-
-### Docker
-
-```bash
-docker run ghcr.io/effect-native/ansilust:latest path/to/artwork.ans
-```
-
-### From Source
+### From Source (Requires Zig 0.15+)
 
 ```bash
 git clone https://github.com/effect-native/ansilust.git
 cd ansilust
 zig build -Doptimize=ReleaseSafe
-./zig-out/bin/ansilust path/to/artwork.ans
+./zig-out/bin/ansilust artwork.ans
+```
+
+### GitHub Releases
+
+Download pre-built binaries from [GitHub Releases](https://github.com/effect-native/ansilust/releases):
+
+```bash
+# Linux x64 (glibc)
+curl -fsSL https://github.com/effect-native/ansilust/releases/latest/download/ansilust-linux-x64-gnu.tar.gz | tar xz
+./ansilust-linux-x64-gnu/ansilust artwork.ans
+
+# macOS Apple Silicon
+curl -fsSL https://github.com/effect-native/ansilust/releases/latest/download/ansilust-darwin-arm64.tar.gz | tar xz
+./ansilust-darwin-arm64/ansilust artwork.ans
+```
+
+### npm (Coming Soon)
+
+```bash
+# Not yet available - platform packages need npm trusted publisher setup
+npx ansilust artwork.ans
+```
+
+### Other Methods (Planned)
+
+```bash
+# Nix
+nix run github:effect-native/ansilust -- artwork.ans
+
+# AUR (Arch Linux)
+yay -S ansilust
+
+# Homebrew (macOS)
+brew install ansilust
 ```
 
 ## 📊 Current Status
