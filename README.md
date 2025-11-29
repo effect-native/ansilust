@@ -8,7 +8,7 @@ A next-generation text art processing system inspired by the legendary [ansilove
 |---|---|---|
 |![](https://img.shields.io/npm/v/16c)|`16c`|coming soon|
 |![](https://img.shields.io/npm/v/16colors)|`16colors`|coming soon|
-|![](https://img.shields.io/npm/v/ansilust)|`ansilust`|coming soon|
+|![](https://img.shields.io/npm/v/ansilust)|`ansilust`|coming sooner|
 
 ---
 
