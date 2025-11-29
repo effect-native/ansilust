@@ -18,6 +18,7 @@ jobs:
     name: Build binaries
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Linux builds
@@ -29,20 +30,21 @@ jobs:
             platform: linux-arm64-gnu
           - target: aarch64-linux-musl
             platform: linux-arm64-musl
-          - target: armv7-linux-gnueabihf
-            platform: linux-armv7-gnu
-          - target: armv7-linux-musleabihf
-            platform: linux-armv7-musl
-          - target: i386-linux-musl
-            platform: linux-i386-musl
+          - target: arm-linux-gnueabihf
+            platform: linux-arm-gnu
+          - target: arm-linux-musleabihf
+            platform: linux-arm-musl
           # macOS builds
           - target: x86_64-macos
             platform: darwin-x64
           - target: aarch64-macos
             platform: darwin-arm64
-          # Windows build
-          - target: x86_64-windows
-            platform: win32-x64
+          # Windows - DISABLED: POSIX API usage needs fixing
+          # - target: x86_64-windows
+          #   platform: win32-x64
+          # i386 - DISABLED: Low priority, test after v1.0.0
+          # - target: i386-linux-musl
+          #   platform: linux-i386-musl
     steps:
       - uses: actions/checkout@v4
       
@@ -53,11 +55,20 @@ jobs:
         run: |
           zig build -Dtarget=${{ matrix.target }} -Doptimize=ReleaseSafe
       
+      - name: Package binary
+        run: |
+          mkdir -p release/${{ matrix.platform }}
+          if [ "${{ matrix.platform }}" = "win32-x64" ]; then
+            cp zig-out/bin/ansilust.exe release/${{ matrix.platform }}/
+          else
+            cp zig-out/bin/ansilust release/${{ matrix.platform }}/
+          fi
+      
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: binaries-${{ matrix.platform }}
-          path: zig-out/*/ansilust*
+          path: release/${{ matrix.platform }}/
           retention-days: 1
 
   assemble-npm:
@@ -77,20 +88,34 @@ jobs:
         with:
           path: artifacts/
       
-      - name: Assemble binaries
+      - name: Organize binaries by platform
         run: |
-          mkdir -p zig-out
-          # Extract binaries from artifact structure
-          find artifacts -name "ansilust*" -type f | while read file; do
-            basename=$(basename "$file")
-            cp "$file" "zig-out/$basename"
+          # Each artifact directory contains the binary for that platform
+          # We need to organize them so the assembly script can find them
+          for platform_dir in artifacts/binaries-*/; do
+            platform=$(basename "$platform_dir" | sed 's/binaries-//')
+            mkdir -p "platform-binaries/$platform"
+            for binary in "$platform_dir"ansilust*; do
+              if [ -f "$binary" ]; then
+                echo "Found binary: $binary for platform: $platform"
+                cp "$binary" "platform-binaries/$platform/"
+              fi
+            done
           done
+          echo "Platform binaries organized:"
+          find platform-binaries -type f
       
       - name: Install dependencies
         run: npm install
       
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
       - name: Run assembly script
-        run: node scripts/assemble-npm-packages.js
+        run: PACKAGE_VERSION=${{ steps.version.outputs.version }} node scripts/assemble-npm-packages.js
       
       - name: Upload npm packages
         uses: actions/upload-artifact@v4
