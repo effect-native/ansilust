@@ -15,7 +15,8 @@
 ### C3: GitHub Repository
 - `effect-native/ansilust` exists
 - GitHub Actions enabled
-- GitHub Actions must be configured for npm OIDC authentication (no NPM_TOKEN secret required)
+- npm OIDC authentication configured (no NPM_TOKEN secret required)
+- Workflow has `permissions: id-token: write` for OIDC
 
 ### C4: Binary Works
 - Native build produces working binaries
@@ -68,7 +69,7 @@
 ## Immutable Dependencies
 
 ### For npm Publish
-1. NPM_TOKEN secret in GitHub Actions
+1. npm OIDC configured for effect-native org (trusted publisher)
 2. All platform packages created and ready
 3. launcher.js implemented
 4. optionalDependencies point to npm packages (not local files)

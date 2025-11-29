@@ -13,10 +13,10 @@
 **Impact**: Cannot test global installation locally
 **Resolution**: Symlink directly in node_modules (works for testing)
 
-### FP3: NPM_TOKEN Not Verified
-**Issue**: Unknown if secret is configured in GitHub Actions
-**Impact**: Could fail on publish
-**Resolution**: Check via `gh secret list` before release
+### FP3: npm OIDC Not Configured
+**Issue**: npm org needs trusted publisher setup for OIDC
+**Impact**: Could fail on publish with auth error
+**Resolution**: Configure trusted publisher in npm org settings (see MANUAL-STEPS.md)
 
 ## What Works
 
@@ -68,16 +68,17 @@
    - Replace std.posix.isatty with cross-platform check
    - Replace std.posix.getenv with std.process.getEnvVarOwned
 
-2. **Verify NPM_TOKEN secret exists**
-   - `gh secret list` to check
+2. **Configure npm OIDC**
+   - Set up trusted publisher in npm org settings
+   - See MANUAL-STEPS.md for detailed instructions
 
 3. **Test CI workflow**
    - Push test tag to see if workflow runs
    - Fix any issues before real release
 
-4. **Update release.yml**
-   - Remove Windows target from build matrix (or handle failure gracefully)
-   - Add linux-i386-musl back when tested
+4. **Update release.yml** (DONE)
+   - Windows target removed from build
+   - Single runner builds all targets via Zig cross-compile
 
 5. **Create changeset and release**
    - `npx changeset add` - major bump to 1.0.0

@@ -16,17 +16,17 @@ Pushed to: https://github.com/effect-native/ansilust/tree/feat/publish-v1
 
 ### What's Broken/Missing
 1. **Windows build fails** - POSIX API usage in code (deferred to v1.1.0)
-2. **NPM_TOKEN secret not configured** - see MANUAL-STEPS.md
+2. **npm OIDC not configured** - see MANUAL-STEPS.md for setup
 3. **AUR_SSH_KEY secret not configured** - can skip for v1.0.0
 4. **Platform packages created by CI** - assembly script ready
-5. **No GitHub release yet** - waiting on NPM_TOKEN
+5. **No GitHub release yet** - pending OIDC setup
 
 ### Critical Path to v1.0.0
 
 ```
-1. [MANUAL] Add NPM_TOKEN secret to GitHub repo
+1. [MANUAL] Configure npm OIDC for effect-native org (see MANUAL-STEPS.md)
 2. [MANUAL] Add AUR_SSH_KEY secret (or skip AUR for v1.0.0)
-3. [CODE]   Update release.yml to skip Windows target
+3. [CODE]   Update release.yml to skip Windows target (DONE)
 4. [CODE]   Create changeset for v1.0.0
 5. [CI]     Push, let changesets create version PR
 6. [MANUAL] Merge version PR
@@ -42,8 +42,8 @@ Pushed to: https://github.com/effect-native/ansilust/tree/feat/publish-v1
 | linux-x64-musl | READY | Alpine/containers |
 | linux-arm64-gnu | READY | RPi 4, Apple Silicon VMs |
 | linux-arm64-musl | READY | Alpine ARM |
-| linux-armv7-gnu | READY | RPi 2/3 |
-| linux-armv7-musl | READY | Older embedded |
+| linux-arm-gnu | READY | RPi 2/3 |
+| linux-arm-musl | READY | Older embedded |
 | darwin-x64 | READY | Intel Macs |
 | darwin-arm64 | READY | Apple Silicon |
 | win32-x64 | BLOCKED | POSIX API usage |
@@ -66,11 +66,11 @@ Pushed to: https://github.com/effect-native/ansilust/tree/feat/publish-v1
 
 ### Immediate Next Steps
 
-1. **[MANUAL]** Add NPM_TOKEN to GitHub secrets (see MANUAL-STEPS.md)
+1. **[MANUAL]** Configure npm OIDC (see MANUAL-STEPS.md)
 2. **[OPTIONAL]** Test release with `v0.0.2-test.1` tag
 3. **[MANUAL]** Create PR and merge feat/publish-v1 to main
 4. **[MANUAL]** Create changeset for v1.0.0
-5. **[AUTO]** Release workflow builds and publishes
+5. **[AUTO]** Release workflow builds and publishes (using OIDC provenance)
 
 ### Later (v1.1.0)
 

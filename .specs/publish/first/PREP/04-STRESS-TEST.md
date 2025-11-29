@@ -2,11 +2,17 @@
 
 ## What-If Scenarios
 
-### WIF-1: NPM_TOKEN Secret Missing
-**What if**: GitHub Actions runs but NPM_TOKEN isn't configured?
-**Impact**: npm publish fails, CI workflow breaks
-**Mitigation**: Check secrets before first release
-**Test**: `gh secret list` should show NPM_TOKEN
+### WIF-1: npm OIDC Not Configured
+**What if**: GitHub Actions runs but npm org doesn't have OIDC configured?
+**Impact**: npm publish fails with "No token available" error
+**Mitigation**: Configure trusted publisher in npm org settings
+**Test**: Check npm package settings show GitHub repo as trusted publisher
+
+### WIF-1b: id-token Permission Missing
+**What if**: Workflow doesn't have `permissions: id-token: write`?
+**Impact**: GitHub can't issue OIDC token, npm publish fails
+**Mitigation**: Ensure permission is set in release.yml (already done)
+**Test**: Check workflow YAML for `id-token: write`
 
 ### WIF-2: Platform Package Names Wrong
 **What if**: npm package names don't match what launcher expects?
@@ -86,7 +92,7 @@
 
 1. **CRITICAL**: launcher.js must exist and work
 2. **CRITICAL**: Platform package names must match exactly
-3. **HIGH**: All 10 platform packages must publish before meta
-4. **HIGH**: NPM_TOKEN must be configured
+3. **HIGH**: All 8 platform packages must publish before meta
+4. **HIGH**: npm OIDC must be configured (trusted publisher)
 5. **MEDIUM**: Cross-compilation must succeed for all targets
 6. **LOW**: Help/version flags in binary (nice to have)
