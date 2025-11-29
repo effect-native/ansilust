@@ -1,6 +1,6 @@
 {
   "name": "16c",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "16colo.rs CLI shorthand (placeholder - real package coming soon)",
   "main": "index.js",
   "repository": {
