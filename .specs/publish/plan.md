@@ -895,8 +895,10 @@ nix run . -- --version
 
 ### 4.3: Domain Hosting (ansilust.com)
 
+**Cross-reference**: See `.specs/website/` for full website specification. The website will be deployed via Kamal to VPS with Docker, serving both the marketing site and install scripts.
+
 - [ ] **4.3.1**: Configure static hosting for install scripts
-  - **Options**: GitHub Pages, Cloudflare Pages, or Netlify
+  - **Method**: Deployed as part of website via Kamal (see `.specs/website/`)
   - **Setup**: Deploy `scripts/install.sh` to `ansilust.com/install`
   - **Validation**: `curl https://ansilust.com/install` returns script
 
