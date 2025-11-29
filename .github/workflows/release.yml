@@ -116,11 +116,12 @@ jobs:
           retention-days: 1
 
   publish-npm:
-    name: Publish to npm
+    name: Publish to npm (OIDC)
     needs: assemble-npm
     runs-on: ubuntu-latest
-    # Only run if NPM_TOKEN secret is configured
-    if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
+    permissions:
+      contents: read
+      id-token: write  # Required for npm OIDC trusted publishing
     steps:
       - uses: actions/checkout@v4
       
@@ -130,6 +131,9 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
       
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+      
       - name: Download npm packages
         uses: actions/download-artifact@v4
         with:
@@ -137,8 +141,6 @@ jobs:
           path: packages/
       
       - name: Publish platform packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           for pkg in packages/ansilust-*/; do
             if [ -f "$pkg/package.json" ]; then
@@ -150,8 +152,6 @@ jobs:
           done
       
       - name: Publish meta package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish packages/ansilust/ --provenance --access public || echo "Failed to publish meta package (may already exist)"
 
   create-release:
@@ -292,7 +292,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
       
       - name: Build and push
         uses: docker/build-push-action@v5
