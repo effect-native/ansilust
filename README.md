@@ -2,6 +2,16 @@
 
 A next-generation text art processing system inspired by the legendary [ansilove](https://github.com/ansilove/ansilove) project. Ansilust provides a unified intermediate representation (IR) for working with both classic BBS-era text art formats and modern terminal output.
 
+---
+
+|Status|Package|Purpose|
+|---|---|---|
+|![](https://img.shields.io/npm/v/16c)|`16c`|coming soon|
+|![](https://img.shields.io/npm/v/16colors)|`16colors`|coming soon|
+|![](https://img.shields.io/npm/v/ansilust)|`ansilust`|coming soon|
+
+---
+
 ## 🚀 Quick Start
 
 ```bash
