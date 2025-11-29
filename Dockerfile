@@ -1,28 +1,34 @@
 # Multi-stage build for minimal container image
-# This Dockerfile builds a minimal container with just the ansilust binary
+# Uses pre-built binaries from CI artifacts
 
-# Stage 1: Build (uses Zig to compile)
-FROM alpine:latest AS builder
+# We use alpine as base for the final image (for shell access if needed)
+# ARG is used to select the correct binary based on target platform
+ARG TARGETPLATFORM
 
-# Install Zig and dependencies
-RUN apk add --no-cache \
-    zig \
-    build-base \
-    git
+FROM alpine:latest
 
-WORKDIR /src
+# Install minimal runtime dependencies (if any needed in future)
+# Currently ansilust is statically linked, so none needed
 
-# Copy source code
-COPY . .
+WORKDIR /
 
-# Build ansilust
-RUN zig build -Doptimize=ReleaseSafe
+# Copy the appropriate binary based on platform
+# The binaries are copied from artifacts/ which is populated by the CI download step
+# Platform mapping:
+#   linux/amd64  -> linux-x64-musl/ansilust
+#   linux/arm64  -> linux-arm64-musl/ansilust  
+#   linux/arm/v7 -> linux-arm-musl/ansilust
+COPY artifacts/ /artifacts/
 
-# Stage 2: Runtime (minimal image with just the binary)
-FROM scratch
-
-# Copy only the binary from builder
-COPY --from=builder /src/zig-out/bin/ansilust /ansilust
+# Use shell to copy the correct binary based on TARGETPLATFORM
+RUN case "${TARGETPLATFORM}" in \
+      "linux/amd64")  cp /artifacts/linux-x64-musl/ansilust /ansilust ;; \
+      "linux/arm64")  cp /artifacts/linux-arm64-musl/ansilust /ansilust ;; \
+      "linux/arm/v7") cp /artifacts/linux-arm-musl/ansilust /ansilust ;; \
+      *) echo "Unsupported platform: ${TARGETPLATFORM}" && exit 1 ;; \
+    esac && \
+    chmod +x /ansilust && \
+    rm -rf /artifacts
 
 # Set entrypoint
 ENTRYPOINT ["/ansilust"]
