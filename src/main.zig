@@ -1,5 +1,36 @@
 const std = @import("std");
 const ansilust = @import("ansilust");
+const build_options = @import("build_options");
+
+const version = build_options.version;
+
+// Helper for managed ArrayList in Zig 0.15
+fn ArrayList(comptime T: type) type {
+    return std.array_list.AlignedManaged(T, null);
+}
+
+fn printVersion() void {
+    const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+    stdout_file.writeAll("ansilust " ++ version ++ "\n") catch {};
+}
+
+fn printHelp(file: std.fs.File) void {
+    file.writeAll(
+        \\ansilust - Next-generation text art processing system
+        \\
+        \\USAGE:
+        \\    ansilust [OPTIONS] <file.ans> [<file2.ans> ...]
+        \\
+        \\OPTIONS:
+        \\    -h, --help       Print this help message
+        \\    -V, --version    Print version information
+        \\
+        \\EXAMPLES:
+        \\    ansilust artwork.ans           Render ANSI art to terminal
+        \\    ansilust file1.ans file2.ans   Render multiple files
+        \\
+    ) catch {};
+}
 
 fn processFile(allocator: std.mem.Allocator, path: []const u8) !void {
     const file_data = std.fs.cwd().readFileAlloc(allocator, path, 100 * 1024 * 1024) catch |e| {
@@ -34,14 +65,50 @@ pub fn main() !void {
 
     _ = args.next(); // skip argv0
 
-    var file_count: usize = 0;
-    while (args.next()) |path| {
-        try processFile(allocator, path);
-        file_count += 1;
+    const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+    const stderr_file = std.fs.File{ .handle = std.posix.STDERR_FILENO };
+
+    var file_paths = ArrayList([]const u8).init(allocator);
+    defer file_paths.deinit();
+
+    var show_help = false;
+    var show_version = false;
+
+    // Parse all arguments first, collect file paths
+    while (args.next()) |arg| {
+        if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+            show_help = true;
+        } else if (std.mem.eql(u8, arg, "-V") or std.mem.eql(u8, arg, "--version")) {
+            show_version = true;
+        } else if (std.mem.startsWith(u8, arg, "-")) {
+            var buf: [256]u8 = undefined;
+            const msg = std.fmt.bufPrint(&buf, "error: unknown option '{s}'\n", .{arg}) catch "error: unknown option\n";
+            stderr_file.writeAll(msg) catch {};
+            stderr_file.writeAll("Try 'ansilust --help' for more information.\n") catch {};
+            std.process.exit(1);
+        } else {
+            try file_paths.append(arg);
+        }
     }
 
-    if (file_count == 0) {
-        std.debug.print("usage: ansilust <file.ans> [<file2.ans> ...]\n", .{});
+    // Handle flags before processing files
+    if (show_version) {
+        printVersion();
         return;
+    }
+
+    if (show_help) {
+        printHelp(stdout_file);
+        return;
+    }
+
+    if (file_paths.items.len == 0) {
+        printHelp(stderr_file);
+        std.process.exit(1);
+    }
+
+    // Process files after all argument parsing is complete
+    for (file_paths.items) |path| {
+        try processFile(allocator, path);
     }
 }
