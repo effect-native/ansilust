@@ -15,7 +15,7 @@
 ### C3: GitHub Repository
 - `effect-native/ansilust` exists
 - GitHub Actions enabled
-- NPM_TOKEN secret needs to be configured (verify)
+- GitHub Actions must be configured for npm OIDC authentication (no NPM_TOKEN secret required)
 
 ### C4: Binary Works
 - Native build produces working binaries
