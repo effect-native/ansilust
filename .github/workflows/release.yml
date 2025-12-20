@@ -142,17 +142,24 @@ jobs:
       
       - name: Publish platform packages
         run: |
+          failed=0
           for pkg in packages/ansilust-*/; do
             if [ -f "$pkg/package.json" ]; then
               echo "Publishing $pkg..."
               cd "$pkg"
-              npm publish --provenance --access public || echo "Failed to publish $pkg (may already exist)"
+              if ! npm publish --provenance --access public; then
+                echo "::error::Failed to publish $pkg"
+                failed=1
+              fi
               cd - > /dev/null
             fi
           done
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
       
       - name: Publish meta package
-        run: npm publish packages/ansilust/ --provenance --access public || echo "Failed to publish meta package (may already exist)"
+        run: npm publish packages/ansilust/ --provenance --access public
 
   create-release:
     name: Create GitHub release
