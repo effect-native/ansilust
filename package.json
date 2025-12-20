@@ -6,9 +6,5 @@
   ],
   "scripts": {
     "release": "./scripts/release.sh"
-  },
-  "devDependencies": {
-    "@changesets/changelog-github": "^0.5.1",
-    "@changesets/cli": "^2.29.7"
   }
 }
