@@ -1,6 +1,6 @@
 # Tracker Directory - Agent Guidelines
 
-**Purpose**: Single source of truth for atomic, ephemeral work items (gaps, tasks, bugs, technical debt).
+**Purpose**: Legacy tracker guidance retained for historical context during DotOK transition.
 
 ## Directory Structure
 
@@ -27,7 +27,7 @@ tracker/
 **Don't use tracker/ for**:
 - Long-term product vision (use `.specs/`)
 - Completed work (archive or delete task files)
-- General notes or research (use reference/ or TODO.md)
+- General notes or research (use `reference/` or DotOK artifacts under `.ok/` and `.tasks/`)
 
 ## Task Lifecycle
 
@@ -249,13 +249,7 @@ After identifying gaps (e.g., from comparing .specs to src):
   - Break into smaller tasks
   - Merge with related tasks
 
-## Integration with TODO.md
-
-**TODO.md** (root):
-- Historical context
-- Long-term vision
-- Completed work log
-- Points to `tracker/` for active tasks
+## Historical Relationship
 
 **tracker/** (this directory):
 - Active work only
@@ -263,4 +257,4 @@ After identifying gaps (e.g., from comparing .specs to src):
 - Current priorities
 - Single source of truth
 
-Users should check `tracker/index.md` first for "what to work on next."
+DotOK now supersedes this legacy tracker flow. Use `.ok/project-management.ok.md` for project-management authority and `.tasks/` for current execution state.
