@@ -28,6 +28,7 @@ This repository uses DotOK for project management.
 ## Covered Spec Areas
 
 - `.specs/publish/` -> `.ok/deployments.ok.md`
+- `.specs/ir/` -> `.ok/ir.ok.md`
 
 ## Required Spec-To-OK Coverage Map
 

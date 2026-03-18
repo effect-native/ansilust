@@ -2,8 +2,7 @@
 id: task-low-link-ir-ok-to-live-evidence
 level: low
 status: pending
-blocked_by:
-  - task-med-author-ir-constitution
+blocked_by: []
 expires_at: 2026-03-20T18:00:00-04:00
 ---
 
