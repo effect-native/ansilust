@@ -14,6 +14,7 @@ Retire legacy planning authority and make DotOK the single active execution syst
 
 - 2026-03-18: Confirmed the repository still has multiple competing planning surfaces (`tracker/index.md`, `TODO.md`, `STATUS.md`, and README messaging) alongside DotOK.
 - 2026-03-18: Decomposed the transition into independently executable medium tasks by removing the high-level task as an execution blocker for the two transition workstreams.
+- 2026-03-18: Retired root-level planning/status messaging as authority by redirecting `README.md`, `TODO.md`, and `STATUS.md` to DotOK and unblocking the follow-up tracker/TODO cleanup tasks.
 
 ## Remaining Work
 

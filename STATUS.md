@@ -1,5 +1,7 @@
 # Ansilust Project Status
 
+This file is a reader-facing status snapshot only. Project-management authority lives in `.ok/project-management.ok.md`, and active execution state lives in `.tasks/`.
+
 **Last Updated**: 2025-11-01
 **Language**: Zig
 **License**: See LICENSE file
@@ -401,7 +403,7 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 **Documentation**:
 - `.specs/ir/ANSIMATION_IMPLEMENTATION.md` - Detailed ansimation summary
 - `.specs/ir/plan.md` - Updated progress snapshot (Cycles 8-10 complete)
-- `TODO.md` - Updated with completed features
+- `TODO.md` - Historical note updated at the time
 - `AGENTS.md` - Module import patterns documented
 
 **Next Steps**:
@@ -490,7 +492,7 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 ### Phase 5.2 - Documentation ✅ COMPLETE
 
 - ✅ README.md updated with all installation methods
-- ✅ STATUS.md: Current document tracks all phases
+- ✅ STATUS.md: Reader-facing phase narrative captured
 - ✅ AGENTS.md: Architecture and module documentation
 - ✅ .specs/ directory: Detailed implementation plans for each phase
 - ✅ .github/workflows/: Automated release pipeline configured
@@ -625,4 +627,3 @@ Ready to push: YES
 **Code Quality**: 127 tests, 100% passing, zero memory leaks
 
 ---
-

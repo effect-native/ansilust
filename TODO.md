@@ -1,8 +1,7 @@
 # Ansilust TODO
 
-> **Note**: This file contains historical context and long-term vision.  
-> **For active tasks**, see `tracker/` directory (single source of truth).  
-> **Quick start**: `tracker/index.md` lists open tasks by priority.
+> **Legacy note**: This file is retained temporarily as historical context only.  
+> **Do not use it as planning authority**. DotOK lives in `.ok/project-management.ok.md`, and active execution work lives in `.tasks/`.
 
 ## Critical Issues
 

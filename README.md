@@ -14,6 +14,8 @@ A next-generation text art processing system inspired by the legendary [ansilove
 
 ## 🚀 Quick Start
 
+Project-management authority lives in `.ok/project-management.ok.md`, and active execution work lives in `.tasks/`. `README.md`, `STATUS.md`, and `TODO.md` are reader-facing artifacts only.
+
 ```bash
 # Render classic ANSI art to your terminal
 zig build run -- path/to/artwork.ans
@@ -257,8 +259,10 @@ See `CORPUS.md` for detailed corpus documentation.
 
 ## Documentation
 
-- **`STATUS.md`** - Detailed implementation status and phase completion
-- **`TODO.md`** - Planned features and future work
+- **`.ok/project-management.ok.md`** - Project-management constitution and authority rules
+- **`.tasks/`** - Current ephemeral work orders and execution state
+- **`STATUS.md`** - Historical and reader-facing status narrative only
+- **`TODO.md`** - Historical notes pending retirement; not an active planning authority
 - **`AGENTS.md`** - Complete project architecture and reference materials
 - **`IR-RESEARCH.md`** - Intermediate representation design research
 - **`.specs/ir/`** - Detailed IR specifications and design documents
