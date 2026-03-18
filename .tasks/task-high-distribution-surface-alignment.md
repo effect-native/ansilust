@@ -1,7 +1,7 @@
 ---
 id: task-high-distribution-surface-alignment
 level: high
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-03-25T22:49:25Z
 ---
