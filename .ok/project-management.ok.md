@@ -29,11 +29,18 @@ This repository uses DotOK for project management.
 
 - `.specs/publish/` -> `.ok/deployments.ok.md`
 
-## Current Spec Areas That Still Need OK Coverage
+## Required Spec-To-OK Coverage Map
 
-- `.specs/ir/`
-- `.specs/render-utf8ansi/`
-- `.specs/download/`
-- `.specs/website/`
-- `.specs/screensaver/`
-- `.specs/durdraw-darkdraw/`
+- `.specs/ir/` -> `.ok/ir.ok.md` via `task-med-author-ir-constitution`
+- `.specs/render-utf8ansi/` -> `.ok/render-utf8ansi.ok.md` via `task-med-author-render-utf8ansi-constitution`
+- `.specs/download/` -> `.ok/download.ok.md` via `task-med-author-download-constitution`
+- `.specs/website/` -> `.ok/website.ok.md` via `task-med-author-experience-constitutions`
+- `.specs/screensaver/` -> `.ok/screensaver.ok.md` via `task-med-author-experience-constitutions`
+- `.specs/durdraw-darkdraw/` -> `.ok/durdraw-darkdraw.ok.md` via `task-med-author-experience-constitutions`
+
+## Constitution Authoring Order
+
+- Phase 1 core coverage: author `.ok/ir.ok.md`, then `.ok/render-utf8ansi.ok.md`
+- Phase 2 product surface coverage: author `.ok/download.ok.md`
+- Phase 3 experience coverage: author `.ok/website.ok.md`, `.ok/screensaver.ok.md`, and `.ok/durdraw-darkdraw.ok.md`
+- A spec area is not considered governed until the mapped `.ok` file exists and names the relevant `.specs/**` references explicitly.
