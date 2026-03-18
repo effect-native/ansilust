@@ -1,12 +1,12 @@
 # ansilust installer script
 #
-# Served from: https://ansilust.com/install.ps1
+# Repository path: scripts/install.ps1
 # Source: https://github.com/effect-native/ansilust/blob/main/scripts/install.ps1
 #
-# Usage: irm ansilust.com/install.ps1 | iex
+# Usage: irm https://raw.githubusercontent.com/effect-native/ansilust/main/scripts/install.ps1 | iex
 #
 # For security, you should review this script before running:
-# irm ansilust.com/install.ps1 | more
+# irm https://raw.githubusercontent.com/effect-native/ansilust/main/scripts/install.ps1 | more
 #
 
 param(
@@ -53,21 +53,11 @@ function Write-Warning-Custom {
 # Detect platform
 function Detect-Platform {
   $arch = $env:PROCESSOR_ARCHITECTURE
-  
-  switch ($arch) {
-    "AMD64" {
-      $platform = "win32-x64"
-    }
-    "ARM64" {
-      $platform = "win32-arm64"
-    }
-    default {
-      Write-Error-Custom "Unsupported architecture: $arch"
-      return $null
-    }
-  }
-  
-  return $platform
+
+  Write-Warning-Custom "Windows release artifacts are not published in the current release workflow."
+  Write-Info "This installer is currently informational only and will not install ansilust on $arch."
+  Write-Info "Check the GitHub release page for the supported target matrix: $GITHUB_RELEASES"
+  return $null
 }
 
 # Download binary with retry

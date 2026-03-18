@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ansilust installer script
 #
-# Served from: https://ansilust.com/install
+# Repository path: scripts/install.sh
 # Source: https://github.com/effect-native/ansilust/blob/main/scripts/install.sh
 #
-# Usage: curl -fsSL https://ansilust.com/install | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/effect-native/ansilust/main/scripts/install.sh | bash
 #
 # For security, you should review this script before running:
-# curl -fsSL https://ansilust.com/install | less
+# curl -fsSL https://raw.githubusercontent.com/effect-native/ansilust/main/scripts/install.sh | less
 #
 
 set -e
@@ -61,8 +61,15 @@ detect_platform() {
   case "$arch" in
     x86_64) arch="x64" ;;
     aarch64|arm64) arch="arm64" ;;
-    armv7l|armv7) arch="armv7" ;;
-    i686|i386) arch="i386" ;;
+    armv7l|armv7) arch="arm" ;;
+    i686|i386)
+      print_error "32-bit Linux artifacts are not published in the current release workflow"
+      return 1
+      ;;
+    *)
+      print_error "Unsupported architecture: $arch"
+      return 1
+      ;;
   esac
   
   # Normalize OS names
@@ -82,18 +89,28 @@ detect_platform() {
       os="darwin"
       ;;
     MINGW*|MSYS*|CYGWIN*)
-      os="win32"
+      print_error "Windows artifacts are not published in the current release workflow"
+      print_info "Use the GitHub release page to verify current supported targets: $GITHUB_RELEASES"
+      return 1
       ;;
     *)
       print_error "Unsupported OS: $os"
       return 1
       ;;
   esac
+
+  if [ "$os" = "darwin" ] && [ "$arch" != "x64" ] && [ "$arch" != "arm64" ]; then
+    print_error "Unsupported macOS architecture: $arch"
+    return 1
+  fi
+
+  if [ "$os" = "linux" ] && [ "$arch" != "x64" ] && [ "$arch" != "arm64" ] && [ "$arch" != "arm" ]; then
+    print_error "Unsupported Linux architecture: $arch"
+    return 1
+  fi
   
   # Format platform string
-  if [ "$os" = "win32" ]; then
-    echo "${os}-${arch}"
-  elif [ "$os" = "darwin" ]; then
+  if [ "$os" = "darwin" ]; then
     echo "${os}-${arch}"
   else
     echo "${os}-${arch}-${libc}"
@@ -212,7 +229,7 @@ install_binary() {
   
   if ! cp "$binary" "$INSTALL_DIR/ansilust"; then
     print_error "Failed to copy binary to $INSTALL_DIR"
-    print_error "Try running with: sudo bash -c 'curl -fsSL https://ansilust.com/install | bash'"
+    print_error "Try rerunning after reviewing scripts/install.sh from the repository"
     return 1
   fi
   

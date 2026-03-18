@@ -25,9 +25,23 @@ zig build
 ./zig-out/bin/ansilust path/to/artwork.ans
 ```
 
-## 📦 Installation (COMING SOON)
+## 📦 Installation
 
-### npm (Cross-Platform)
+The only install path fully exercised in this repository today is building from source. Release-channel guidance below is limited to the target matrix declared in `.ok/deployments.ok.md` and the current non-website reality in `.ok/website.ok.md`.
+
+### Current install matrix
+
+| Channel | Supported targets evidenced in repo | Notes |
+|---|---|---|
+| Source build | Any system with Zig that can build this repository | This is the primary path shown in Quick Start and Current Status. |
+| GitHub Releases | `darwin-arm64`, `darwin-x64`, `linux-x64-gnu`, `linux-x64-musl`, `linux-arm64-gnu`, `linux-arm64-musl`, `linux-arm-gnu`, `linux-arm-musl` | GitHub Releases is the canonical direct-download source when a tagged release is published. |
+| npm | Same target set as GitHub Releases | The `ansilust` npm package is only supported where matching platform packages and release artifacts exist at the same version. |
+| Repository shell installer | Same Unix target set as GitHub Releases | Hosted from raw GitHub repository paths, not from `ansilust.com`; downloads release artifacts plus `SHA256SUMS`. |
+| Container image | `linux/amd64`, `linux/arm64`, `linux/arm/v7` | Built and pushed by the tag-driven release workflow to `ghcr.io/effect-native/ansilust`. |
+
+### npm
+
+Use npm only on the currently supported release targets listed above.
 
 ```bash
 # Install globally
@@ -37,35 +51,26 @@ npm install -g ansilust
 npx ansilust path/to/artwork.ans
 ```
 
-### Bash Installer (Linux/macOS)
+### Repository Installer Script (Linux/macOS release targets only)
 
 ```bash
-curl -fsSL https://ansilust.com/install | bash
+curl -fsSL https://raw.githubusercontent.com/effect-native/ansilust/main/scripts/install.sh | bash
 ```
 
-### PowerShell Installer (Windows)
-
-```powershell
-irm https://ansilust.com/install.ps1 | iex
-```
-
-### AUR (Arch Linux)
-
-```bash
-yay -S ansilust
-```
-
-### Nix (All Platforms)
-
-```bash
-nix run github:effect-native/ansilust -- path/to/artwork.ans
-```
+The shell installer currently ships from this repository, not from `ansilust.com`. It installs only from the GitHub release artifacts and checksum manifest supported by the current release workflow.
 
 ### Docker
 
 ```bash
 docker run ghcr.io/effect-native/ansilust:latest path/to/artwork.ans
 ```
+
+### Not currently shipped as supported install channels
+
+- The in-repo PowerShell installer is informational only until Windows artifacts are published in the release workflow.
+- AUR packaging remains aspirational and is not presented as a current install path.
+- Nix packaging remains aspirational and is not presented as a current install path.
+- No website-hosted installer or `ansilust.com` install flow is currently evidenced in this repository.
 
 ### From Source
 
