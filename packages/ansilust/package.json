@@ -28,14 +28,12 @@
   "optionalDependencies": {
     "ansilust-darwin-arm64": "0.2.2",
     "ansilust-darwin-x64": "0.2.2",
-    "ansilust-linux-aarch64-gnu": "0.2.2",
-    "ansilust-linux-aarch64-musl": "0.2.2",
+    "ansilust-linux-arm64-gnu": "0.2.2",
+    "ansilust-linux-arm64-musl": "0.2.2",
     "ansilust-linux-arm-gnu": "0.2.2",
     "ansilust-linux-arm-musl": "0.2.2",
-    "ansilust-linux-i386-musl": "0.2.2",
     "ansilust-linux-x64-gnu": "0.2.2",
-    "ansilust-linux-x64-musl": "0.2.2",
-    "ansilust-win32-x64": "0.2.2"
+    "ansilust-linux-x64-musl": "0.2.2"
   },
   "engines": {
     "node": ">=14.0.0"

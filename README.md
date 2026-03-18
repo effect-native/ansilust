@@ -78,47 +78,25 @@ zig build -Doptimize=ReleaseSafe
 
 ## 📊 Current Status
 
-### ✅ What's Implemented (Ready to Use)
+Ansilust is an active source build, not a packaged release. The repository currently demonstrates a working ANSI-to-IR-to-UTF-8 terminal path backed by tests and corpus fixtures, while broader parser, renderer, and distribution work remains in progress.
 
-**Core Infrastructure:**
-- **IR (Intermediate Representation)** - Complete cell grid system with:
-  - Structure-of-arrays layout for efficient memory access
-  - CP437 and Unicode character support
-  - 16-color palette and 24-bit RGB color support
-  - Text attributes (bold, italic, underline, blink, etc.)
-  - SAUCE metadata parsing and preservation
-  - Animation frame support (snapshot and delta frames)
-  - Hyperlink tracking (OSC 8)
-  - Wide character and grapheme cluster handling
+### Implemented and exercised in this repository
 
-**Parsers (Input → IR):**
-- **ANSI Parser** (`src/parsers/ansi.zig`) ✅ **WORKING**
-  - CP437 character encoding
-  - SGR (Select Graphic Rendition) attributes
-  - Cursor positioning and control sequences
-  - SAUCE metadata extraction
-  - Tested with real-world BBS art from 1996 artpacks
+**Core infrastructure:**
+- **IR (Intermediate Representation)** includes a cell-grid foundation with CP437 and Unicode support, palette and RGB colors, text attributes, SAUCE metadata handling, animation frame structures, hyperlink tracking, and wide-character or grapheme support.
 
-**Renderers (IR → Output):**
-- **UTF8ANSI Renderer** (`src/renderers/utf8ansi.zig`) ✅ **WORKING**
-  - Converts classic CP437 ANSI art to modern UTF-8 terminal output
-  - DOS palette to ANSI 256-color mapping
-  - 24-bit RGB (truecolor) support
-  - Style batching optimization
-  - TTY vs file mode distinction
-  - **Visual fidelity adjustments** for modern terminal fonts:
-    - CP437 control characters (0x00-0x1F) mapped to visible glyphs
-    - Baseline alignment fixes (▃ instead of ▬, ˜ instead of ~)
-    - Weight adjustments (‧ instead of ∙)
-  - Targets: Ghostty, Alacritty, Kitty, WezTerm, and other modern terminals
+**Parsers (Input -> IR):**
+- **ANSI parser** (`src/parsers/ansi.zig`) is present and covered by the current test suite, including CP437 decoding, SGR attributes, cursor movement, and SAUCE extraction.
 
-**Testing:**
-- 127 unit tests (all passing)
-- Memory leak detection via `std.testing.allocator` in all tests
-- Real-world corpus validation (137+ ANSI files from sixteencolors archive)
-- Visual fidelity validation with H4-2017.ANS (Fire artpack)
+**Renderers (IR -> Output):**
+- **UTF8ANSI renderer** (`src/renderers/utf8ansi.zig`) is present and covered by the current test suite, including CP437-to-UTF-8 rendering, palette and RGB output, style batching, and TTY versus file behavior.
 
-### 🚧 What's Planned (Not Yet Implemented)
+**Current evidence:**
+- `zig build test` is the project validation path documented in this repository.
+- The README's quick-start commands run from source via `zig build` and `./zig-out/bin/ansilust`.
+- The repository includes unit tests plus corpus-based validation against ANSI art fixtures from the sixteencolors archive.
+
+### Planned or still in progress
 
 **Additional Parsers:**
 - Binary format (.BIN) - 160-column format

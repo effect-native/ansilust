@@ -1,73 +1,29 @@
-# NPM Package Publishing Guide
+# Package Publishing Notes
 
-## Quick Commands to Publish All Placeholders
+This repository does not currently use `packages/16c` or `packages/16colors` as active ansilust deployment channels.
 
-### 1. Check Name Availability (30 seconds)
+## Current intent
 
-```bash
-npm view ansilust
-npm view 16colors
-npm view 16c
-```
+- `16c` is a reserved shorthand surface for possible future CLI or archive-adjacent tooling.
+- `16colors` is a reserved surface for possible future archive utilities.
+- These package folders exist to hold namespace context, not to promise a live npm release.
 
-**Expected**: "npm ERR! 404 Not Found" (means available)
+## What this file is not
 
-### 2. Publish All Packages (~5 minutes)
+- Not an active runbook for publishing placeholder packages.
+- Not evidence that npm packages have been released.
+- Not a guarantee that these names will become public ansilust packages.
 
-```bash
-# Publish ansilust
-cd packages/ansilust && npm publish && cd ../..
+## If publication ever becomes real
 
-# Publish 16colors
-cd packages/16colors && npm publish && cd ../..
+Replace this note with an evidence-backed process that includes:
 
-# Publish 16c
-cd packages/16c && npm publish && cd ../..
-```
-
-### 3. Verify Publications (1 minute)
-
-```bash
-npm view ansilust
-npm view 16colors
-npm view 16c
-```
-
-**Expected**: Should show version 0.0.1
-
-## Troubleshooting
-
-### If not logged in:
-```bash
-npm whoami  # Check if logged in
-npm login   # Login if needed
-```
-
-### If 2FA is enabled:
-- Have authenticator app ready
-- npm will prompt for OTP during `npm publish`
-
-### If name is already taken:
-1. Check `npm view <package>` to see who owns it
-2. Look for "Repository" field - might be abandoned
-3. Check last publish date - if >2 years, can request via npm support
-4. Consider alternative names if needed
-
-## Package URLs
-
-Once published, packages will be available at:
-- https://www.npmjs.com/package/ansilust
-- https://www.npmjs.com/package/16colors
-- https://www.npmjs.com/package/16c
-
-## Next Steps
-
-After securing the names:
-1. Update this file with actual publication results
-2. Set calendar reminder to publish real packages
-3. Plan migration from placeholder to real package
+- the package that is actually intended for release
+- release prerequisites and ownership details
+- the exact verified commands used for publication
+- links to the resulting package pages after publication succeeds
 
 ---
 
-**Author**: Tom Aylott <oblivious@subtlegradient.com>  
+**Author**: Tom Aylott <oblivious@subtlegradient.com>
 **Repository**: https://github.com/subtleGradient/ansilust

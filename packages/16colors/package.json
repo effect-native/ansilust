@@ -1,7 +1,7 @@
 {
   "name": "16colors",
   "version": "0.1.0",
-  "description": "16colo.rs ANSI art archive utilities (placeholder - real package coming soon)",
+  "description": "Reserved package name for possible future 16colo.rs archive utilities; not a current ansilust release",
   "main": "index.js",
   "repository": {
     "type": "git",

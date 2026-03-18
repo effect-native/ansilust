@@ -35,8 +35,6 @@ while IFS= read -r line; do
       CHECKSUMS["x86_64"]="$hash"
     elif [[ $filename =~ linux-arm64-gnu ]]; then
       CHECKSUMS["aarch64"]="$hash"
-    elif [[ $filename =~ linux-armv7-gnu ]]; then
-      CHECKSUMS["armv7h"]="$hash"
     fi
   fi
 done < "$CHECKSUMS_FILE"
@@ -53,12 +51,7 @@ if [ -v CHECKSUMS["aarch64"] ]; then
   sed -i "s/sha256sums_aarch64=.*/sha256sums_aarch64=('${CHECKSUMS["aarch64"]}')/" "$PKGBUILD"
 fi
 
-if [ -v CHECKSUMS["armv7h"] ]; then
-  sed -i "s/sha256sums_armv7h=.*/sha256sums_armv7h=('${CHECKSUMS["armv7h"]}')/" "$PKGBUILD"
-fi
-
 echo "✅ Updated PKGBUILD version=$VERSION"
 echo "✅ Updated checksums:"
 echo "   x86_64: ${CHECKSUMS[x86_64]:-MISSING}"
 echo "   aarch64: ${CHECKSUMS[aarch64]:-MISSING}"
-echo "   armv7h: ${CHECKSUMS[armv7h]:-MISSING}"

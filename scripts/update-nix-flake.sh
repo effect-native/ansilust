@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# Update Nix flake.nix with latest checksums and version
+# Update flake.nix with evidence-backed release metadata.
 # Usage: ./scripts/update-nix-flake.sh <version> <sha256sums-file>
 
 set -euo pipefail
 
-VERSION="${1:-0.0.1}"
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+  printf 'Usage: %s <version> [sha256sums-file]\n' "$0" >&2
+  exit 1
+fi
+
+VERSION="$1"
 CHECKSUMS_FILE="${2:-.checksums}"
 
 if [ ! -f "$CHECKSUMS_FILE" ]; then
@@ -46,13 +51,13 @@ FLAKE_TEMP=$(mktemp)
 trap "rm -f $FLAKE_TEMP" EXIT
 
 # Update version
-sed "s/version = \"[^\"]*\"/version = \"$VERSION\"/" "$FLAKE" > "$FLAKE_TEMP"
+sed -E "s/version = (null|\"[^\"]*\")/version = \"$VERSION\"/" "$FLAKE" > "$FLAKE_TEMP"
 
 # Update checksums
 for system in "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"; do
   if [ -v CHECKSUMS["$system"] ]; then
     hash="${CHECKSUMS[$system]}"
-    sed -i "s|sha256 = \"PLACEHOLDER_CHECKSUM_$system\"|sha256 = \"$hash\"|" "$FLAKE_TEMP"
+    sed -i -E "s|\"$system\" = (null|\"[^\"]*\")|\"$system\" = \"$hash\"|" "$FLAKE_TEMP"
   fi
 done
 

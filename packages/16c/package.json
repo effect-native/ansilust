@@ -1,7 +1,7 @@
 {
   "name": "16c",
   "version": "0.1.0",
-  "description": "16colo.rs CLI shorthand (placeholder - real package coming soon)",
+  "description": "Reserved package name for possible future 16colo.rs shorthand tooling; not a current ansilust release",
   "main": "index.js",
   "repository": {
     "type": "git",

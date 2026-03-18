@@ -10,7 +10,7 @@ This file is a reader-facing status snapshot only. Project-management authority 
 
 Build a next-generation text art processing system that unifies classic BBS art formats (ANSI, Binary, PCBoard, XBin) with modern terminal capabilities (UTF-8, true color, Unicode) through a unified Intermediate Representation (IR).
 
-## 📊 Current Status: Phase 4 Complete - Distribution Ready 📦
+## 📊 Current Status: Core parser and renderer work documented; release readiness not claimed
 
 ### Phase 1: Research & Design ✅ COMPLETE
 
@@ -388,7 +388,7 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 - `cd00f83` - GREEN: Parse all animation frames into animation_data
 - `62fbc86` - GREEN: Add UTF-8 support to ANSI parser
 - `3c29eaf` - REFACTOR: Clean up UTF-8 decoder implementation
-- `bcbc288` - docs(TODO): Mark OSC 8 hyperlink support as completed
+- `bcbc288` - docs: Mark OSC 8 hyperlink support as completed
 - `c1dda52` - test(integration): Add round-trip test for OSC 8 hyperlinks
 
 **Performance Improvements**:
@@ -403,7 +403,6 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 **Documentation**:
 - `.specs/ir/ANSIMATION_IMPLEMENTATION.md` - Detailed ansimation summary
 - `.specs/ir/plan.md` - Updated progress snapshot (Cycles 8-10 complete)
-- `TODO.md` - Historical note updated at the time
 - `AGENTS.md` - Module import patterns documented
 
 **Next Steps**:
@@ -416,201 +415,17 @@ Completed all 9 XP/TDD cycles for the UTF8ANSI renderer following Kent Beck's re
 - Parser: `src/parsers/ansi.zig`, `src/parsers/ansi_test.zig`
 - Renderer: `src/renderers/utf8ansi.zig`, `src/renderers/utf8ansi_test.zig`
 - IR: `src/ir/sauce.zig`, `src/ir/animation.zig`
-- Docs: `.specs/ir/ANSIMATION_IMPLEMENTATION.md`, `TODO.md`, `STATUS.md`
+- Docs: `.specs/ir/ANSIMATION_IMPLEMENTATION.md`, `STATUS.md`
 
-## 📦 Phase 4: Package Managers & Deployment ✅ COMPLETE (2025-11-01)
+## Release Posture
 
-**Location**: `aur/`, `flake.nix`, `Dockerfile`, `scripts/`
-
-**Implementation Summary**:
-- ✅ AUR Package System
-  - PKGBUILD for Arch Linux (x86_64, aarch64, armv7h)
-  - .SRCINFO metadata file
-  - Automated update scripts (update-aur-pkgbuild.sh, generate-srcinfo.sh)
-  
-- ✅ Nix Flake Configuration
-  - Complete flake.nix at repository root
-  - Multi-system support (x86_64-linux, aarch64-linux, x86_64-darwin, aarch64-darwin)
-  - Development shell with Zig and Node.js
-  - Automated update script (update-nix-flake.sh)
-  
-- ✅ Container Images (GHCR)
-  - Minimal Dockerfile with multi-stage build
-  - .dockerignore for clean builds
-  - Multi-architecture support (linux/amd64, linux/arm64, linux/arm/v7)
-  - Configured for docker buildx in GitHub Actions
-  
-- ✅ Domain Hosting Foundation
-  - Install scripts ready at scripts/install.sh and scripts/install.ps1
-  - Awaiting DNS configuration for ansilust.com
-
-**Files Added**:
-- `aur/PKGBUILD` - Arch Linux package definition
-- `aur/.SRCINFO` - AUR metadata
-- `flake.nix` - Complete Nix flake (updated from stub)
-- `Dockerfile` - Container image definition
-- `.dockerignore` - Docker build exclusions
-- `scripts/update-aur-pkgbuild.sh` - AUR update automation
-- `scripts/update-nix-flake.sh` - Nix flake update automation
-- `scripts/generate-srcinfo.sh` - .SRCINFO generation
-- `.specs/publish/PHASE4-IMPLEMENTATION.md` - Implementation details
-- `.specs/publish/PHASE4-TESTING.md` - Testing procedures
-
-**Status**: 4/4 package manager systems ready for release
-**Documentation**: Complete testing guide and implementation summary
-**Integration**: All update scripts connected to GitHub Actions release workflow
-
----
-
-
-## 📋 Phase 5: Validation & Release ✅ READY FOR v1.0.0 (2025-11-02)
-
-### Phase 5.1 - Pre-Release Testing ✅ COMPLETE
-
-**Validation Results**:
-- ✅ Test Suite: 127/127 tests passing (100% pass rate)
-  - IR modules: 51 tests
-  - ANSI parser: 46 tests
-  - UTF8ANSI renderer: 27 tests
-  - Ansimation: 3 tests
-  - Zero memory leaks detected
-
-- ✅ Binary Testing:
-  - Build: Successful (debug and release targets)
-  - CLI Execution: Working (./zig-out/bin/ansilust renders art correctly)
-  - File I/O: TTY and file output modes functional
-  - Real-world validation: test_16colors.ans renders with proper escape sequences
-
-- ✅ Installation Methods:
-  - npm packages: Ready for publication
-  - Bash installer: Syntax validated (bash -n check passed)
-  - PowerShell installer: Script ready
-  - AUR package: PKGBUILD + .SRCINFO prepared
-  - Nix flake: Configuration complete
-  - Docker: Dockerfile and .dockerignore ready
-
-### Phase 5.2 - Documentation ✅ COMPLETE
-
-- ✅ README.md updated with all installation methods
-- ✅ STATUS.md: Reader-facing phase narrative captured
-- ✅ AGENTS.md: Architecture and module documentation
-- ✅ .specs/ directory: Detailed implementation plans for each phase
-- ✅ .github/workflows/: Automated release pipeline configured
-
-**Changeset Prepared**:
-- File: `.changeset/pretty-knives-swim.md`
-- Type: Major version bump (0.0.1 → 1.0.0)
-- Content: Initial public release infrastructure
-
-### Phase 5.3 - Release Process ⏳ READY TO INITIATE
-
-**Release Readiness Checklist**:
-- [x] All tests passing (127/127)
-- [x] Binary builds successfully
-- [x] CLI works with real-world ANSI art files
-- [x] Documentation complete and current
-- [x] npm workspace structure validated
-- [x] GitHub Actions workflows configured
-- [x] Changeset prepared for v1.0.0
-- [x] Git commits ready (12 commits ahead of origin)
-- [x] No uncommitted changes
-
-**What's Included in v1.0.0**:
-1. **Complete ANSI Parser**
-   - CP437 character encoding with UTF-8 fallback
-   - SGR (Select Graphic Rendition) attributes
-   - Cursor positioning and control sequences
-   - SAUCE metadata parsing (128-byte records)
-   - Animation frame detection and multi-frame capture
-   - OSC 8 hyperlink support
-   - 46 comprehensive tests
-
-2. **UTF8ANSI Renderer**
-   - Modern terminal output (Ghostty, Alacritty, Kitty, WezTerm compatible)
-   - 24-bit truecolor (ESC[38;2;R;G;B)
-   - 256-color palette support
-   - CP437 → UTF-8 roundtrip conversion
-   - Visual fidelity adjustments for modern terminal fonts
-   - Style batching optimization
-   - 27 comprehensive tests
-
-3. **Intermediate Representation (IR)**
-   - Cell grid with structure-of-arrays layout
-   - Color union (None/Palette/RGB)
-   - Text attributes (bold, italic, underline, blink, faint, etc.)
-   - Animation support (snapshot and delta frames)
-   - Hyperlink registry (OSC 8)
-   - Grapheme cluster handling
-   - SAUCE metadata preservation
-
-4. **Distribution Infrastructure**
-   - npm packages (10 platform variants + meta package)
-   - AUR (Arch User Repository) support
-   - Nix flakes (all platforms)
-   - Bash/PowerShell installers
-   - Docker container images
-   - GitHub Actions CI/CD
-
-5. **Testing & Validation**
-   - 127 unit tests across all modules
-   - Real-world corpus validation (137+ ANSI files)
-   - Memory leak detection
-   - Performance benchmarks (1.2MB file parses in ~242ms)
-
-**What's Deferred to v1.1+**:
-- Additional parsers (Binary, PCBoard, XBin, Tundra, ArtWorx, iCE Draw)
-- PNG renderer
-- HTML Canvas renderer
-- OpenTUI integration
-- Animation playback with frame timing
-- Additional CLI features
-
-### Release Execution Steps
-
-**Step 1: Push to origin/main** (Triggers GitHub Actions)
-```bash
-git push origin main
-```
-
-The changesets/action will:
-1. Detect the changeset in `.changeset/pretty-knives-swim.md`
-2. Create a version PR that bumps versions to 1.0.0
-3. Updates CHANGELOG.md files
-
-**Step 2: Review & Merge Version PR**
-Once the PR is created, review and merge it. This triggers:
-1. npm publish (all packages to npm registry)
-2. GitHub Actions release workflow
-3. Binary builds for 10 platforms
-4. Docker image push to GHCR
-5. GitHub release creation with all artifacts
-
-**Step 3: Post-Release Validation**
-- Verify npm packages published: `npm view ansilust`
-- Test installation: `npm install -g ansilust`
-- Check GitHub release artifacts
-- Verify Docker image: `docker pull ghcr.io/effect-native/ansilust:latest`
-- Monitor AUR (requires manual submission)
-
-### Git Status (Pre-Release)
-
-```
-Branch: main
-Commits ahead of origin: 12
-Latest commit: f5b20d1 (docs: Update STATUS.md with Phase 4 completion details)
-Uncommitted changes: 0
-Ready to push: YES
-```
+- This status file does not currently claim package-manager completeness, release readiness, or a pending `v1.0.0` release.
+- Earlier draft notes referenced release artifacts and process steps that are no longer treated as current evidence in this reader-facing snapshot.
+- The implementation details above still show meaningful parser, renderer, and IR progress, but deferred work remains in additional parsers, renderers, and animation playback.
 
 ### Key Performance Metrics
 
-- **Build time**: ~2 seconds (incremental)
-- **Test suite**: ~1.5 seconds (127 tests)
-- **Binary size**: ~10 MB (debug), ~5 MB (release)
 - **Parse performance**: 1.2 MB ANSI file (55 frames) in ~242ms
-- **Memory safety**: Zero memory leaks (verified with std.testing.allocator)
-
----
 
 ## 🚀 Release Timeline
 
@@ -619,11 +434,11 @@ Ready to push: YES
 | Phase 1: Research | ~2 weeks | ✅ Complete | Oct 1-14 |
 | Phase 2: IR Scaffolding | ~3 weeks | ✅ Complete | Oct 14-Nov 1 |
 | Phase 3: ANSI Parser | ~1 week | ✅ Complete | Nov 1 |
-| Phase 4: Distribution | ~1 day | ✅ Complete | Nov 1 |
-| Phase 5: Validation | ~1 day | ✅ Complete | Nov 2 |
-| **v1.0.0 Release** | Pending | 🔄 Ready | Nov 2 (on push) |
+| Phase 4: Distribution | Historical note removed | Not claimed | — |
+| Phase 5: Validation | Historical note removed | Not claimed | — |
+| **v1.0.0 Release** | Historical note removed | Not claimed | — |
 
 **Total Development**: ~5 weeks
-**Code Quality**: 127 tests, 100% passing, zero memory leaks
+**Code Quality**: STATUS currently documents parser and renderer progress plus selected test and performance evidence.
 
 ---
