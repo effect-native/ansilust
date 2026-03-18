@@ -2,11 +2,15 @@
 id: task-low-prune-unsupported-npm-target-promises
 level: low
 status: pending
-blocked_by:
-  - task-med-align-platform-matrix-promises
-expires_at: 2026-03-20T18:00:00-04:00
+blocked_by: ["task-med-align-supported-platform-matrix"]
+expires_at: 2026-03-20T22:49:25Z
 ---
 
-# Prune Unsupported NPM Targets
+# Prune Unsupported NPM Target Promises
 
-Remove unsupported Windows and i386 platform promises from npm metadata until matching release assets and published packages exist.
+Make the npm meta package promise only the platform packages that are actually supported by the current release contract.
+
+## Done When
+
+- `packages/ansilust/package.json` no longer promises unsupported or mismatched platform packages.
+- The npm-supported target set matches the intended release workflow target set exactly.
