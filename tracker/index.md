@@ -1,5 +1,7 @@
 # Task Index
 
+Legacy snapshot only. Do not use this file to select or manage active work. Project-management authority lives in `.ok/project-management.ok.md`, and active execution state lives in `.tasks/`.
+
 **Last Updated**: 2025-11-03
 
 ## Open Tasks by Priority
@@ -60,10 +62,6 @@ rg '^status: blocked' tracker/tasks/
 rg '^priority: high' tracker/tasks/ -l
 ```
 
-## Next Steps
+## Note
 
-1. Pick a high-priority task from the list above
-2. Update status to `in_progress` in the task file
-3. Follow RED-GREEN-REFACTOR cycle from `.specs/ir/plan.md`
-4. Reference task ID in commit messages
-5. Mark `done` when acceptance criteria met
+This index is retained for historical reference during tracker demotion. Use `.tasks/` for live task selection and status changes.

@@ -15,16 +15,24 @@ tracker/
     └── ...
 ```
 
-## When to Use Tracker
+## Tracker Status
 
-**Use tracker/ for**:
+`tracker/` is a legacy reference directory only.
+
+- Project-management authority lives in `.ok/project-management.ok.md`.
+- Active execution state lives in `.tasks/`.
+- Do not start or manage live work from `tracker/`.
+
+## Historical Use of Tracker
+
+**Previously used tracker/ for**:
 - Missing features identified from gap analysis
 - Bugs and defects in existing code
 - Technical debt and refactoring needs
 - Non-functional requirements (performance, docs, safety)
 - Active work-in-progress tasks
 
-**Don't use tracker/ for**:
+**Do not use tracker/ now for**:
 - Long-term product vision (use `.specs/`)
 - Completed work (archive or delete task files)
 - General notes or research (use `reference/` or DotOK artifacts under `.ok/` and `.tasks/`)
@@ -71,10 +79,7 @@ created: 2025-11-03
 
 ### 2. Working on Tasks
 
-**Pick task from `index.md`**:
-1. Choose highest priority task matching your area
-2. Update `status: in_progress` in task file
-3. Only ONE task in_progress at a time
+Do not pick active work from `tracker/index.md`. Use `.tasks/` for current execution state.
 
 **During work**:
 - Reference task ID in commit messages: `GAP-PARS-001(red): add binary parser tests`
@@ -101,10 +106,7 @@ created: 2025-11-03
 
 ### 4. Updating Index
 
-After status changes, update `tracker/index.md`:
-- Add/remove tasks from priority tables
-- Update status summary counts
-- Keep "Next Steps" section current
+If `tracker/index.md` is retained, keep it clearly marked as legacy context rather than an active queue.
 
 ## Relationship to .specs/ and plan.md
 
@@ -129,11 +131,11 @@ After status changes, update `tracker/index.md`:
 - Example: `[WP-PARS-001] Binary parser: implement 160x25, attr byte`
 - Lists linked tasks: `Tasks: GAP-PARS-001, GAP-PARS-005`
 
-**Tracker owns executable status**:
+**Historical tracker ownership**:
 - For every WP, create one or more `tracker/tasks/*.md`
 - Each task includes `spec_ref: [.specs/<domain>/plan.md#wp-pars-001]`
 - Tasks carry granular acceptance criteria
-- Tracker is single source of truth for status (pending/in_progress/done)
+- Tracker is no longer the source of truth for status (pending/in_progress/done)
 
 **Status ownership**:
 - `plan.md` does NOT mirror per-task state
@@ -252,9 +254,9 @@ After identifying gaps (e.g., from comparing .specs to src):
 ## Historical Relationship
 
 **tracker/** (this directory):
-- Active work only
-- Atomic, actionable tasks
-- Current priorities
-- Single source of truth
+- Historical work records only
+- Legacy atomic task examples
+- Non-authoritative priorities snapshot
+- Not a source of truth
 
 DotOK now supersedes this legacy tracker flow. Use `.ok/project-management.ok.md` for project-management authority and `.tasks/` for current execution state.

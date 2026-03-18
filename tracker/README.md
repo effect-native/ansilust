@@ -1,6 +1,6 @@
 # Task Tracker
 
-Single source of truth for atomic, ephemeral work items (gaps, tasks, bugs).
+Legacy tracker reference only. Project-management authority lives in `.ok/project-management.ok.md`, and active execution state lives in `.tasks/`.
 
 ## Layout
 
@@ -61,18 +61,18 @@ Format: `<TYPE>-<AREA>-<NNN>`
 
 **Numbers**: Zero-padded 3-digit sequence per area (001, 002, ...)
 
-## Workflow
+## Status
 
-1. **Add task**: Create `tasks/<ID>.md` with frontmatter
-2. **Update status**: Edit frontmatter `status` field
-3. **Reference in commits**: Include ID in commit messages (e.g., `GAP-PARS-001(red): add binary parser tests`)
-4. **Archive completed**: Move to `archive/` or delete when obsolete
-5. **Query**: Use `rg`, `grep`, or editors to filter by status/area/priority
+- Do not use `tracker/` as the live execution queue.
+- Do not pick work from `tracker/index.md`.
+- Keep this directory only as historical context until its contents are archived or migrated.
 
 ## Relationship to .specs/
 
 - `.specs/**`: Long-term product truth; stable, version-controlled specification
-- `tracker/`: Ephemeral work tracking; tasks reference specs via `spec_ref`
+- `.ok/project-management.ok.md`: Project-management authority
+- `.tasks/`: Active ephemeral work tracking and execution state
+- `tracker/`: Legacy historical reference; not authoritative for execution
 - Specs survive code loss; tracker is disposable once work is done
 
 ## Example Task
@@ -94,6 +94,5 @@ rg 'blocked_by:.*GAP-IR-001' tracker/tasks/
 
 ## Maintenance
 
-- Keep `index.md` updated as tasks transition
-- Archive or delete completed tasks regularly
-- IDs are immutable; reuse only after archival
+- Prefer migrating or archiving tracker content instead of extending it.
+- IDs are immutable; reuse only after archival.
