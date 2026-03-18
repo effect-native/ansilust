@@ -29,6 +29,7 @@ This repository uses DotOK for project management.
 
 - `.specs/publish/` -> `.ok/deployments.ok.md`
 - `.specs/ir/` -> `.ok/ir.ok.md`
+- `.specs/render-utf8ansi/` -> `.ok/render-utf8ansi.ok.md`
 
 ## Required Spec-To-OK Coverage Map
 
