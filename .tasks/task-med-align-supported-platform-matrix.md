@@ -1,7 +1,7 @@
 ---
 id: task-med-align-supported-platform-matrix
 level: medium
-status: pending
+status: done
 blocked_by: ["task-high-distribution-surface-alignment"]
 expires_at: 2026-03-23T22:49:25Z
 ---

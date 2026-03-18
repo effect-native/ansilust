@@ -1,7 +1,7 @@
 ---
 id: task-med-retire-tracker-as-active-authority
 level: medium
-status: pending
+status: done
 blocked_by: ["task-high-governance-authority-alignment"]
 expires_at: 2026-03-23T22:49:25Z
 ---
