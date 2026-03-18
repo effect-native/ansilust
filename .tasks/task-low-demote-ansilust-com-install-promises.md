@@ -2,7 +2,7 @@
 id: task-low-demote-ansilust-com-install-promises
 level: low
 status: pending
-blocked_by: ["task-med-demote-unevidenced-hosting-and-secondary-channels"]
+blocked_by: []
 expires_at: 2026-03-20T22:49:25Z
 ---
 

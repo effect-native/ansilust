@@ -2,7 +2,7 @@
 id: task-low-fix-aur-placeholder-and-armv7-asset-mismatches
 level: low
 status: pending
-blocked_by: ["task-med-align-supported-platform-matrix"]
+blocked_by: []
 expires_at: 2026-03-20T22:49:25Z
 ---
 

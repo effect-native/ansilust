@@ -2,7 +2,7 @@
 id: task-low-reconcile-launcher-installer-and-artifact-platform-ids
 level: low
 status: pending
-blocked_by: ["task-med-align-supported-platform-matrix"]
+blocked_by: []
 expires_at: 2026-03-20T22:49:25Z
 ---
 

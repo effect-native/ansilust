@@ -2,7 +2,7 @@
 id: task-low-rewrite-readme-current-status-summary
 level: low
 status: pending
-blocked_by: ["task-med-reconcile-derived-status-docs"]
+blocked_by: []
 expires_at: 2026-03-20T22:49:25Z
 ---
 

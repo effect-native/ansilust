@@ -2,7 +2,7 @@
 id: task-low-trim-legacy-tracker-operational-instructions
 level: low
 status: pending
-blocked_by: ["task-med-retire-tracker-as-active-authority"]
+blocked_by: []
 expires_at: 2026-03-20T22:49:25Z
 ---
 
