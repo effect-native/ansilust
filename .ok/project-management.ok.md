@@ -31,6 +31,9 @@ This repository uses DotOK for project management.
 - `.specs/ir/` -> `.ok/ir.ok.md`
 - `.specs/render-utf8ansi/` -> `.ok/render-utf8ansi.ok.md`
 - `.specs/download/` -> `.ok/download.ok.md`
+- `.specs/website/` -> `.ok/website.ok.md`
+- `.specs/screensaver/` -> `.ok/screensaver.ok.md`
+- `.specs/durdraw-darkdraw/` -> `.ok/durdraw-darkdraw.ok.md`
 
 ## Required Spec-To-OK Coverage Map
 
