@@ -2,8 +2,7 @@
 id: task-low-link-download-ok-to-existing-evidence
 level: low
 status: pending
-blocked_by:
-  - task-med-author-download-constitution
+blocked_by: []
 expires_at: 2026-03-20T18:00:00-04:00
 ---
 
