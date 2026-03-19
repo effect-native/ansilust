@@ -40,7 +40,8 @@ For accepted proposals:
 
 When RFC is accepted:
 - Create/update `.specs/<domain>/` with requirements
-- Seed tasks in `tracker/` with `spec_ref: [rfcs/RFC-NNN.md]`
+- Record the governing steady-state in `.ok/*.ok.md`
+- Create execution tasks in `.tasks/*.md` and link them back to the RFC/spec
 - Link RFC in `.specs/<domain>/decisions.md`
 - Close RFC or mark "Implemented"
 
@@ -84,17 +85,23 @@ See `TEMPLATE.md` for full structure. Key sections:
 - **Impact**: Consequences and trade-offs
 - **Implementation**: High-level plan
 
-## Integration with Specs and Tracker
+## Integration with Specs and DotOK
 
 **RFC → Spec**:
 - Accepted RFC becomes basis for `.specs/<domain>/requirements.md`
 - Link RFC in spec frontmatter or decisions.md
 - Spec formalizes with EARS notation
 
+**RFC → DotOK Governance**:
+- Capture the desired operational state in `.ok/*.ok.md`
+- Use the RFC and resulting spec to explain why that state exists
+- Keep policy/governance in `.ok/`, not in execution task files
+
 **RFC → Tasks**:
-- Seed `tracker/tasks/` with `spec_ref: [rfcs/RFC-NNN.md]`
-- Tasks execute the implementation
-- Close RFC when implementation complete
+- Create `.tasks/*.md` entries for the concrete implementation work
+- Reference the originating RFC and spec from the task body or metadata
+- Use tasks as the live execution surface until implementation is complete
+- Close RFC when implementation is complete
 
 ## Examples
 

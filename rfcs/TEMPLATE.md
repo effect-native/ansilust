@@ -124,7 +124,7 @@ How should we evaluate the options?
 - Related RFCs: [RFC-XXX](RFC-XXX.md)
 - Related Issues: #123, #456
 - Related Specs: `.specs/<domain>/requirements.md`
-- Related Tasks: `tracker/tasks/GAP-XXX-NNN.md`
+- Related Tasks: `.tasks/task-<slug>.md` (list the DotOK task file(s) that implement or track this RFC)
 
 ## Decision History
 
