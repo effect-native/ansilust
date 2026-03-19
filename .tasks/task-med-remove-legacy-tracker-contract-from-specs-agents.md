@@ -2,7 +2,7 @@
 id: task-med-remove-legacy-tracker-contract-from-specs-agents
 level: medium
 status: pending
-blocked_by: ["task-high-governance-authority-alignment"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 

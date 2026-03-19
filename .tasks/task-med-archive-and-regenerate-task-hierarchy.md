@@ -2,7 +2,7 @@
 id: task-med-archive-and-regenerate-task-hierarchy
 level: medium
 status: pending
-blocked_by: ["task-high-task-system-refresh"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 
