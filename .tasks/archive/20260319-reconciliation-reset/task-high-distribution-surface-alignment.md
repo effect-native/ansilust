@@ -3,14 +3,14 @@ id: task-high-distribution-surface-alignment
 level: high
 status: done
 blocked_by: []
-expires_at: 2026-03-25T22:49:25Z
+expires_at: 2026-03-26T23:35:25Z
 ---
 
 # Distribution Surface Alignment
 
-Reconcile deployment, packaging, installer, and domain-hosted promises with the evidence-backed surfaces governed by `.ok/deployments.ok.md` and `.ok/website.ok.md`.
+Finish aligning reader-facing package inventory and placeholder package-manager surfaces with the evidence-backed deployment constitution.
 
 ## Scope
 
-- Align the supported platform matrix across workflow, npm metadata, launcher logic, installers, and packaging helpers.
-- Demote or remove install/hosting/channel promises that do not yet have checked-in or release-proven evidence.
+- Reconcile remaining README platform-package claims with the supported release matrix.
+- Demote or evidence AUR package definitions so placeholder metadata is not presented as current shipped reality.
