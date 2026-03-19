@@ -345,7 +345,7 @@ function detectPlatform() {
 - Create **ONLY** `plan.md` with:
   - **Work Packages (WP)**: Each with stable anchor ID `WP-<AREA>-<NNN>`
   - **Brief intent + acceptance** at spec level (not granular task status)
-  - **Linked tasks**: List `tracker/tasks/*.md` IDs per WP
+  - **Linked tasks**: List relevant `.tasks/*.md` IDs per WP when execution work has been generated
   - **Validation Checkpoints**: build, test, fmt, docs
   - **Risk Mitigation Strategies**
   - **Success Criteria Validation**
@@ -367,12 +367,13 @@ function detectPlatform() {
 **Status**: [ ] Pending / [ ] In Progress / [x] Complete
 ```
 
-**Plan.md ↔ Tracker Contract**:
+**Plan.md ↔ DotOK Execution Contract**:
 - `plan.md` defines work packages (WHAT, at spec level)
-- `tracker/tasks/` owns all executable work (HOW/WHEN, atomic tasks + status)
-- Each task includes `spec_ref: [.specs/<domain>/plan.md#wp-<area>-<nnn>]`
-- Tracker is single source of truth for per-task status
-- Update plan WP checkboxes only when ALL linked tasks complete
+- `.ok/*.ok.md` governs the durable truth for active spec areas and execution alignment
+- `.tasks/` owns all executable work (HOW/WHEN, atomic tasks + live status)
+- Each task should link back to the relevant work package anchor in `.specs/<domain>/plan.md`
+- `.tasks/` is the single source of truth for per-task status
+- Update plan WP checkboxes only when ALL linked `.tasks/*.md` work is complete
 
 **🚨 FILE DISCIPLINE CHECK**:
 - [ ] All four standard files exist: instructions.md, requirements.md, design.md, plan.md

@@ -1,7 +1,7 @@
 ---
 id: task-low-issue-fresh-gap-snapshot-artifact
 level: low
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---

@@ -135,16 +135,14 @@ This is a monorepo managed with npm workspaces. The `packages/` directory contai
 
 ### Platform Packages (Published Separately)
 
-- **`packages/ansilust-darwin-arm64/`** - macOS Apple Silicon
-- **`packages/ansilust-darwin-x64/`** - macOS Intel
-- **`packages/ansilust-linux-x64-gnu/`** - Linux x64 (glibc)
-- **`packages/ansilust-linux-x64-musl/`** - Linux x64 (musl)
-- **`packages/ansilust-linux-arm64-gnu/`** - Linux ARM64 (glibc)
-- **`packages/ansilust-linux-arm64-musl/`** - Linux ARM64 (musl)
-- **`packages/ansilust-linux-armv7-gnu/`** - Linux ARMv7 (glibc)
-- **`packages/ansilust-linux-armv7-musl/`** - Linux ARMv7 (musl)
-- **`packages/ansilust-linux-i386-musl/`** - Linux i386 (musl)
-- **`packages/ansilust-win32-x64/`** - Windows x64
+- **`ansilust-darwin-arm64`** - macOS Apple Silicon
+- **`ansilust-darwin-x64`** - macOS Intel
+- **`ansilust-linux-x64-gnu`** - Linux x64 (glibc)
+- **`ansilust-linux-x64-musl`** - Linux x64 (musl)
+- **`ansilust-linux-arm64-gnu`** - Linux ARM64 (glibc)
+- **`ansilust-linux-arm64-musl`** - Linux ARM64 (musl)
+- **`ansilust-linux-arm-gnu`** - Linux ARMv7 (glibc)
+- **`ansilust-linux-arm-musl`** - Linux ARMv7 (musl)
 
 Each platform package contains a pre-built native binary for that architecture.
 

@@ -4,7 +4,17 @@
 
 set -euo pipefail
 
-VERSION="${1:-0.0.1}"
+usage() {
+  printf 'Usage: %s <version> [sha256sums-file]\n' "$0" >&2
+}
+
+if [ "$#" -lt 1 ]; then
+  printf 'Error: version argument is required.\n' >&2
+  usage
+  exit 1
+fi
+
+VERSION="$1"
 CHECKSUMS_FILE="${2:-.checksums}"
 
 if [ ! -f "$CHECKSUMS_FILE" ]; then
