@@ -2,7 +2,7 @@
 id: task-med-reconcile-rfc-dotok-task-references
 level: medium
 status: pending
-blocked_by: ["task-high-rfc-governance-authority-alignment"]
+blocked_by: []
 expires_at: 2026-03-26T23:52:54Z
 ---
 
