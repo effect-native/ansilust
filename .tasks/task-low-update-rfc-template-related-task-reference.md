@@ -2,7 +2,7 @@
 id: task-low-update-rfc-template-related-task-reference
 level: low
 status: pending
-blocked_by: ["task-med-reconcile-rfc-dotok-task-references"]
+blocked_by: []
 expires_at: 2026-03-26T23:52:54Z
 ---
 
