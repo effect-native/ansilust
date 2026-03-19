@@ -2,7 +2,7 @@
 id: task-low-remove-tracker-task-contract-from-specs-agents-phase-4
 level: low
 status: pending
-blocked_by: ["task-med-remove-legacy-tracker-contract-from-specs-agents"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 

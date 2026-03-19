@@ -2,7 +2,7 @@
 id: task-low-mark-aur-files-as-aspirational-placeholder-surface
 level: low
 status: pending
-blocked_by: ["task-med-demote-aur-package-surface-to-aspirational-or-evidenced"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 

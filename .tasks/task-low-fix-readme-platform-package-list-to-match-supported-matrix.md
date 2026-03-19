@@ -2,7 +2,7 @@
 id: task-low-fix-readme-platform-package-list-to-match-supported-matrix
 level: low
 status: pending
-blocked_by: ["task-med-reconcile-readme-platform-package-inventory"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 

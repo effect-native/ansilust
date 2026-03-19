@@ -2,7 +2,7 @@
 id: task-low-archive-completed-top-level-task-files
 level: low
 status: pending
-blocked_by: ["task-med-archive-and-regenerate-task-hierarchy"]
+blocked_by: []
 expires_at: 2026-03-26T23:35:25Z
 ---
 
