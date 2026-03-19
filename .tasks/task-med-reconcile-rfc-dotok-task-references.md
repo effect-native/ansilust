@@ -1,7 +1,7 @@
 ---
 id: task-med-reconcile-rfc-dotok-task-references
 level: medium
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-03-26T23:52:54Z
 ---
