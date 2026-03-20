@@ -5,11 +5,38 @@
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
+const ansilust = @import("ansilust");
 const interface = @import("../database/interface.zig");
 const HttpClient = @import("../protocols/http.zig").HttpClient;
 const FileStorage = @import("../storage/files.zig").FileStorage;
 const PlatformPaths = @import("../storage/paths.zig").PlatformPaths;
 const ArchiveDatabase = interface.ArchiveDatabase;
+
+pub const RandomPlaybackLoop = struct {
+    delay_ns: u64 = 0,
+
+    pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
+        _ = self;
+        try executeRandomOne(allocator);
+    }
+
+    pub fn run(self: RandomPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
+        var remaining = iterations;
+
+        while (remaining == null or remaining.? > 0) {
+            try self.playOnce(allocator);
+
+            if (remaining) |*count| {
+                count.* -= 1;
+                if (count.* == 0) break;
+            }
+
+            if (self.delay_ns > 0) {
+                std.Thread.sleep(self.delay_ns);
+            }
+        }
+    }
+};
 
 /// Execute the random-1 command
 ///
@@ -20,7 +47,7 @@ const ArchiveDatabase = interface.ArchiveDatabase;
 /// 4. Download file to temp location
 /// 5. Save to random/ directory with timestamp
 /// 6. Clean up old files (keep last 10)
-/// 7. Display with ansilust renderer (stubbed for now)
+/// 7. Display with ansilust parser + UTF8ANSI renderer
 /// 8. Clean up temp file
 ///
 /// # Arguments
@@ -77,7 +104,7 @@ pub fn executeRandomOne(allocator: Allocator) !void {
     // 6. Clean up old files
     try storage.cleanupRandom(paths.random_dir, 10);
 
-    // 7. Display artwork (stubbed for now - will integrate renderer in Task 5.1.8)
+    // 7. Display artwork through ansilust
     try displayArtwork(saved_path);
 
     std.debug.print("\n✓ Done!\n", .{});
@@ -85,16 +112,22 @@ pub fn executeRandomOne(allocator: Allocator) !void {
 
 /// Display artwork
 ///
-/// For MVP, exec cat to display file. Full ansilust renderer integration in Phase 5.2.
+/// Parse and render artwork to stdout using ansilust.
 fn displayArtwork(file_path: []const u8) !void {
-    std.debug.print("\n", .{});
-
-    // Simple MVP: exec cat with inherit stdout
-    var child = std.process.Child.init(
-        &[_][]const u8{ "cat", file_path },
+    const file_data = try std.fs.cwd().readFileAlloc(
         std.heap.page_allocator,
+        file_path,
+        100 * 1024 * 1024,
     );
-    _ = try child.spawnAndWait();
+    defer std.heap.page_allocator.free(file_data);
 
-    std.debug.print("\n", .{});
+    var doc = try ansilust.parsers.ansi.parse(std.heap.page_allocator, file_data);
+    defer doc.deinit();
+
+    const is_tty = std.posix.isatty(std.posix.STDOUT_FILENO);
+    const buffer = try ansilust.renderToUtf8Ansi(std.heap.page_allocator, &doc, is_tty);
+    defer std.heap.page_allocator.free(buffer);
+
+    const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+    try stdout_file.writeAll(buffer);
 }

@@ -62,6 +62,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/download/lib.zig"),
         .target = target,
     });
+    download_mod.addImport("ansilust", mod);
 
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
