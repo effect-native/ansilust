@@ -2,7 +2,7 @@
 id: task-low-author-screensaver-plan-doc
 level: low
 status: pending
-blocked_by: ["task-med-author-screensaver-spec-stack"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

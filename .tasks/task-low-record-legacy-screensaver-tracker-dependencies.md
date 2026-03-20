@@ -2,7 +2,7 @@
 id: task-low-record-legacy-screensaver-tracker-dependencies
 level: low
 status: pending
-blocked_by: ["task-med-translate-legacy-screensaver-intent-into-dotok"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

@@ -2,7 +2,7 @@
 id: task-low-defer-nonessential-transition-effects
 level: low
 status: pending
-blocked_by: ["task-med-scope-streaming-and-transition-effects"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

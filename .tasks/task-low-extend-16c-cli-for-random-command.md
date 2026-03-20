@@ -2,7 +2,7 @@
 id: task-low-extend-16c-cli-for-random-command
 level: low
 status: pending
-blocked_by: ["task-med-add-continuous-random-command-surface"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

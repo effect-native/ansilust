@@ -2,7 +2,7 @@
 id: task-low-define-instant-and-streaming-speed-flags
 level: low
 status: pending
-blocked_by: ["task-med-add-timing-and-rotation-policy"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

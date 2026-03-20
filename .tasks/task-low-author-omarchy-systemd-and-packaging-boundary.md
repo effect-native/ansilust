@@ -2,7 +2,7 @@
 id: task-low-author-omarchy-systemd-and-packaging-boundary
 level: low
 status: pending
-blocked_by: ["task-med-design-config-launch-and-packaging-surface"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

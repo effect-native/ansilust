@@ -2,7 +2,7 @@
 id: task-low-define-minimum-local-art-pool-strategy
 level: low
 status: pending
-blocked_by: ["task-med-decouple-mvp-art-selection-from-full-mirror"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 
