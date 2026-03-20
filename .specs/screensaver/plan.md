@@ -5,7 +5,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 ## Execution Baseline
 
 - Current repository truth has moved past the old `random-1`-only baseline: the repo now ships looping `16c random` and dedicated `16c screensaver` command surfaces, and routes playback through the ansilust renderer.
-- The Stage 1 runtime surface now includes local-pool-first artwork selection, the 20-second default dwell and empty-pool policy, explicit `--instant` / `--streaming-speed <preset>` playback controls, and minimal config loading for `playback.dwell_seconds` plus `source.mode = "auto"`.
+- The Stage 1 runtime surface now includes local-pool-first artwork selection, the 20-second default dwell and empty-pool policy, explicit `--instant` / `--streaming-speed <preset>` playback controls, minimal config loading for `playback.dwell_seconds` plus `source.mode = "auto"` from `config.toml` under the resolved `16colors` data root, and the shipped cleanup contract for `SIGINT` plus `SIGTERM`.
 - Stage 1 shipped truth stops at playing from the artwork already present in the local pool. Curated preseed content can satisfy that pool, but any later bootstrap download, cache expansion, or first-run library growth is outside shipped Stage 1 unless the repo later lands owned implementation and evidence.
 - The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices and now records the landed Stage 1 runtime work alongside the still-future launch, bootstrap, packaging, and broader integration growth.
 - This file defines stable work packages for future delivery without treating spec-only behavior as shipped runtime truth.
@@ -84,9 +84,10 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 **Acceptance**:
 - `16c screensaver` owns a distinct session lifecycle above `16c random`.
-- Screensaver mode exits on user input and handles process signals cleanly.
+- Screensaver mode exits on user input and implements the shipped Stage 1 signal-cleanup contract for `SIGINT` and `SIGTERM`.
 - Alternate screen and cursor visibility behavior are defined and restored on exit.
 - MVP fullscreen-session behavior is explicit even before window-manager integration lands.
+- Broader signal coverage remains future-facing hardening rather than part of the shipped Stage 1 contract.
 
 **Tasks**:
 - `task-high-add-screensaver-session-mode`
@@ -163,11 +164,12 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 **Intent**: Add the smallest durable config boundary needed for Stage 1 runtime use without overpromising launch artifacts or desktop integration.
 
 **Acceptance**:
-- MVP `~/.config/16c/config.toml` keys are limited to the runtime controls needed for early delivery.
-- The shared random/screensaver runtime loads missing-config defaults plus `playback.dwell_seconds` and `source.mode = "auto"` without claiming broader config maturity.
+- MVP config keys are limited to the runtime controls needed for early delivery, loaded from `config.toml` under the resolved `16colors` data root.
+- The shared random/screensaver runtime loads missing-config defaults plus `playback.dwell_seconds` and `source.mode = "auto"` from that Stage 1 path without claiming broader config maturity.
 - The owned Stage 1 boundary stops at the shipped `16c screensaver` command surface; launch artifacts, idle wiring, and desktop policy remain future-facing until they exist in-repo.
 - Packaging guidance cleanly separates owned artifacts from environment-specific examples and stays fenced to channels the repository can actually prove.
 - Config/configuration work stays decoupled from mirror/database and transition-polish expansion.
+- Any later per-user config-path expansion or migration away from the `16colors`-root `config.toml` contract is staged as post-MVP follow-on work rather than implied by current completion.
 - X11, XScreenSaver, and broader cross-desktop launch compatibility remain post-MVP follow-on work under later integration packages.
 
 **Tasks**:
@@ -231,7 +233,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ## Success Criteria Validation
 
-- MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, and session cleanup behavior is tested.
+- MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, Stage 1 config loads from `config.toml` under the resolved `16colors` data root, and session cleanup behavior is tested for input exit plus `SIGINT`/`SIGTERM`.
 - MVP completion does not require bootstrap downloads, first-run growth, or remote expansion flows; a curated local preseed is acceptable only insofar as it preserves the local-pool-only Stage 1 runtime boundary.
 - MVP Omarchy launch scope is complete only when the repo owns the command surface and any promised user-level launch artifacts; idle-manager policy, X11/XScreenSaver support, and extra packaging channels stay outside MVP until separately implemented.
 - Stage 4 launch claims are complete only when the repo owns the launch artifact itself, any claimed idle-manager/user-service wiring artifact, and any claimed packaging/install artifact for the delivery channel; environment-local examples remain illustrative only.

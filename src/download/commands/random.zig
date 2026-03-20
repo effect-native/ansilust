@@ -252,18 +252,7 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: R
     }
 
     if (!allow_remote_fallback) {
-        if (messaging.seed_hint) |seed_hint| {
-            std.debug.print(
-                "No playable local artwork found in random/ or local/. Add a .ans or .asc file there, or run {s} to seed random/.\n",
-                .{seed_hint},
-            );
-        } else {
-            std.debug.print(
-                "No playable local artwork found in random/ or local/. Add a .ans or .asc file there.\n",
-                .{},
-            );
-        }
-        return error.EmptyLocalArtworkPool;
+        return failEmptyLocalArtworkPool(std.io.getStdErr().writer(), messaging.seed_hint);
     }
 
     // 2. Initialize database
@@ -372,7 +361,22 @@ fn stdinReady(timeout_ms: i32) !bool {
     return (try std.posix.poll(fds[0..], timeout_ms)) > 0;
 }
 
-fn selectLocalArtwork(
+pub fn failEmptyLocalArtworkPool(writer: anytype, seed_hint: ?[]const u8) !void {
+    if (seed_hint) |hint| {
+        try writer.print(
+            "No playable local artwork found in random/ or local/. Add a .ans or .asc file there, or run {s} to seed random/.\n",
+            .{hint},
+        );
+    } else {
+        try writer.writeAll(
+            "No playable local artwork found in random/ or local/. Add a .ans or .asc file there.\n",
+        );
+    }
+
+    return error.EmptyLocalArtworkPool;
+}
+
+pub fn selectLocalArtwork(
     allocator: Allocator,
     random_dir: []const u8,
     local_dir: []const u8,
@@ -393,13 +397,12 @@ fn selectLocalArtwork(
     }
 
     if (candidates.items.len == 1) {
-        return allocator.dupe(u8, candidates.items[0]);
+        return try allocator.dupe(u8, candidates.items[0]);
     }
 
     var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
     const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
-    const selected = try allocator.dupe(u8, candidates.items[selected_index]);
-    return selected;
+    return try allocator.dupe(u8, candidates.items[selected_index]);
 }
 
 fn appendPlayableFilesFromDir(

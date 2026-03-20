@@ -32,10 +32,10 @@ The first useful screensaver milestone is no longer "make a loop exist." The loo
 - Keep the existing looping `16c random` runtime, but change its source contract from repeated hardcoded fetches to a local-pool-first selector with explicit empty-pool behavior.
 - Add `16c screensaver` as the same playback core plus screensaver-only terminal lifecycle.
 - Preserve the parser-to-IR-to-renderer handoff that is already checked in, rather than reintroducing raw file passthrough.
-- Add a small dwell policy and playback defaults, with hardcoded defaults acceptable until config loading actually ships.
+- Add a small dwell policy and playback defaults, with built-in fallbacks plus the minimal shipped `config.toml` lookup under the resolved `16colors` root.
 - Keep art source boundaries simple: Stage 1 treats `random/` plus `local/` as the shipped playable local pool, with `random/` covering runtime-fetched intake and `local/` covering user-supplied files, without making `.index.db` mandatory.
 
-Stage 1 therefore ships one intentionally narrow truth: the runtime knows how to pick from a small local pool made of `random/` and `local/`, and it can still repopulate `random/` through the existing hardcoded remote fetch path when no local playable file exists. That truth must remain stable even after later pack-aware work ships; future growth expands the selector behind the same local-first contract instead of redefining what the shipped runtime already means.
+Stage 1 therefore ships one intentionally narrow truth: the runtime knows how to pick from a small local pool made of `random/` and `local/`, and it exits with explicit empty-pool behavior when no local playable file exists. That truth must remain stable even after later pack-aware work ships; future growth expands the selector behind the same local-first contract instead of redefining what the shipped runtime already means.
 
 ### Stage 2: Local Pool Growth
 
@@ -78,13 +78,13 @@ The screensaver feature should stay decomposed into small orchestration units ra
 The runtime coordinator owns the main loop and timing decisions.
 
 - Current checked-in behavior: repeatedly invokes the one-shot fetch-and-render path.
-- Stage 1 completion target: load built-in defaults, optionally load config later, request the next artwork from a source provider, invoke parse-plus-render playback, apply per-piece dwell timing, and stop on explicit exit conditions.
+- Stage 1 completion target: load built-in defaults plus the minimal shipped `config.toml` lookup under the resolved `16colors` root, request the next artwork from a source provider, invoke parse-plus-render playback, apply per-piece dwell timing, and stop on explicit exit conditions.
 
 ### Artwork Source Provider
 
 The source provider isolates selection policy from playback.
 
-- MVP: chooses from the shipped local pool of `random/` plus `local/`, with last-resort repopulation of `random/` through the existing hardcoded remote fetch path, without assuming `.index.db`.
+- MVP: chooses from the shipped local pool of `random/` plus `local/`, with descriptive empty-pool failure when neither root contains playable art, without assuming `.index.db`.
 - Later: may query pack inventory, mirror inventory, filesystem scans, or `.index.db`.
 - The runtime loop should see only a small contract such as "give me the next playable artwork descriptor."
 
@@ -122,7 +122,7 @@ Key boundaries:
 
 - Selection failure is a source problem, not a renderer problem.
 - Parse or render failure should fail the current artwork cleanly and either advance or exit based on command policy.
-- Session cleanup must run even on signal or input-driven exit.
+- Session cleanup must run even on keyboard-driven exit and on the shipped Stage 1 signal path of `SIGINT` and `SIGTERM`.
 
 ## Art Selection Boundaries
 
@@ -150,9 +150,9 @@ Post-MVP selector growth can add:
 Before `.index.db` exists, the selector should use a strict local-first ladder that matches the repo's current evidence and MVP-first constraints.
 
 1. In shipped Stage 1, scan only `random/` first and `local/` second, because those two roots define the actual local playable pool that exists without new pack machinery.
-2. Only if both Stage 1 roots are empty may the runtime fall back to the remaining hardcoded remote-source behavior, using the existing hardcoded archive entry as a last-resort way to obtain one playable file and repopulate `random/`.
-3. In Stage 2+, keep the same local-first contract but widen the scan to include pack-aware managed roots such as `packs/` between `random/` and `local/`, or alongside them under a selector mode that still resolves to local playable files before any network fetch.
-4. If a curated seed set is later introduced, treat it as one way to populate the managed local library surface rather than as a different runtime contract.
+2. If both Stage 1 roots are empty, stop with a descriptive local-only failure instead of silently fetching or inventing another runtime source.
+3. In Stage 2+, keep the same local-first contract but widen the scan to include pack-aware managed roots such as `packs/` between `random/` and `local/`, or alongside them under a selector mode that still resolves to local playable files before any later optional growth flow.
+4. If a curated seed set or explicit bootstrap helper is later introduced, treat it as one way to populate the managed local library surface rather than as a different runtime contract.
 
 This fallback order keeps Stage 1 unblocked:
 
@@ -198,7 +198,7 @@ Pack-aware selection should therefore be understood as "local archive selection"
 
 ### Rotation Policy Beyond MVP
 
-- The MVP fallback ladder remains the cold-start and recovery rule: curated seed if present, then local discovery preferring `random/`, then `packs/`, then `local/`, then last-resort remote fetch.
+- The MVP fallback ladder remains the cold-start and recovery rule: local discovery preferring `random/`, then `packs/` once that stage exists, then `local/`, then a descriptive empty-pool stop.
 - Once Stage 2+ introduces remembered rotation state, `random/` should function as the recency queue: newly arrived playable files there should be attempted before the runtime settles back into the broader durable library.
 - After the current `random/` intake set has been attempted, the steady-state rotation pool should favor `packs/` as the main long-lived source and include `local/` as an always-eligible secondary source.
 - If both `packs/` and `local/` have unseen playable files, the default auto policy should prefer `packs/` first so managed library growth becomes the main screensaver body without displacing user-owned art from eligibility.
@@ -300,15 +300,17 @@ The session lifecycle differs by command mode.
 
 - Repeated selection and playback.
 - Normal terminal mode by default.
-- Stage 1 completion should add graceful handling for interruption signals.
+- Stage 1 completion should add graceful handling for `SIGINT` and `SIGTERM`, with any broader signal coverage treated as later hardening.
 
 ### `screensaver`
 
 - Same repeated playback core as `random`.
 - Adds alternate-screen entry and restoration.
 - Hides and restores cursor.
-- Exits on user input and normal termination signals.
+- Exits on keyboard input plus `SIGINT` and `SIGTERM`.
 - Owns final cleanup even if playback fails mid-piece.
+
+Stage 1 should treat keyboard exit plus best-effort cleanup on `SIGINT` and `SIGTERM` as the complete shipped session contract. Broader signal handling remains future-facing and should be documented as additive hardening if it lands later.
 
 This separation keeps the fullscreen/session-specific behavior additive instead of infecting the base loop.
 
@@ -319,11 +321,11 @@ Configuration should remain an optional policy layer above runtime playback.
 ### MVP Defaults
 
 - The runtime shall work with no config file present by using built-in defaults.
-- The MVP `~/.config/16c/config.toml` surface should stay intentionally tiny and define only the keys needed to tune loop timing and source resolution policy.
+- The MVP config surface is `config.toml` under the resolved `16colors` root, and it should stay intentionally tiny by defining only the keys needed to tune loop timing and source resolution policy.
 
 ### Stage 1 Completion `config.toml` Keys
 
-The first usable screensaver completion may recognize exactly these top-level tables and keys once config loading is implemented:
+The first usable screensaver completion recognizes exactly these top-level tables and keys from `config.toml` under the resolved `16colors` root:
 
 ```toml
 [playback]
@@ -336,7 +338,7 @@ mode = "auto"
 Target key meanings and defaults:
 
 - `playback.dwell_seconds = 20`: target default number of seconds to keep each artwork visible before advancing in `16c random` and `16c screensaver`, matching the Stage 1 default defined in requirements.
-- `source.mode = "auto"`: target built-in fallback ladder of curated seed if present, then filesystem-backed local discovery, then the existing hardcoded remote fetch as a last resort.
+- `source.mode = "auto"`: target built-in local-first ladder over the shipped playable roots, with descriptive empty-pool failure when no local artwork is available.
 
 MVP key constraints:
 
@@ -347,7 +349,7 @@ MVP key constraints:
 
 Current gap note:
 
-- The checked-in runtime does not currently load `~/.config/16c/config.toml` or any equivalent screensaver config surface.
+- The checked-in runtime loads only this minimal `config.toml` surface under the resolved `16colors` root; it does not yet expose a broader screensaver config schema.
 - The checked-in runtime does not currently expose dwell flags or playback-mode flags on the CLI.
 
 ### Post-MVP Config Surface

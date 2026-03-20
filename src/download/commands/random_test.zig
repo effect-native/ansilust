@@ -1,5 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
+const random = @import("random.zig");
 
 test "16c playback no longer shells out through raw cat" {
     const source = @embedFile("random.zig");
@@ -15,26 +16,32 @@ test "16c playback routes artwork through parser and UTF8ANSI renderer" {
     try testing.expect(std.mem.indexOf(u8, source, "isatty") != null);
 }
 
-test "16c random stage1 local pool scans random and local directories" {
-    const source = @embedFile("random.zig");
+test "16c random stage1 local pool selects the only playable local file" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
 
-    try testing.expect(std.mem.indexOf(u8, source, "paths.random_dir") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "paths.local_dir") != null);
-}
+    try tmp.dir.makePath("random");
+    try tmp.dir.makePath("local");
+    try tmp.dir.writeFile(.{ .sub_path = "random/ignore.txt", .data = "not ansi" });
+    try tmp.dir.writeFile(.{ .sub_path = "local/keep.asc", .data = "ansi" });
 
-test "16c random stage1 local pool filters to playable ansi files" {
-    const source = @embedFile("random.zig");
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
 
-    try testing.expect(std.mem.indexOf(u8, source, ".ans") != null);
-    try testing.expect(std.mem.indexOf(u8, source, ".asc") != null);
-}
+    const random_dir = try std.fs.path.join(allocator, &.{ root, "random" });
+    defer allocator.free(random_dir);
 
-test "16c random stage1 local pool is selected before remote fallback" {
-    const source = @embedFile("random.zig");
-    const remote_index = std.mem.indexOf(u8, source, "db.getRandomFile()") orelse return error.TestUnexpectedResult;
-    const local_scan_index = std.mem.indexOf(u8, source, "paths.local_dir") orelse return error.TestUnexpectedResult;
+    const local_dir = try std.fs.path.join(allocator, &.{ root, "local" });
+    defer allocator.free(local_dir);
 
-    try testing.expect(local_scan_index < remote_index);
+    const expected = try std.fs.path.join(allocator, &.{ local_dir, "keep.asc" });
+    defer allocator.free(expected);
+
+    const selected = (try random.selectLocalArtwork(allocator, random_dir, local_dir)).?;
+    defer allocator.free(selected);
+
+    try testing.expectEqualStrings(expected, selected);
 }
 
 test "16c random stage1 dwell defaults to 20 seconds" {
@@ -79,19 +86,15 @@ test "16c stage1 config parses source.mode auto" {
     try testing.expect(std.mem.indexOf(u8, source, "\"auto\"") != null);
 }
 
-test "16c random stage1 local pool explicitly replays a single playable file" {
-    const source = @embedFile("random.zig");
-
-    try testing.expect(std.mem.indexOf(u8, source, "if (candidates.items.len == 1)") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "return allocator.dupe(u8, candidates.items[0]);") != null);
-}
-
 test "16c random stage1 empty local pool fails with helpful guidance" {
-    const source = @embedFile("random.zig");
+    var buffer: [160]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buffer);
 
-    try testing.expect(std.mem.indexOf(u8, source, "error.EmptyLocalArtworkPool") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "random/") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "local/") != null);
+    try testing.expectError(error.EmptyLocalArtworkPool, random.failEmptyLocalArtworkPool(stream.writer(), null));
+    try testing.expectEqualStrings(
+        "No playable local artwork found in random/ or local/. Add a .ans or .asc file there.\n",
+        stream.getWritten(),
+    );
 }
 
 test "16c screensaver session enters and restores alternate screen" {
