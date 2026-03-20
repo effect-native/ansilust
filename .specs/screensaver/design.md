@@ -285,10 +285,32 @@ Configuration should remain an optional policy layer above runtime playback.
 
 ### MVP Defaults
 
-- sensible dwell time
-- optional instant-vs-streaming toggle placeholder
-- default source selection behavior
-- metadata overlay disabled by default unless implemented later
+- The runtime shall work with no config file present by using built-in defaults.
+- The MVP `~/.config/16c/config.toml` surface should stay intentionally tiny and define only the keys needed to tune loop timing and source resolution policy.
+
+### MVP `config.toml` Keys
+
+The first usable screensaver release should recognize exactly these top-level tables and keys:
+
+```toml
+[playback]
+dwell_seconds = 20
+
+[source]
+mode = "auto"
+```
+
+Key meanings and defaults:
+
+- `playback.dwell_seconds = 20`: default number of seconds to keep each artwork visible before advancing in `16c random` and `16c screensaver`, matching the Stage 1 default defined in requirements.
+- `source.mode = "auto"`: use the built-in MVP fallback ladder of curated seed if present, then filesystem-backed local discovery, then the existing hardcoded remote fetch as a last resort.
+
+MVP key constraints:
+
+- Keep `dwell_seconds` as a positive integer in seconds; sub-second timing is out of scope for the first release.
+- Keep `source.mode` limited to `"auto"` in MVP so the config format exists without prematurely committing to filters, playlists, or source-specific selectors.
+- Omit render-mode, metadata-overlay, transition, fullscreen-layout, and filtering keys until those features actually exist.
+- Omit screensaver-only lifecycle toggles such as alternate-screen or exit-on-input because Stage 1 treats those as fixed command behavior, not user policy.
 
 ### Post-MVP Config Surface
 

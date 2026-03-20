@@ -49,9 +49,15 @@ FR1.3.1: The system shall render selected artwork through ansilust-owned renderi
 FR1.3.2: WHILE `16c random` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
 FR1.3.3: WHILE `16c screensaver` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
 FR1.3.4: WHILE Stage 1 is the active delivery target the system shall use a fixed-duration pacing policy with no per-artwork heuristics, transitions, or adaptive timing.
-FR1.3.5: WHEN a 20-second viewing interval ends the system shall replace the current artwork immediately with the next selected artwork.
-FR1.3.6: WHEN artwork playback completes the system shall advance to another artwork without requiring process restart.
-FR1.3.7: WHEN the terminal size changes during Stage 1 playback the system shall preserve a usable display and exit path.
+FR1.3.5: The system shall expose instant playback for `16c random` and `16c screensaver` through an explicit `--instant` command-line flag.
+FR1.3.6: WHERE `--instant` is enabled the system shall render each selected artwork as a fully drawn frame immediately and shall keep the same rotation interval policy used by default Stage 1 playback.
+FR1.3.7: The system shall expose streaming-speed control for `16c random` and `16c screensaver` through a dedicated `--streaming-speed <preset>` command-line option.
+FR1.3.8: WHERE `--streaming-speed <preset>` is enabled the system shall use that preset for progressive Stage 1 playback and shall reject unsupported preset names with a helpful error.
+FR1.3.9: WHILE Stage 1 is the active delivery target the system shall treat `--instant` and `--streaming-speed` as the only MVP playback-style controls and shall not require a broader presentation-mode abstraction.
+FR1.3.10: IF `--instant` and `--streaming-speed` are both provided THEN the system shall reject the invocation with a clear mutual-exclusivity error.
+FR1.3.11: WHEN a 20-second viewing interval ends the system shall replace the current artwork immediately with the next selected artwork.
+FR1.3.12: WHEN artwork playback completes the system shall advance to another artwork without requiring process restart.
+FR1.3.13: WHEN the terminal size changes during Stage 1 playback the system shall preserve a usable display and exit path.
 
 ### FR1.4: Stage 2 - Art-Source Growth
 FR1.4.1: WHERE local archive browsing is enabled the system shall select artwork from local archive surfaces beyond the Stage 1 pool.
@@ -99,6 +105,9 @@ DR4.2.2: The Stage 1 pool descriptor shall require only file path, basename, and
 DR4.2.3: The Stage 1 empty-pool message shall name `random/` and `local/` as the concrete directories the user can populate.
 DR4.3: Stage 2 metadata-backed selection shall define the indexed artwork fields required for random selection and filtering.
 DR4.4: The Stage 1 MVP shall define a default playback duration of 20 seconds per artwork and a fixed immediate-cut rotation policy.
+DR4.4.1: The Stage 1 MVP shall define `--instant` as a boolean command override for immediate full-frame playback.
+DR4.4.2: The Stage 1 MVP shall define `--streaming-speed <preset>` as a command override that selects from a documented preset set rather than arbitrary free-form timing input.
+DR4.4.3: The Stage 1 MVP shall keep playback-style overrides ephemeral to the current command invocation; persisted playback-mode configuration remains a Stage 3 concern.
 DR4.5: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
 
 ## IR5: Integration Requirements
