@@ -2,7 +2,7 @@
 id: task-med-remove-flaky-download-randomness-check
 level: medium
 status: pending
-blocked_by: ["task-high-stabilize-download-validation-floor"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

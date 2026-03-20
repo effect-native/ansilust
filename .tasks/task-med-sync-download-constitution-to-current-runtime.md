@@ -2,7 +2,7 @@
 id: task-med-sync-download-constitution-to-current-runtime
 level: medium
 status: pending
-blocked_by: ["task-high-reconcile-current-screensaver-download-truth"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 
