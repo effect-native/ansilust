@@ -172,6 +172,29 @@ This fallback order keeps Stage 1 unblocked:
 - If a file fails to parse or render, the runtime should skip it, continue within the same tier when possible, and advance to the next fallback tier only if the tier proves effectively empty or unusable.
 - `random-1` remains compatible with its current hardcoded-fetch contract; the new ladder primarily governs future looping `random` and `screensaver` behavior before `.index.db` arrives.
 
+### Growth Roles For `random/`, `packs/`, And `local/`
+
+As the library grows past MVP, these three roots should remain distinct surfaces with different retention and rotation responsibilities rather than collapsing into one undifferentiated directory.
+
+- `random/` is the short-horizon intake surface. It remains the first playable local root for MVP compatibility because current `random-1` behavior already lands fetched artwork there. In Stage 2+, newly fetched or opportunistically downloaded pieces should enter rotation here first so the runtime can surface fresh material quickly without requiring pack curation or index rebuilds.
+- `packs/` is the managed durable library surface. In Stage 2+, downloaded archives, extracted collections, and future curated bundle material should accumulate here for long-term rotation. This directory is the default home for broad library growth once the system has more than one-off `random-1` fetches.
+- `local/` is the user-owned durable surface. It is always eligible for playback, but it stays conceptually separate from managed downloads because files here are user-supplied and should not be reorganized, deleted, or silently rewritten by the runtime.
+
+### Retention Policy By Surface
+
+- `random/` should be treated as disposable cache-like inventory. The runtime may rely on it for immediate playback and short-horizon replay prevention, but Stage 2+ design should not require indefinite retention there once artwork has been promoted into broader managed inventory elsewhere.
+- `packs/` should be treated as the default retained library. Stage 2+ growth work may add pack extraction, inventory refresh, or deduplication here, but the screensaver contract should assume files in `packs/` persist across sessions unless the user or a future explicit maintenance command removes them.
+- `local/` should be treated as fully retained and user-controlled. The runtime may read and rotate these files, but it shall not prune them as part of cache cleanup or managed-library maintenance.
+
+### Rotation Policy Beyond MVP
+
+- The MVP fallback ladder remains the cold-start and recovery rule: curated seed if present, then local discovery preferring `random/`, then `packs/`, then `local/`, then last-resort remote fetch.
+- Once Stage 2+ introduces remembered rotation state, `random/` should function as the recency queue: newly arrived playable files there should be attempted before the runtime settles back into the broader durable library.
+- After the current `random/` intake set has been attempted, the steady-state rotation pool should favor `packs/` as the main long-lived source and include `local/` as an always-eligible secondary source.
+- If both `packs/` and `local/` have unseen playable files, the default auto policy should prefer `packs/` first so managed library growth becomes the main screensaver body without displacing user-owned art from eligibility.
+- When all currently eligible files in the active rotation surface have been seen, the runtime may reset seen-state and continue, but it should preserve the same ordering bias: fresh `random/` arrivals first, then `packs/`, then `local/`.
+- Future config or index-backed policies may expose more explicit weighting or filtering, but the default auto policy should preserve this directory-role model so Stage 2+ growth does not invalidate the MVP-first fallback story.
+
 ## Renderer Handoff
 
 Renderer integration is the architectural seam that replaces the current `cat` behavior.
