@@ -2,7 +2,7 @@
 id: task-low-add-red-tests-for-instant-and-streaming-flags
 level: low
 status: pending
-blocked_by: ["task-med-add-stage1-playback-flag-surface"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 
