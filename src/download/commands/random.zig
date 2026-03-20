@@ -12,6 +12,12 @@ const FileStorage = @import("../storage/files.zig").FileStorage;
 const PlatformPaths = @import("../storage/paths.zig").PlatformPaths;
 const ArchiveDatabase = interface.ArchiveDatabase;
 
+var screensaver_exit_requested = std.atomic.Value(bool).init(false);
+
+fn handleScreensaverSignal(_: c_int) callconv(.c) void {
+    screensaver_exit_requested.store(true, .seq_cst);
+}
+
 pub const RandomPlaybackLoop = struct {
     delay_ns: u64 = 20 * std.time.ns_per_s,
 
@@ -42,7 +48,84 @@ pub const ScreensaverPlaybackLoop = struct {
     playback: RandomPlaybackLoop = .{},
 
     pub fn run(self: ScreensaverPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
-        try self.playback.run(allocator, iterations);
+        var session = try ScreensaverSession.enter();
+        defer session.leave();
+
+        var remaining = iterations;
+
+        while (remaining == null or remaining.? > 0) {
+            if (screensaver_exit_requested.load(.seq_cst)) break;
+
+            try self.playback.playOnce(allocator);
+
+            if (remaining) |*count| {
+                count.* -= 1;
+                if (count.* == 0) break;
+            }
+
+            if (try screensaverShouldExit(self.playback.delay_ns)) break;
+        }
+    }
+};
+
+const ScreensaverSession = struct {
+    manage_terminal: bool,
+    previous_sigint: std.posix.Sigaction,
+    previous_sigterm: std.posix.Sigaction,
+    signals_installed: bool,
+
+    fn enter() !ScreensaverSession {
+        screensaver_exit_requested.store(false, .seq_cst);
+
+        var session = ScreensaverSession{
+            .manage_terminal = std.posix.isatty(std.posix.STDOUT_FILENO),
+            .previous_sigint = undefined,
+            .previous_sigterm = undefined,
+            .signals_installed = false,
+        };
+
+        try session.enterAlternateScreen();
+        session.installSignalHandlers();
+        return session;
+    }
+
+    fn leave(self: *ScreensaverSession) void {
+        self.restoreSignalHandlers();
+        self.restoreTerminal();
+    }
+
+    fn enterAlternateScreen(self: *ScreensaverSession) !void {
+        if (!self.manage_terminal) return;
+
+        const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+        try stdout_file.writeAll("\x1b[?1049h\x1b[?25l");
+    }
+
+    fn restoreTerminal(self: *ScreensaverSession) void {
+        if (!self.manage_terminal) return;
+
+        const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
+        stdout_file.writeAll("\x1b[?25h\x1b[?1049l") catch {};
+    }
+
+    fn installSignalHandlers(self: *ScreensaverSession) void {
+        // Best-effort Stage 1 cleanup hooks for SIGINT and SIGTERM.
+        const action = std.posix.Sigaction{
+            .handler = .{ .handler = handleScreensaverSignal },
+            .mask = std.posix.sigemptyset(),
+            .flags = 0,
+        };
+
+        std.posix.sigaction(std.posix.SIG.INT, &action, &self.previous_sigint);
+        std.posix.sigaction(std.posix.SIG.TERM, &action, &self.previous_sigterm);
+        self.signals_installed = true;
+    }
+
+    fn restoreSignalHandlers(self: *ScreensaverSession) void {
+        if (!self.signals_installed) return;
+
+        std.posix.sigaction(std.posix.SIG.INT, &self.previous_sigint, null);
+        std.posix.sigaction(std.posix.SIG.TERM, &self.previous_sigterm, null);
     }
 };
 
@@ -164,6 +247,45 @@ fn displayArtwork(file_path: []const u8) !void {
 
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
     try stdout_file.writeAll(buffer);
+}
+
+fn screensaverShouldExit(delay_ns: u64) !bool {
+    if (screensaver_exit_requested.load(.seq_cst)) return true;
+
+    var remaining_ns = delay_ns;
+    while (remaining_ns > 0) {
+        const slice_ns = @min(remaining_ns, 100 * std.time.ns_per_ms);
+        const timeout_ms: i32 = @intCast(slice_ns / std.time.ns_per_ms);
+
+        if (try stdinReady(timeout_ms)) {
+            var discard_buffer: [16]u8 = undefined;
+            _ = std.posix.read(std.posix.STDIN_FILENO, discard_buffer[0..]) catch 0;
+            screensaver_exit_requested.store(true, .seq_cst);
+            return true;
+        }
+
+        if (screensaver_exit_requested.load(.seq_cst)) return true;
+        remaining_ns -= slice_ns;
+    }
+
+    return screensaver_exit_requested.load(.seq_cst);
+}
+
+fn stdinReady(timeout_ms: i32) !bool {
+    if (!std.posix.isatty(std.posix.STDIN_FILENO)) {
+        if (timeout_ms > 0) {
+            std.Thread.sleep(@as(u64, @intCast(timeout_ms)) * std.time.ns_per_ms);
+        }
+        return false;
+    }
+
+    var fds = [_]std.posix.pollfd{.{
+        .fd = std.posix.STDIN_FILENO,
+        .events = std.posix.POLL.IN,
+        .revents = 0,
+    }};
+
+    return (try std.posix.poll(fds[0..], timeout_ms)) > 0;
 }
 
 fn selectLocalArtwork(
