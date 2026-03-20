@@ -1,11 +1,12 @@
 //! 16c CLI entry point
 //!
 //! Command-line interface for the 16colors archive downloader.
-//! Currently supports: random-1
+//! Currently supports: random, random-1
 
 const std = @import("std");
 const download = @import("download");
 const random = download.commands.random;
+const RandomPlaybackLoop = download.RandomPlaybackLoop;
 
 fn ArrayList(comptime T: type) type {
     return std.array_list.AlignedManaged(T, null);
@@ -29,7 +30,10 @@ pub fn main() !void {
     const command = args[1];
 
     // Execute command
-    if (std.mem.eql(u8, command, "random-1")) {
+    if (std.mem.eql(u8, command, "random")) {
+        const playback = RandomPlaybackLoop{};
+        try playback.run(allocator, null);
+    } else if (std.mem.eql(u8, command, "random-1")) {
         try random.executeRandomOne(allocator);
     } else if (std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
         printHelp();
@@ -43,33 +47,42 @@ pub fn main() !void {
 }
 
 fn printUsage() void {
-    writeUsage(std.io.getStdErr().writer().any()) catch return;
+    var buffer: [256]u8 = undefined;
+    var stderr_writer = std.fs.File.stderr().writer(&buffer);
+    writeUsage(&stderr_writer.interface) catch return;
+    stderr_writer.interface.flush() catch return;
 }
 
 fn printHelp() void {
-    writeHelp(std.io.getStdErr().writer().any()) catch return;
+    var buffer: [256]u8 = undefined;
+    var stderr_writer = std.fs.File.stderr().writer(&buffer);
+    writeHelp(&stderr_writer.interface) catch return;
+    stderr_writer.interface.flush() catch return;
 }
 
 fn printVersion() void {
-    writeVersion(std.io.getStdErr().writer().any()) catch return;
+    var buffer: [256]u8 = undefined;
+    var stderr_writer = std.fs.File.stderr().writer(&buffer);
+    writeVersion(&stderr_writer.interface) catch return;
+    stderr_writer.interface.flush() catch return;
 }
 
-fn writeUsage(writer: std.io.AnyWriter) !void {
+fn writeUsage(writer: anytype) !void {
     try writer.writeAll("Usage: 16c <command>\n\n");
     try writer.writeAll("Commands:\n");
-    try writer.writeAll("  random-1    Download and display random artwork\n");
+    try writer.writeAll("  random      Download and continuously display random artwork\n");
     try writer.writeAll("  --help      Show this help message\n");
     try writer.writeAll("  --version   Show version information\n\n");
 }
 
-fn writeHelp(writer: std.io.AnyWriter) !void {
+fn writeHelp(writer: anytype) !void {
     try writer.writeAll("16c - 16colors Archive Downloader\n\n");
     try writeUsage(writer);
     try writer.writeAll("Examples:\n");
-    try writer.writeAll("  16c random-1    # Display random ANSI/ASCII art\n\n");
+    try writer.writeAll("  16c random    # Display random ANSI/ASCII art in a loop\n\n");
 }
 
-fn writeVersion(writer: std.io.AnyWriter) !void {
+fn writeVersion(writer: anytype) !void {
     try writer.writeAll("16c version 0.1.0-alpha (Phase 5.1 MVP)\n");
 }
 
@@ -77,7 +90,8 @@ test "16c help exposes random command surface" {
     var output = ArrayList(u8).init(std.testing.allocator);
     defer output.deinit();
 
-    try writeHelp(output.writer().any());
+    var writer = output.writer();
+    try writeHelp(&writer);
 
     try std.testing.expect(std.mem.indexOf(u8, output.items, "16c random") != null);
     try std.testing.expect(std.mem.indexOf(u8, output.items, "random-1") == null);
