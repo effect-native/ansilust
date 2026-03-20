@@ -13,3 +13,11 @@ pub const storage = struct {
     pub const paths = @import("storage/paths.zig");
     pub const files = @import("storage/files.zig");
 };
+
+test {
+    _ = @import("database/interface_test.zig");
+    _ = @import("protocols/http_test.zig");
+    _ = @import("storage/files_test.zig");
+    _ = @import("storage/paths_test.zig");
+    _ = @import("commands/random_test.zig");
+}

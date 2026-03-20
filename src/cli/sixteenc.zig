@@ -7,6 +7,10 @@ const std = @import("std");
 const download = @import("download");
 const random = download.commands.random;
 
+fn ArrayList(comptime T: type) type {
+    return std.array_list.AlignedManaged(T, null);
+}
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -39,22 +43,42 @@ pub fn main() !void {
 }
 
 fn printUsage() void {
-    std.debug.print("Usage: 16c <command>\n\n", .{});
-    std.debug.print("Commands:\n", .{});
-    std.debug.print("  random-1    Download and display random artwork\n", .{});
-    std.debug.print("  --help      Show this help message\n", .{});
-    std.debug.print("  --version   Show version information\n", .{});
-    std.debug.print("\n", .{});
+    writeUsage(std.io.getStdErr().writer().any()) catch return;
 }
 
 fn printHelp() void {
-    std.debug.print("16c - 16colors Archive Downloader\n\n", .{});
-    printUsage();
-    std.debug.print("Examples:\n", .{});
-    std.debug.print("  16c random-1    # Display random ANSI/ASCII art\n", .{});
-    std.debug.print("\n", .{});
+    writeHelp(std.io.getStdErr().writer().any()) catch return;
 }
 
 fn printVersion() void {
-    std.debug.print("16c version 0.1.0-alpha (Phase 5.1 MVP)\n", .{});
+    writeVersion(std.io.getStdErr().writer().any()) catch return;
+}
+
+fn writeUsage(writer: std.io.AnyWriter) !void {
+    try writer.writeAll("Usage: 16c <command>\n\n");
+    try writer.writeAll("Commands:\n");
+    try writer.writeAll("  random-1    Download and display random artwork\n");
+    try writer.writeAll("  --help      Show this help message\n");
+    try writer.writeAll("  --version   Show version information\n\n");
+}
+
+fn writeHelp(writer: std.io.AnyWriter) !void {
+    try writer.writeAll("16c - 16colors Archive Downloader\n\n");
+    try writeUsage(writer);
+    try writer.writeAll("Examples:\n");
+    try writer.writeAll("  16c random-1    # Display random ANSI/ASCII art\n\n");
+}
+
+fn writeVersion(writer: std.io.AnyWriter) !void {
+    try writer.writeAll("16c version 0.1.0-alpha (Phase 5.1 MVP)\n");
+}
+
+test "16c help exposes random command surface" {
+    var output = ArrayList(u8).init(std.testing.allocator);
+    defer output.deinit();
+
+    try writeHelp(output.writer().any());
+
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "16c random") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "random-1") == null);
 }
