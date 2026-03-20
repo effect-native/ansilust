@@ -125,3 +125,38 @@ test "16c includes distinct screensaver command dispatch path" {
     try std.testing.expect(std.mem.indexOf(u8, source, "std.mem.eql(u8, command, \"screensaver\")") != null);
     try std.testing.expect(std.mem.indexOf(u8, source, "std.mem.eql(u8, command, \"random\") and std.mem.eql(u8, command, \"screensaver\")") == null);
 }
+
+test "16c help documents instant and streaming speed flags for random and screensaver" {
+    var output = ArrayList(u8).init(std.testing.allocator);
+    defer output.deinit();
+
+    var writer = output.writer();
+    try writeHelp(&writer);
+
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "--instant") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "--streaming-speed <preset>") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "16c random --instant") != null);
+    try std.testing.expect(std.mem.indexOf(u8, output.items, "16c screensaver --streaming-speed") != null);
+}
+
+test "16c validates supported streaming speed presets" {
+    const source = try std.fs.cwd().readFileAlloc(std.testing.allocator, "src/cli/sixteenc.zig", 64 * 1024);
+    defer std.testing.allocator.free(source);
+
+    try std.testing.expect(std.mem.indexOf(u8, source, "--streaming-speed") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "slow") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "normal") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "fast") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "Invalid streaming speed preset") != null);
+}
+
+test "16c rejects mutually exclusive instant and streaming speed flags for random and screensaver" {
+    const source = try std.fs.cwd().readFileAlloc(std.testing.allocator, "src/cli/sixteenc.zig", 64 * 1024);
+    defer std.testing.allocator.free(source);
+
+    try std.testing.expect(std.mem.indexOf(u8, source, "random") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "screensaver") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "--instant") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "--streaming-speed") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "cannot be used together") != null);
+}
