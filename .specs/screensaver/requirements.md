@@ -33,10 +33,12 @@ FR1.2.5: WHILE Stage 1 is the active delivery target the system shall not requir
 
 ### FR1.3: Stage 1 - Playable MVP Playback
 FR1.3.1: The system shall render selected artwork through ansilust-owned rendering rather than by subprocessing raw `cat` output.
-FR1.3.2: WHILE `16c random` is active the system shall display one artwork at a time for a defined viewing interval before rotating.
-FR1.3.3: WHILE `16c screensaver` is active the system shall display one artwork at a time for a defined viewing interval before rotating.
-FR1.3.4: WHEN artwork playback completes the system shall advance to another artwork without requiring process restart.
-FR1.3.5: WHEN the terminal size changes during Stage 1 playback the system shall preserve a usable display and exit path.
+FR1.3.2: WHILE `16c random` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
+FR1.3.3: WHILE `16c screensaver` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
+FR1.3.4: WHILE Stage 1 is the active delivery target the system shall use a fixed-duration pacing policy with no per-artwork heuristics, transitions, or adaptive timing.
+FR1.3.5: WHEN a 20-second viewing interval ends the system shall replace the current artwork immediately with the next selected artwork.
+FR1.3.6: WHEN artwork playback completes the system shall advance to another artwork without requiring process restart.
+FR1.3.7: WHEN the terminal size changes during Stage 1 playback the system shall preserve a usable display and exit path.
 
 ### FR1.4: Stage 2 - Art-Source Growth
 FR1.4.1: WHERE local archive browsing is enabled the system shall select artwork from local archive surfaces beyond the Stage 1 pool.
@@ -80,7 +82,8 @@ TC3.4: Stage 1 shall preserve the existing shipped `16c random-1` behavior until
 DR4.1: The Stage 1 MVP shall define a local artwork pool abstraction that can enumerate supported artwork files from disk.
 DR4.2: The Stage 1 MVP shall define the minimum artwork metadata needed for rotation, such as file path and format suitability.
 DR4.3: Stage 2 metadata-backed selection shall define the indexed artwork fields required for random selection and filtering.
-DR4.4: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
+DR4.4: The Stage 1 MVP shall define a default playback duration of 20 seconds per artwork and a fixed immediate-cut rotation policy.
+DR4.5: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
 
 ## IR5: Integration Requirements
 

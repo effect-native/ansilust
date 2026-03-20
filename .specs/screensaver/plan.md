@@ -138,6 +138,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - MVP art source order is defined independently of `.index.db` availability.
 - The minimum local art pool and random-selection boundary are explicit.
 - Screensaver runtime can operate from local files before mirror/database maturity.
+- The MVP may rely on a small curated preseeded local art set that ships in-repo or via other owned local assets, without requiring network fetch, background sync, or metadata indexing.
 - The spec leaves room for later bootstrap and broader library growth without promising them in the MVP.
 
 **Tasks**:
@@ -175,6 +176,9 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 **Acceptance**:
 - Bootstrap behavior is defined as post-MVP and does not block the first playable loop.
+- Curated preseeded art is treated separately from bootstrap: preseed provides the first local playable pool, while bootstrap is only an optional later flow for pulling or unpacking additional art.
+- Any bootstrap flow is user-invoked or otherwise explicit; it is not a promised always-on sync service.
+- Bootstrap scope stops at obtaining more playable local art. Full background sync, broad remote catalog management, and metadata indexing remain later follow-on work unless the repo gains direct implementation evidence.
 - The growth path from minimum local pool to larger library is explicit.
 - Later system integration remains separated from runtime truth until owned artifacts exist; this includes Omarchy idle wiring beyond the initial launch boundary plus any X11/XScreenSaver-specific adapters.
 - Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
@@ -198,7 +202,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ## Risk Mitigation
 
-- Keep `.index.db`, mirror sync, and curated bootstrap out of the MVP critical path.
+- Keep `.index.db`, mirror sync, background library sync, and optional bootstrap out of the MVP critical path; allow only a small curated preseeded local pool to satisfy first-run playback.
 - Treat renderer-backed playback as the non-negotiable replacement for raw `cat` before adding presentation polish.
 - Separate `16c random` delivery from `16c screensaver` session controls so loop playback can land first.
 - Hold transitions, advanced render modes, overlays, X11/XScreenSaver adapters, and broader desktop-specific integration until the base loop is usable.
@@ -209,4 +213,4 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 - MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, and session cleanup behavior is tested.
 - MVP Omarchy launch scope is complete only when the repo owns the command surface and any promised user-level launch artifacts; idle-manager policy, X11/XScreenSaver support, and extra packaging channels stay outside MVP until separately implemented.
-- Post-MVP expansion is complete only when config growth, bootstrap/library expansion, environment integration, and any new deployment channels are backed by owned implementation and evidence rather than spec prose.
+- Post-MVP expansion is complete only when config growth, optional bootstrap/library expansion, environment integration, and any new deployment channels are backed by owned implementation and evidence rather than spec prose; background sync and metadata indexing stay non-promised until that evidence exists.

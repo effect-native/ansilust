@@ -167,7 +167,8 @@ Renderer integration is the architectural seam that replaces the current `cat` b
 ### MVP Renderer Scope
 
 - Use existing UTF8ANSI renderer behavior as-is.
-- Avoid promising fit/fill/native scaling, SAUCE-perfect layout, or streaming simulation until those capabilities are actually implemented.
+- Ship only one explicit Stage 1 presentation mode: render the parsed document into the current terminal cell viewport using the renderer's existing natural output behavior.
+- Avoid promising fit, fill, native-size toggles, zoom, pan, SAUCE-perfect layout, or streaming simulation until those capabilities are actually implemented.
 - Treat metadata overlays and richer transitions as separate later layers, not part of the core handoff.
 
 ## Terminal Sizing And Presentation Policy
@@ -188,6 +189,14 @@ Stage 1 needs a presentation policy that is usable in ordinary terminals without
 - If artwork exceeds the viewport in either dimension, the MVP may show only the renderer's natural visible region for that terminal instead of shrinking or reflowing the art.
 - Oversized artwork is therefore acceptable as clipped-by-viewport in Stage 1 as long as playback remains legible enough to view and exit cleanly.
 
+### Resize Handling In Stage 1
+
+- Terminal resize during playback is handled at artwork boundaries, not as a live relayout contract.
+- The runtime should sample terminal size before each new artwork begins, so the next piece uses the latest viewport.
+- If the terminal is resized while a piece is already being shown, Stage 1 does not guarantee immediate re-centering, redraw, or replay of that piece.
+- It is acceptable for the active frame to remain visually imperfect until the next artwork, as long as the session stays usable and terminal cleanup still works on exit.
+- A later implementation may choose to clear and redraw on resize, but MVP design must not depend on SIGWINCH-driven recomposition being available.
+
 ### MVP Centering Rules
 
 - Centering is a presentation nicety, not a correctness requirement for Stage 1 playback.
@@ -207,7 +216,17 @@ Stage 1 needs a presentation policy that is usable in ordinary terminals without
 - Small artwork in a larger terminal should usually appear centered when that only requires blank padding.
 - Large artwork may render from its natural origin and be clipped by the terminal viewport.
 - SAUCE-aware width and classic mode hints may improve interpretation, but they do not create new scaling or presentation modes in Stage 1.
-- Resize-specific behavior remains a separate policy surface so sizing promises here stay limited to the start-of-playback contract.
+- Mid-piece terminal resize may leave the current image anchored or clipped until the next artwork starts.
+
+### Explicitly Deferred Render Modes
+
+- `fit`: shrink or relayout art to fully fit the current terminal in both dimensions.
+- `fill`: scale or crop deliberately to cover the viewport as a presentation mode.
+- `native`: preserve source dimensions as a user-selectable policy distinct from the default Stage 1 behavior.
+- any user-selectable render-mode switch or config that toggles among these policies.
+- aspect-correct presentation modes that emulate DOS pixel geometry, font metrics, or fullscreen correction passes.
+
+These modes are deferred because current evidence supports parser-to-IR-to-UTF8ANSI playback, not a complete resize-aware presentation engine with multiple policy-specific layout passes.
 
 ## Session Lifecycle
 
