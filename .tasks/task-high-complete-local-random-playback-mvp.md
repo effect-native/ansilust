@@ -2,7 +2,7 @@
 id: task-high-complete-local-random-playback-mvp
 level: high
 status: pending
-blocked_by: ["task-high-reconcile-current-screensaver-download-truth", "task-high-stabilize-download-validation-floor"]
+blocked_by: ["task-high-reconcile-current-screensaver-download-truth"]
 expires_at: 2026-04-03T01:51:31Z
 ---
 

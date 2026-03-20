@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-The screensaver surface should be built as a thin orchestration layer around already-governed download, IR, and renderer capabilities instead of as a new monolithic subsystem. The current repository reality is that `16c` only ships `random-1`, selection is backed by a hardcoded source list, and display still hands the downloaded file to `cat`. This design therefore splits the work into a shortest-path MVP and explicitly deferred post-MVP layers.
+The screensaver surface should be built as a thin orchestration layer around already-governed download, IR, and renderer capabilities instead of as a new monolithic subsystem. The current repository reality is that `16c` already ships `random` and `random-1`, selection is still backed by a hardcoded remote source list, and playback now routes downloaded files through ansilust parsing plus UTF8ANSI rendering. This design therefore treats the repo as having a partial Stage 1 runtime and isolates the remaining gaps needed for a usable local-pool screensaver baseline.
 
 The staged target flow is:
 
@@ -20,20 +20,20 @@ The staged target flow is:
 
 ### Stage 0: Current Baseline
 
-- `16c` supports `random-1` only.
-- Artwork selection is effectively one hardcoded remote entry.
-- Downloaded output is displayed by subprocess `cat`.
-- No looping runtime, no alternate-screen lifecycle, and no config surface are shipped.
+- `16c` supports both `random-1` and looping `random`.
+- Artwork selection is still effectively one hardcoded remote entry reused on each loop iteration.
+- Downloaded output is parsed into ansilust IR and rendered through the UTF8ANSI renderer instead of being displayed by subprocess `cat`.
+- No `16c screensaver` command, no alternate-screen lifecycle, no config loading, and no local-pool-first selector are shipped.
 
 ### Stage 1: Playable MVP
 
-The first useful screensaver milestone is a local runtime loop that can repeatedly display artwork without depending on `.index.db`, mirror sync, curated bootstrap, or desktop integration.
+The first useful screensaver milestone is no longer "make a loop exist." The loop and renderer handoff already exist. The remaining Stage 1 work is to make that runtime usable as a local-first screensaver baseline without depending on `.index.db`, mirror sync, curated bootstrap, or desktop integration.
 
-- Add a looping `16c random` runtime for repeated playback.
-- Add `16c screensaver` as the same loop plus screensaver-only terminal lifecycle.
-- Replace raw `cat` display with parser-to-IR-to-renderer handoff.
-- Keep art source boundaries simple: use whatever playable local or fetched artwork set the current download surface can provide.
-- Keep configuration minimal and optional; hardcoded defaults are acceptable for MVP.
+- Keep the existing looping `16c random` runtime, but change its source contract from repeated hardcoded fetches to a local-pool-first selector with explicit empty-pool behavior.
+- Add `16c screensaver` as the same playback core plus screensaver-only terminal lifecycle.
+- Preserve the parser-to-IR-to-renderer handoff that is already checked in, rather than reintroducing raw file passthrough.
+- Add a small dwell policy and playback defaults, with hardcoded defaults acceptable until config loading actually ships.
+- Keep art source boundaries simple: use a playable local or fetched artwork set the current download surface can provide without making `.index.db` mandatory.
 
 ### Stage 2: Local Pool Growth
 
@@ -67,18 +67,15 @@ The screensaver feature should stay decomposed into small orchestration units ra
 ### Command Surface
 
 - `16c random-1` remains the single-artwork command.
-- `16c random` owns repeated playback for normal terminal use.
-- `16c screensaver` reuses the same playback core but adds screensaver-only session rules.
+- `16c random` already owns repeated playback for normal terminal use, but today it is only a thin loop over the one-shot fetch path.
+- `16c screensaver` is still future and should reuse the same playback core while adding screensaver-only session rules.
 
 ### Runtime Coordinator
 
 The runtime coordinator owns the main loop and timing decisions.
 
-- Loads defaults and optional config.
-- Requests the next artwork from a source provider.
-- Invokes parse-plus-render playback.
-- Applies per-piece dwell timing.
-- Stops on explicit exit conditions.
+- Current checked-in behavior: repeatedly invokes the one-shot fetch-and-render path.
+- Stage 1 completion target: load built-in defaults, optionally load config later, request the next artwork from a source provider, invoke parse-plus-render playback, apply per-piece dwell timing, and stop on explicit exit conditions.
 
 ### Artwork Source Provider
 
@@ -92,17 +89,15 @@ The source provider isolates selection policy from playback.
 
 The playback pipeline converts a selected artwork into terminal output.
 
-- Read artwork bytes from disk.
-- Parse into ansilust IR using the appropriate parser.
-- Hand the IR document to the UTF8ANSI renderer.
-- Emit bytes to stdout or an owned terminal session.
+- Current checked-in path already reads artwork bytes from disk, parses them into ansilust IR, renders via UTF8ANSI, and emits bytes to stdout.
+- Stage 1 and later should preserve that same seam whether artwork came from `random-1`, local-pool `random`, or future `screensaver` mode.
 
 ### Session Manager
 
 The session manager exists only for looping and screensaver commands.
 
-- For `16c random`, manage timing between pieces and clean interruption.
-- For `16c screensaver`, also enter and restore alternate screen, cursor visibility, and input-exit behavior.
+- For current `16c random`, the session manager is only a bare loop and does not yet evidence dwell policy, interruption handling, or explicit terminal cleanup.
+- For future `16c screensaver`, also enter and restore alternate screen, cursor visibility, and input-exit behavior.
 
 ## Runtime Loop
 
@@ -153,7 +148,7 @@ Before `.index.db` exists, the selector should use a strict local-first ladder t
 
 1. Try a small ansilust-owned curated seed set if one is present locally. This is the preferred first-run source because it gives the loop a deterministic playable baseline without requiring network fetch, mirror sync, or metadata services.
 2. Otherwise perform filesystem-backed discovery against the known local artwork roots rather than waiting for an index build.
-3. Within that scan, prefer `random/` first because current shipped behavior already downloads `random-1` output there and that directory is the only evidenced cache location in the repo today.
+3. Within that scan, prefer `random/` first because current shipped behavior already downloads `random-1` and looped `random` output there and that directory is the only evidenced cache location in the repo today.
 4. Next prefer `packs/` as the future managed library root for broader downloaded or extracted collections.
 5. Next prefer `local/` for user-supplied or manually dropped artwork that should remain playable but is not required for MVP bootstrap.
 6. Only if all local tiers are empty may the runtime fall back to the remaining hardcoded remote-source behavior, using the existing hardcoded archive entry as a last-resort way to obtain one playable file and repopulate `random/`.
@@ -290,7 +285,7 @@ The session lifecycle differs by command mode.
 
 - Repeated selection and playback.
 - Normal terminal mode by default.
-- Graceful handling for interruption signals.
+- Stage 1 completion should add graceful handling for interruption signals.
 
 ### `screensaver`
 
@@ -311,9 +306,9 @@ Configuration should remain an optional policy layer above runtime playback.
 - The runtime shall work with no config file present by using built-in defaults.
 - The MVP `~/.config/16c/config.toml` surface should stay intentionally tiny and define only the keys needed to tune loop timing and source resolution policy.
 
-### MVP `config.toml` Keys
+### Stage 1 Completion `config.toml` Keys
 
-The first usable screensaver release should recognize exactly these top-level tables and keys:
+The first usable screensaver completion may recognize exactly these top-level tables and keys once config loading is implemented:
 
 ```toml
 [playback]
@@ -323,10 +318,10 @@ dwell_seconds = 20
 mode = "auto"
 ```
 
-Key meanings and defaults:
+Target key meanings and defaults:
 
-- `playback.dwell_seconds = 20`: default number of seconds to keep each artwork visible before advancing in `16c random` and `16c screensaver`, matching the Stage 1 default defined in requirements.
-- `source.mode = "auto"`: use the built-in MVP fallback ladder of curated seed if present, then filesystem-backed local discovery, then the existing hardcoded remote fetch as a last resort.
+- `playback.dwell_seconds = 20`: target default number of seconds to keep each artwork visible before advancing in `16c random` and `16c screensaver`, matching the Stage 1 default defined in requirements.
+- `source.mode = "auto"`: target built-in fallback ladder of curated seed if present, then filesystem-backed local discovery, then the existing hardcoded remote fetch as a last resort.
 
 MVP key constraints:
 
@@ -334,6 +329,11 @@ MVP key constraints:
 - Keep `source.mode` limited to `"auto"` in MVP so the config format exists without prematurely committing to filters, playlists, or source-specific selectors.
 - Omit render-mode, metadata-overlay, transition, fullscreen-layout, and filtering keys until those features actually exist.
 - Omit screensaver-only lifecycle toggles such as alternate-screen or exit-on-input because Stage 1 treats those as fixed command behavior, not user policy.
+
+Current gap note:
+
+- The checked-in runtime does not currently load `~/.config/16c/config.toml` or any equivalent screensaver config surface.
+- The checked-in runtime does not currently expose dwell flags or playback-mode flags on the CLI.
 
 ### Post-MVP Config Surface
 
@@ -381,7 +381,7 @@ The design expects tests to follow the staged architecture.
 
 ### MVP-Focused Tests
 
-- command dispatch for `random` and `screensaver`
+- command dispatch for current `random` and future `screensaver`
 - loop termination after signal or input event
 - renderer handoff from selected artwork to parsed IR to emitted bytes
 - terminal cleanup on normal exit and failure exit
@@ -396,8 +396,8 @@ The design expects tests to follow the staged architecture.
 
 ## Design Decisions
 
-- The playback loop is the MVP center of gravity; mirror/database completeness is not.
+- The playback loop is already checked-in and remains the MVP center of gravity; mirror/database completeness is not.
 - Art-source discovery is a provider boundary so the runtime can ship before `.index.db` exists.
-- Renderer handoff is explicit so screensaver work advances real ansilust playback instead of extending `cat` output.
+- Renderer handoff is already explicit so screensaver work can extend real ansilust playback instead of regressing to raw file output.
 - Fullscreen and exit-on-input behavior belong only to the screensaver session layer, not to every display command.
 - Config, overlays, bootstrap, and desktop integration are deferred to preserve a shortest-path usable runtime.
