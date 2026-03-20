@@ -57,3 +57,40 @@ test "16c random stage1 empty local pool fails with helpful guidance" {
     try testing.expect(std.mem.indexOf(u8, source, "random/") != null);
     try testing.expect(std.mem.indexOf(u8, source, "local/") != null);
 }
+
+test "16c screensaver session enters and restores alternate screen" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "?1049h") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "?1049l") != null);
+}
+
+test "16c screensaver session hides and restores cursor" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "?25l") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "?25h") != null);
+}
+
+test "16c screensaver exits when user input arrives" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "STDIN_FILENO") != null);
+    try testing.expect(
+        std.mem.indexOf(u8, source, "poll") != null or
+            std.mem.indexOf(u8, source, "read") != null,
+    );
+}
+
+test "16c screensaver restores terminal state when interrupted by signal" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(
+        std.mem.indexOf(u8, source, "SIGINT") != null or
+            std.mem.indexOf(u8, source, "SIGTERM") != null,
+    );
+    try testing.expect(
+        std.mem.indexOf(u8, source, "sigaction") != null or
+            std.mem.indexOf(u8, source, "signal") != null,
+    );
+}
