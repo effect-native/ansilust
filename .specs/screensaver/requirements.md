@@ -2,11 +2,11 @@
 
 ## Scope and Staging
 
-This document decomposes screensaver delivery into a shortest-path playable MVP plus deferred expansion layers. It is aligned with current constitutional truth in `.ok/screensaver.ok.md`, `.ok/download.ok.md`, and `.ok/render-utf8ansi.ok.md`: the repository does not currently ship continuous rotation, fullscreen screensaver mode, `.index.db`-backed selection, config parsing, bundled pre-cache, or idle-manager integration.
+This document decomposes screensaver delivery into a shortest-path playable MVP plus deferred expansion layers. It is aligned with current constitutional truth in `.ok/screensaver.ok.md`, `.ok/download.ok.md`, and `.ok/render-utf8ansi.ok.md`: the repository now ships narrow Stage 1 continuous rotation through `16c random`, a fullscreen-style `16c screensaver` terminal mode, and minimal config parsing, but it does not yet ship `.index.db`-backed selection, bundled pre-cache, or idle-manager integration.
 
 ### Stage Boundaries
 
-- **Stage 1 - Playable MVP**: deliver a usable local-loop runtime for `16c random` and `16c screensaver` without requiring `.index.db`, mirror bootstrap, package pre-cache, config parsing, or system integration.
+- **Stage 1 - Playable MVP**: deliver a usable local-loop runtime for `16c random` and `16c screensaver` without requiring `.index.db`, mirror bootstrap, package pre-cache, expanded persistent configuration, or system integration.
 - **Stage 2 - Art-Source Growth**: expand artwork selection beyond the MVP local pool into richer local archive and metadata-backed sources.
 - **Stage 3 - Config Expansion**: add persistent user configuration and richer selection/display controls.
 - **Stage 4 - Launch and Integration**: add service, idle-manager, packaging, and desktop-environment launch surfaces.
@@ -68,7 +68,7 @@ FR1.4.5: WHERE curated bootstrap is enabled the system shall offer an additive w
 FR1.4.6: WHERE bundled or downloaded artwork growth is enabled the system shall preserve the distinction between official archive material and user-managed local artwork.
 
 ### FR1.5: Stage 3 - Config Expansion
-FR1.5.1: WHERE persistent user configuration is enabled the system shall read screensaver settings from a documented config surface.
+FR1.5.1: WHERE expanded persistent user configuration is enabled the system shall read screensaver settings from a documented config surface beyond the minimal Stage 1 runtime parsing contract.
 FR1.5.2: WHERE selection filters are enabled the system shall support filtering by archive metadata fields such as year, group, artist, or format.
 FR1.5.3: WHERE display controls are enabled the system shall support configurable artwork duration and playback mode selection.
 FR1.5.4: WHERE metadata overlays are enabled the system shall support showing and hiding artwork metadata during playback.

@@ -1,15 +1,16 @@
-# 16colors CLI & Download Client - Design Document
+# 16c Download Runtime - Design Document
 
 ## Document Overview
 
-This document provides the technical architecture and implementation strategy for the 16colors download client. It focuses on **WHAT** to build and **HOW** it will be structured, not the actual implementation code.
+This document describes the shipped Stage 1 download architecture for ansilust's `16c` runtime. It records the current executable, module, storage, and playback structure as it exists in checked-in code, while keeping broader archive-client ambitions staged as later work rather than present-tense truth.
 
 **Related Documents**:
-- `instructions.md` - User stories and initial requirements capture
-- `requirements.md` - Formal EARS-based requirements
-- `plan.md` - Implementation roadmap (Phase 4)
+- `instructions.md` - user intent and product framing
+- `requirements.md` - formal requirements language
+- `plan.md` - staged implementation roadmap
+- `.ok/download.ok.md` - constitutional truth for current download behavior
 
-**Design Philosophy**: This design follows Zig best practices for memory safety, explicit error handling, and zero hidden control flow. The architecture separates concerns cleanly while maintaining simplicity and performance.
+**Design Philosophy**: Keep the current runtime simple, local-first, and easy to reason about. Stage 1 favors a small executable surface, explicit module boundaries, platform-resolved directories, and a hardcoded archive abstraction over premature database or mirror complexity.
 
 ---
 
@@ -19,1004 +20,453 @@ This document provides the technical architecture and implementation strategy fo
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        CLI Layer                             │
-│  ┌──────────────┐                  ┌────────────────────┐   │
-│  │  16c CLI     │                  │  ansilust CLI      │   │
-│  │  (archive)   │                  │  (--16colors)      │   │
-│  └──────┬───────┘                  └─────────┬──────────┘   │
-│         │                                    │              │
-│         └────────────────┬───────────────────┘              │
-└──────────────────────────┼────────────────────────────────┘
-                           │
-┌──────────────────────────┼────────────────────────────────┐
-│                   Library Layer                            │
-│  ┌────────────────────────────────────────────────────┐   │
-│  │           16colors Download Library                 │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌─────────────────┐   │   │
-│  │  │ Database │  │ Protocol │  │ Mirror Manager  │   │   │
-│  │  │ Manager  │  │ Clients  │  │                 │   │   │
-│  │  └──────────┘  └──────────┘  └─────────────────┘   │   │
-│  └────────────────────────────────────────────────────┘   │
-└────────────────────────────┬───────────────────────────────┘
+│                       CLI Runtime                           │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  16c executable (`src/cli/sixteenc.zig`)             │  │
+│  │  commands: random, screensaver, random-1, help, ver │  │
+│  └──────────────────────────────┬────────────────────────┘  │
+└─────────────────────────────────┼───────────────────────────┘
+                                  │
+┌─────────────────────────────────┼───────────────────────────┐
+│                    Download Runtime Layer                    │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ `src/download/lib.zig`                                 │ │
+│  │ - database interface export                            │ │
+│  │ - random command runtime export                        │ │
+│  │ - http protocol export                                 │ │
+│  │ - storage path/file export                             │ │
+│  └──────────────────────────────┬─────────────────────────┘ │
+└─────────────────────────────────┼───────────────────────────┘
+                                  │
+┌─────────────────────────────────┼───────────────────────────┐
+│                    Stage 1 Command Runtime                  │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ `commands/random.zig`                                  │ │
+│  │ - load Stage 1 config                                  │ │
+│  │ - resolve local-first artwork selection                │ │
+│  │ - optional remote fallback for `random-1`             │ │
+│  │ - save remote result to `random/` cache               │ │
+│  │ - render via ansilust parser + UTF8ANSI renderer      │ │
+│  └───────────────┬───────────────────────┬───────────────┘ │
+└──────────────────┼───────────────────────┼─────────────────┘
+                   │                       │
+         ┌─────────┘                       └─────────┐
+         │                                           │
+┌────────┼───────────────┐                 ┌─────────┼──────────────┐
+│   Archive Source       │                 │   Local Storage         │
+│ `database/interface`   │                 │ `storage/paths.zig`     │
+│ `database/hardcoded`   │                 │ `storage/files.zig`     │
+│ current source set:    │                 │ root + random/packs/    │
+│ one curated file entry │                 │ local directories        │
+└────────┬───────────────┘                 └─────────┬──────────────┘
+         │                                           │
+         └───────────────────┬───────────────────────┘
                              │
-┌────────────────────────────┼───────────────────────────────┐
-│                     Protocol Layer                          │
-│  ┌──────────┐   ┌──────────┐   ┌──────────────────────┐   │
-│  │   HTTP   │   │   FTP    │   │   RSYNC (wrapper)    │   │
-│  │  Client  │   │  Client  │   │                      │   │
-│  └──────────┘   └──────────┘   └──────────────────────┘   │
-└────────────────────────────┬───────────────────────────────┘
-                             │
-┌────────────────────────────┼───────────────────────────────┐
-│                      Storage Layer                          │
-│  ┌──────────────────┐   ┌──────────────────────────────┐   │
-│  │   File System    │   │   SQLite Database            │   │
-│  │   (16colors/)    │   │   (.index.db)                │   │
-│  └──────────────────┘   └──────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+                 ┌───────────┴───────────┐
+                 │ HTTP Download Path    │
+                 │ `protocols/http.zig`  │
+                 │ curl via `sh -c`      │
+                 └───────────────────────┘
 ```
 
 ### Component Relationships
 
-**CLI Layer** → **Library Layer** → **Protocol Layer** → **Storage Layer**
-
-- **CLI Layer**: Two entry points (`16c`, `ansilust --16colors`) with different default contexts
-- **Library Layer**: Reusable download/mirror/search logic (independent of CLI)
-- **Protocol Layer**: HTTP/FTP/RSYNC clients with automatic fallback
-- **Storage Layer**: Platform-specific filesystem + SQLite database
+- The shipped entrypoint is the standalone `16c` executable; there is no shipped `ansilust --16colors` integration path yet.
+- `src/cli/sixteenc.zig` parses command and playback flags, then delegates to the random command runtime.
+- `src/download/commands/random.zig` owns the actual Stage 1 workflow for single-play, looping, and screensaver playback.
+- The archive source is abstracted behind `ArchiveDatabase`, but the shipped implementation is the hardcoded provider, not SQLite.
+- Storage exists primarily to support local-first playback and the `random/` cache; `packs/` and broader archive management remain reserved structure, not active workflow.
 
 ---
 
 ## Module Organization
 
-### Primary Modules
+### Shipped Stage 1 Modules
 
 ```
+src/cli/
+└── sixteenc.zig                    # standalone 16c executable and flag parsing
+
 src/download/
-├── lib.zig                    # Public library API
-├── cli/
-│   ├── sixteenc.zig          # 16c CLI entry point
-│   ├── ansilust_integration.zig  # --16colors flag handling
-│   └── commands.zig          # Shared CLI commands
+├── lib.zig                         # public Stage 1 download surface
+├── commands/
+│   ├── random.zig                  # random-1, random loop, screensaver runtime
+│   └── stage1_config.zig           # minimal config parser for config.toml
 ├── database/
-│   ├── schema.zig            # Database schema and migrations
-│   ├── queries.zig           # Query builders
-│   ├── fts.zig               # Full-text search
-│   └── updates.zig           # Auto-update mechanism
+│   ├── interface.zig               # stable archive abstraction
+│   └── hardcoded.zig               # current curated in-memory archive source
 ├── protocols/
-│   ├── http.zig              # HTTP/HTTPS client
-│   ├── ftp.zig               # FTP client
-│   └── rsync.zig             # RSYNC wrapper
-├── mirror/
-│   ├── sync.zig              # Mirror sync logic
-│   ├── filters.zig           # Content filtering (NSFW, executables, etc.)
-│   └── config.zig            # Mirror configuration management
-├── storage/
-│   ├── paths.zig             # Platform-specific path resolution
-│   ├── extract.zig           # ZIP extraction
-│   └── sauce.zig             # SAUCE metadata extraction
-└── errors.zig                # Error definitions
-
-tests/
-├── database_test.zig
-├── protocols_test.zig
-├── mirror_test.zig
-└── integration_test.zig
+│   └── http.zig                    # HTTP-only download path via curl shell-out
+└── storage/
+    ├── paths.zig                   # platform root + subdirectory resolution
+    └── files.zig                   # random-cache save path and cleanup stub
 ```
 
-### Module Dependencies
+### Dependency Flow
 
-**Dependency Flow**:
-```
-cli/* → lib.zig → database/*, protocols/*, mirror/*, storage/*
-database/* → storage/paths.zig
-protocols/* → (std.http, custom FTP, shell rsync)
-mirror/* → protocols/*, database/*, storage/*
-storage/* → (std.fs, std.zip)
+```text
+src/cli/sixteenc.zig
+  -> src/download/commands/random.zig
+  -> src/download/commands/stage1_config.zig
+  -> src/download/database/interface.zig
+  -> src/download/database/hardcoded.zig
+  -> src/download/protocols/http.zig
+  -> src/download/storage/paths.zig
+  -> src/download/storage/files.zig
+  -> ansilust parser + renderer APIs
 ```
 
-**Key Design Decisions**:
-- No circular dependencies (DAG structure)
-- Each module has clear single responsibility
-- Protocol clients are interchangeable (interface-based design)
-- Database layer is isolated (can swap SQLite implementation)
+### Module Boundary Intent
+
+- `sixteenc.zig` owns CLI syntax and user-facing dispatch only.
+- `random.zig` owns runtime orchestration and playback/session behavior.
+- `stage1_config.zig` owns the tiny Stage 1 config schema and parsing rules.
+- `database/interface.zig` preserves a stable seam for later archive metadata growth without forcing SQLite into the shipped MVP.
+- `storage/*.zig` isolates platform path policy and on-disk file behavior from command orchestration.
+
+---
+
+## Shipped Runtime Baseline
+
+### CLI Surface
+
+The current runtime is centered on these command paths in `src/cli/sixteenc.zig`:
+
+- `random` - replay artwork continuously using the Stage 1 playback loop
+- `screensaver` - run the alternate-screen looping session
+- `random-1` - fetch or select one artwork and display it once
+- `--help` / `-h`
+- `--version` / `-v`
+
+Playback control is intentionally small:
+
+- `--instant` disables dwell delay between loop iterations
+- `--streaming-speed <preset>` accepts `slow`, `normal`, or `fast`
+- conflicting playback flags fail fast
+
+### Stage 1 Source Policy
+
+Stage 1 is local-first, not database-first:
+
+- `random` and `screensaver` first scan `random/` and `local/` for playable `.ans` or `.asc` files
+- if no playable local file exists, `random` and `screensaver` stop with guidance rather than fetching remotely
+- `random-1` uses the same local-first scan, but may fall back to one remote archive selection when the local pool is empty
+- remote fallback currently uses the hardcoded archive abstraction and HTTP-only download path
+
+### Storage Reality
+
+`src/download/storage/paths.zig` resolves a shared `16colors` root and creates:
+
+- `random/` - runtime cache used by Stage 1 playback
+- `packs/` - reserved official archive area, not yet populated by shipped workflows
+- `local/` - user-managed artwork input for local-first playback
+
+`src/download/storage/files.zig` currently implements:
+
+- timestamped saves into `random/`
+- a declared random-cache cleanup seam
+- a no-op cleanup implementation for now
+
+### Archive Reality
+
+`src/download/database/interface.zig` provides the long-lived abstraction surface, but the shipped implementation is `database/hardcoded.zig`:
+
+- `getRandomFile` works
+- `searchFiles` returns an empty result set
+- `getPack` returns `error.NotImplemented`
+- `listPacksByYear` returns an empty result set
+- the curated source list currently contains one verified remote file entry
+
+This is deliberate Stage 1 scaffolding, not an accidental partial SQLite client.
+
+---
+
+## Runtime Flows
+
+### `16c random-1`
+
+High-level flow:
+
+```text
+1. Resolve platform paths and create root/random/packs/local directories.
+2. Scan random/ and local/ for playable .ans/.asc artwork.
+3. If a local candidate exists, display it and exit.
+4. Otherwise initialize ArchiveDatabase using the hardcoded implementation.
+5. Select one remote file entry.
+6. Download it to /tmp via HttpClient.
+7. Save the downloaded file into random/ with a timestamped filename.
+8. Call random-cache cleanup.
+9. Parse and render the saved file through ansilust.
+```
+
+### `16c random`
+
+High-level flow:
+
+```text
+1. Load config.toml from the 16colors root, or use built-in defaults.
+2. Resolve dwell/playback mode from CLI flags plus config.
+3. Repeatedly call the shared one-shot playback path with remote fallback disabled.
+4. Sleep between iterations unless instant mode is selected.
+5. Stop only on process termination or surfaced runtime error.
+```
+
+### `16c screensaver`
+
+High-level flow:
+
+```text
+1. Load the same Stage 1 config defaults/overrides as random.
+2. Enter alternate-screen session if stdout is a TTY.
+3. Install SIGINT and SIGTERM handlers for best-effort exit.
+4. Repeatedly play one local artwork item with remote fallback disabled.
+5. Exit on signal, input readiness, iteration bound in tests, or runtime error.
+6. Restore terminal state on the way out.
+```
 
 ---
 
 ## Data Structures
 
-### Core Types
+### Playback Types
 
-#### Platform Detection
+`src/download/commands/random.zig` defines the current playback control model:
+
+- `PlaybackMode` - `.standard`, `.instant`, or `.streaming`
+- `StreamingSpeed` - `slow`, `normal`, `fast`
+- `RandomPlaybackLoop` - loop state containing playback mode, resolved delay, and source mode
+- `ScreensaverPlaybackLoop` - screensaver wrapper around the random playback loop
+
+These are runtime control types, not archive metadata models.
+
+### Config Types
+
+`src/download/commands/stage1_config.zig` defines the shipped config schema:
+
 ```zig
-/// Platform-specific directory paths
-pub const PlatformPaths = struct {
-    /// 16colors root directory (~/Pictures/16colors/ or platform equivalent)
-    sixteen_colors_root: []const u8,
-    
-    /// Tool-specific cache directory
-    cache_dir: []const u8,
-    
-    /// Tool-specific config directory
-    config_dir: []const u8,
-};
-
-/// Platform detection and path resolution
-pub const Platform = enum {
-    linux,
-    macos,
-    windows,
-    
-    pub fn detect() Platform;
-    pub fn getPaths(allocator: Allocator) !PlatformPaths;
+pub const Stage1Config = struct {
+    playback: PlaybackConfig = .{},
+    source: SourceConfig = .{},
 };
 ```
 
-#### Database Types
-```zig
-/// Global archive database (.index.db)
-pub const ArchiveDatabase = struct {
-    db: *sqlite.Database,
-    allocator: Allocator,
-    path: []const u8,
-    
-    pub fn init(allocator: Allocator, path: []const u8) !ArchiveDatabase;
-    pub fn deinit(self: *ArchiveDatabase) void;
-    pub fn checkForUpdates(self: *ArchiveDatabase) !?UpdateInfo;
-    pub fn applyPatch(self: *ArchiveDatabase, patch_sql: []const u8) !void;
-};
+Shipped knobs are intentionally minimal:
 
-/// Pack metadata from database
-pub const Pack = struct {
-    id: i64,
-    name: []const u8,
-    year: u16,
-    group_name: ?[]const u8,
-    release_date: ?[]const u8,
-    file_count: u32,
-    total_size: u64,
-    nsfw: bool,
-    zip_url: []const u8,
-    web_url: []const u8,
-};
+- `playback.dwell_seconds`
+- `source.mode = "auto"`
 
-/// File metadata from database
-pub const ArtFile = struct {
-    id: i64,
-    pack_id: i64,
-    relative_path: []const u8,
-    filename: []const u8,
-    extension: ?[]const u8,
-    size: u64,
-    artist: ?[]const u8,
-    title: ?[]const u8,
-    sauce_data: ?[]const u8,  // JSON string
-    source_url: []const u8,
-    png_url: ?[]const u8,
-    png_url_x1: ?[]const u8,
-    png_url_x2: ?[]const u8,
-};
+No checked-in evidence yet supports richer source policies, filtering, or mirror settings.
 
-/// Search results with context
-pub const SearchResult = struct {
-    file: ArtFile,
-    pack: Pack,
-    match_score: f32,  // FTS5 relevance
-};
-```
+### Archive Types
 
-#### Protocol Types
-```zig
-/// Download progress callback
-pub const ProgressCallback = fn (bytes_transferred: u64, total_bytes: u64) void;
+`src/download/database/interface.zig` provides the archive-facing types:
 
-/// Protocol selection strategy
-pub const ProtocolStrategy = enum {
-    auto,        // Automatic selection
-    http_only,
-    ftp_only,
-    rsync_only,
-};
+- `FileEntry` - pack name, filename, source URL, year, optional artist, extension
+- `Pack` - pack name, year, optional group name, zip URL
+- `Implementation` - union over `.hardcoded` and future `.sqlite`
+- `ArchiveDatabase` - wrapper that dispatches to the selected backend
 
-/// Download options
-pub const DownloadOptions = struct {
-    allocator: Allocator,
-    protocol: ProtocolStrategy = .auto,
-    resume: bool = true,
-    progress_callback: ?ProgressCallback = null,
-    rate_limit_bytes_per_sec: ?u64 = null,
-};
+The important architectural point is that the interface is shipped, while the SQLite branch remains a placeholder.
 
-/// Protocol client interface (concept, not explicit trait)
-/// All protocol clients implement: download(url, dest, options)
-pub const HttpClient = struct {
-    allocator: Allocator,
-    
-    pub fn init(allocator: Allocator) HttpClient;
-    pub fn download(self: *HttpClient, url: []const u8, dest: []const u8, options: DownloadOptions) !void;
-    pub fn head(self: *HttpClient, url: []const u8) !HttpHeaders;
-};
+### Storage Types
 
-pub const FtpClient = struct {
-    allocator: Allocator,
-    
-    pub fn init(allocator: Allocator) FtpClient;
-    pub fn download(self: *FtpClient, url: []const u8, dest: []const u8, options: DownloadOptions) !void;
-    pub fn list(self: *FtpClient, path: []const u8) ![]FtpEntry;
-};
+`src/download/storage/paths.zig` defines `PlatformPaths` with:
 
-pub const RsyncClient = struct {
-    allocator: Allocator,
-    
-    pub fn init(allocator: Allocator) !RsyncClient;  // May fail if rsync not found
-    pub fn sync(self: *RsyncClient, src: []const u8, dest: []const u8, options: RsyncOptions) !void;
-};
-```
+- `sixteen_colors_root`
+- `random_dir`
+- `packs_dir`
+- `local_dir`
 
-#### Mirror Types
-```zig
-/// Mirror filter configuration
-pub const MirrorFilters = struct {
-    year_range: ?struct { since: u16, until: ?u16 } = null,
-    include_nsfw: bool = false,
-    include_executables: bool = false,
-    exclude_extensions: ?[]const []const u8 = null,
-    include_extensions: ?[]const []const u8 = null,  // Overrides defaults if set
-    exclude_groups: ?[]const []const u8 = null,
-    include_groups: ?[]const []const u8 = null,
-};
-
-/// Mirror configuration (persisted to .16colors-config.json)
-pub const MirrorConfig = struct {
-    mirror_mode: enum { full, filtered } = .filtered,
-    last_sync: ?[]const u8 = null,  // ISO 8601 timestamp
-    defaults: struct {
-        exclude_nsfw: bool = true,
-        exclude_executables: bool = true,
-    } = .{},
-    filters: MirrorFilters = .{},
-    sync_stats: ?SyncStats = null,
-    
-    pub fn load(allocator: Allocator, path: []const u8) !MirrorConfig;
-    pub fn save(self: *const MirrorConfig, path: []const u8) !void;
-};
-
-/// Mirror sync statistics
-pub const SyncStats = struct {
-    total_packs: u32,
-    total_size_bytes: u64,
-    last_duration_seconds: u64,
-    nsfw_excluded_count: u32,
-    executables_excluded_count: u32,
-};
-```
-
----
-
-## Algorithm Approaches
-
-### Database Auto-Update Flow
-
-**High-level algorithm** (non-blocking, throttled):
-
-```
-1. On CLI invocation (16c command):
-   a. Load cached .index.db (instant access to search)
-   b. Check if update check is due (throttle: max once per hour)
-   c. If not due: proceed with command
-   d. If due: spawn background update check
-   
-2. Background update check:
-   a. HEAD request to https://ansilust.com/16colors/.index.db.version
-   b. Compare remote version with local schema_version
-   c. If versions match: update throttle timestamp, exit
-   d. If remote newer: determine update strategy
-   
-3. Update strategy decision:
-   a. Check for available patches (0001.sql, 0002.sql, ...)
-   b. Calculate patch count needed (remote_version - local_version)
-   c. If patch count < 10: incremental update (apply patches)
-   d. If patch count >= 10: full update (download new .index.db)
-   
-4. Incremental update:
-   a. Download missing patches sequentially
-   b. Apply each patch in transaction
-   c. On failure: rollback, fallback to full update
-   d. Update schema_version on success
-   
-5. Full update:
-   a. Download .index.db to temporary location
-   b. Verify database integrity (SQLite PRAGMA integrity_check)
-   c. If valid: atomic rename to replace .index.db
-   d. If invalid: delete temp, continue with cached database
-   
-6. Error handling:
-   a. Network failure: log error, continue with cached DB
-   b. Corruption: log error, continue with cached DB
-   c. Never block user's command on update failure
-```
-
-**Throttling mechanism**:
-- Store last update check timestamp in cache directory
-- File: `~/.cache/16colors-tools/ansilust/last_update_check`
-- Format: Unix timestamp (seconds since epoch)
-- Check on every CLI invocation, proceed only if > 3600 seconds elapsed
-
-### Search Algorithm (FTS5)
-
-**Full-text search flow**:
-
-```
-1. Parse user query (filename or full-text search):
-   a. Simple filename: exact match first, then FTS5
-   b. Complex query: direct FTS5 query
-   
-2. Execute FTS5 query:
-   SELECT f.*, p.*, rank 
-   FROM files_fts 
-   JOIN files f ON files_fts.rowid = f.id
-   JOIN packs p ON f.pack_id = p.id
-   WHERE files_fts MATCH :query
-   ORDER BY rank
-   LIMIT 100
-   
-3. Enhance results:
-   a. Check filesystem for local availability
-   b. Add download URLs from database
-   c. Calculate match score (FTS5 rank)
-   
-4. Return SearchResult array sorted by relevance
-```
-
-**Filesystem check** (local download detection):
-```
-For each result:
-  path = ~/Pictures/16colors/packs/{year}/{pack_name}/{relative_path}
-  if file_exists(path):
-    result.locally_available = true
-  else:
-    result.locally_available = false
-```
-
-### Mirror Sync Algorithm
-
-**Incremental sync flow**:
-
-```
-1. Load mirror configuration (.16colors-config.json)
-   - Read filters, exclusions, last sync timestamp
-   
-2. Query database for packs to sync:
-   SELECT * FROM packs
-   WHERE (year >= filters.year_range.since)
-     AND (filters.include_nsfw OR nsfw = 0)
-     AND ...  -- Apply all filters
-   ORDER BY year, name
-   
-3. For each pack in query results:
-   a. Check if already downloaded (filesystem check)
-   b. If exists and not --force: skip
-   c. If not exists or --force: add to download queue
-   
-4. Apply file-level filters:
-   a. For each file in pack (from database):
-      - Check extension against include/exclude lists
-      - Check for executable extensions (default exclude)
-      - Track exclusion statistics
-   b. Build filtered file list per pack
-   
-5. Execute downloads:
-   a. Select protocol (RSYNC > FTP > HTTP)
-   b. Download in order (sequential for now, parallel future)
-   c. Display progress per pack and overall
-   d. Extract ZIP after download
-   e. Update sync statistics
-   
-6. Persist updated configuration:
-   - Update last_sync timestamp
-   - Update sync_stats
-   - Save .16colors-config.json
-```
-
-**Dry-run mode**:
-- Execute steps 1-4 (filtering and planning)
-- Display what would be downloaded (pack names, sizes, counts)
-- Show exclusion statistics (NSFW, executables, extensions)
-- Exit without downloading
-
-### ZIP Extraction with Security
-
-**Path traversal prevention**:
-
-```
-1. For each entry in ZIP archive:
-   a. Normalize path (resolve .., ., etc.)
-   b. Ensure path does not start with / (absolute path)
-   c. Ensure path does not contain .. components
-   d. Construct full destination path
-   e. Verify destination is within allowed directory
-   
-2. Security checks:
-   IF normalized_path starts with '/': REJECT (absolute path)
-   IF normalized_path contains '..': REJECT (parent traversal)
-   IF destination_path not within base_dir: REJECT (escape attempt)
-   
-3. Extract if all checks pass:
-   a. Create intermediate directories as needed
-   b. Write file contents
-   c. Preserve timestamps if available
-   d. Track extracted files for indexing
-```
+`src/download/storage/files.zig` defines `FileStorage` for saving cache files and later pruning them.
 
 ---
 
 ## Error Handling Strategy
 
-### Error Sets
+### Current Strategy
 
-```zig
-/// Download-related errors
-pub const DownloadError = error{
-    NetworkFailure,
-    ConnectionRefused,
-    Timeout,
-    HttpError,
-    FtpError,
-    FileNotFound,
-    PermissionDenied,
-    DiskFull,
-    CorruptedDownload,
-    InvalidUrl,
-    UnsupportedProtocol,
-};
+Stage 1 uses explicit Zig error propagation and keeps failure modes close to the command runtime:
 
-/// Database-related errors
-pub const DatabaseError = error{
-    SchemaVersionMismatch,
-    CorruptedDatabase,
-    MigrationFailed,
-    QueryFailed,
-    OutOfMemory,
-    LockTimeout,
-};
+- CLI parsing errors fail immediately for unknown commands, unknown flags, missing presets, and conflicting flags
+- local-playback commands surface `error.EmptyLocalArtworkPool` when no playable local files exist
+- config loading falls back to defaults when `config.toml` is missing
+- remote failures bubble from the HTTP client or archive abstraction
+- unimplemented archive APIs remain explicit through empty results or `error.NotImplemented`
 
-/// Mirror-related errors
-pub const MirrorError = error{
-    InvalidConfiguration,
-    FilterError,
-    SyncFailed,
-    InsufficientSpace,
-};
+### Architectural Intent
 
-/// Combined library error set
-pub const LibraryError = DownloadError || DatabaseError || MirrorError || std.mem.Allocator.Error || std.fs.File.OpenError;
-```
-
-### Error Propagation Patterns
-
-**Functions use error unions**:
-```zig
-pub fn downloadPack(
-    allocator: Allocator,
-    pack_name: []const u8,
-    options: DownloadOptions
-) DownloadError!void {
-    // Explicit error handling, propagate with try
-}
-
-pub fn searchArchive(
-    db: *ArchiveDatabase,
-    query: []const u8
-) DatabaseError![]SearchResult {
-    // FTS5 search with explicit error handling
-}
-```
-
-**Error context**:
-- Store error context in stack-allocated structures
-- Include relevant info: URL, file path, pack name, operation type
-- Log errors with context for debugging
-- Display user-friendly error messages in CLI
-
-**Fallback strategies**:
-- Protocol failure → fallback to alternative protocol
-- Database update failure → continue with cached database
-- Single pack download failure → continue with next pack (in batch)
-- Network timeout → retry with exponential backoff (max 3 attempts)
+- Keep Stage 1 errors concrete and visible rather than hiding them behind a large speculative shared error taxonomy.
+- Preserve stable seams where later search, pack, mirror, or database features can introduce more structured domain errors.
+- Treat missing future capabilities as explicit non-support, not partial silent behavior.
 
 ---
 
 ## Memory Management Strategy
 
-### Allocator Usage
+### Current Patterns
 
-**Allocator passing patterns**:
-```zig
-// Explicit allocator for all allocations
-pub fn init(allocator: Allocator) !Self {
-    // Store allocator in struct
-    return Self{ .allocator = allocator };
-}
+- CLI and command entrypoints receive an explicit allocator.
+- `PlatformPaths` owns allocated path strings and requires `deinit`.
+- `ArchiveDatabase` owns its backend wrapper and provides `deinit`.
+- local file candidate selection duplicates owned path strings before returning them.
+- temporary download paths and saved-path strings are allocator-owned and released by the caller.
+- artwork display uses page allocator reads/renders for the one-shot render path.
 
-// Caller-owned memory (common for queries)
-pub fn searchArchive(
-    allocator: Allocator,  // Results allocated with this
-    db: *ArchiveDatabase,
-    query: []const u8
-) ![]SearchResult {
-    // Caller must deinit results
-}
+### Design Intent
 
-// Self-owned memory (cleanup with deinit)
-pub const HttpClient = struct {
-    allocator: Allocator,
-    buffer: []u8,
-    
-    pub fn deinit(self: *HttpClient) void {
-        self.allocator.free(self.buffer);
-    }
-};
-```
-
-**Resource cleanup patterns**:
-```zig
-// defer for success path cleanup
-pub fn downloadPack(...) !void {
-    const temp_file = try fs.createFile(temp_path, .{});
-    defer temp_file.close();  // Always close
-    
-    // Download to temp_file...
-}
-
-// errdefer for error path cleanup
-pub fn extractZip(...) !void {
-    const entries = try allocator.alloc(Entry, count);
-    errdefer allocator.free(entries);  // Free on error
-    
-    // Process entries...
-    // On success, caller owns entries
-}
-
-// Combined defer + errdefer for complex resources
-pub fn syncMirror(...) !void {
-    var state = try State.init(allocator);
-    defer state.deinit();      // Cleanup on success
-    errdefer state.cleanup();  // Rollback on error
-}
-```
-
-### Memory Allocation Patterns
-
-**Arena allocator for request-scoped allocations**:
-```zig
-pub fn handleCliCommand(allocator: Allocator, args: []const []const u8) !void {
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();  // Free all at once
-    
-    const arena_alloc = arena.allocator();
-    // All CLI-command allocations use arena_alloc
-    // Automatic cleanup on function return
-}
-```
-
-**Pooled allocations for long-lived resources**:
-```zig
-pub const DatabaseManager = struct {
-    allocator: Allocator,
-    query_buffer_pool: BufferPool,
-    
-    pub fn executeQuery(self: *DatabaseManager, query: []const u8) ![]Row {
-        const buffer = try self.query_buffer_pool.acquire();
-        defer self.query_buffer_pool.release(buffer);
-        // Reuse buffer across queries
-    }
-};
-```
-
-**Ownership rules**:
-- **Caller-owned**: Search results, query outputs (caller must free)
-- **Self-owned**: Internal buffers, caches (freed in deinit)
-- **Arena-owned**: Temporary CLI command data (auto-freed)
-- **Database-owned**: Database connections, prepared statements
+- Keep ownership local and obvious.
+- Avoid introducing a long-lived cache manager or shared database state before Stage 1 needs it.
+- Prefer short-lived allocations per command invocation over speculative persistent services.
 
 ---
 
 ## Testing Approach
 
-### Test Categories
+### Shipped Validation Surface
 
-#### Unit Tests
-**What to test**:
-- Platform path resolution (Linux, macOS, Windows)
-- URL construction (pack URLs, file URLs, PNG URLs)
-- Filter logic (NSFW, executables, extensions, year ranges)
-- SAUCE metadata parsing
-- Database query builders
-- Error handling for each module
+The public Stage 1 download surface is validated by tests re-exported from `src/download/lib.zig`:
 
-**Test structure**:
-```zig
-test "Platform.getPaths returns correct paths on Linux" {
-    const allocator = testing.allocator;
-    const platform = Platform.linux;
-    
-    const paths = try platform.getPaths(allocator);
-    defer allocator.free(paths.sixteen_colors_root);
-    defer allocator.free(paths.cache_dir);
-    
-    try testing.expect(std.mem.endsWith(u8, paths.sixteen_colors_root, ".local/share/16colors"));
-}
+- `src/download/commands/random_test.zig`
+- `src/download/database/interface_test.zig`
+- `src/download/protocols/http_test.zig`
+- `src/download/storage/paths_test.zig`
+- `src/download/storage/files_test.zig`
+- command-surface tests in `src/cli/sixteenc.zig`
 
-test "MirrorFilters excludes NSFW by default" {
-    const filters = MirrorFilters{};
-    
-    try testing.expectEqual(false, filters.include_nsfw);
-    try testing.expectEqual(false, filters.include_executables);
-}
-```
+### What Stage 1 Tests Need To Prove
 
-#### Integration Tests
-**What to test**:
-- Download complete pack via HTTP (use test server or fixture)
-- Extract ZIP and verify structure
-- Database operations (create, query, update, FTS5 search)
-- Protocol fallback (HTTP fails → FTP succeeds)
-- Mirror sync with filters (dry-run vs actual)
-- Configuration persistence (save/load)
+- the `16c` command surface matches the shipped runtime
+- playback flags and conflicts are enforced
+- local-first selection only accepts playable `.ans` and `.asc` files
+- config loading defaults work without a checked-in config file
+- path resolution and file save behavior remain stable
+- the archive abstraction still selects the hardcoded backend today
 
-**Test fixtures**:
-- Mock HTTP server (return canned responses)
-- Sample ZIP files (small test packs)
-- Sample SQLite database (pre-populated with test data)
-- Temporary directories (isolated test environments)
-
-#### System Tests
-**What to test**:
-- End-to-end CLI workflows (`16c download`, `16c search`, etc.)
-- Cross-platform compatibility (run on Linux, macOS, Windows)
-- Performance benchmarks (large pack download, FTS5 search)
-- Error recovery (network failures, disk full, corrupted files)
-- Concurrent access (multiple tools using .index.db)
-
-### Test Execution Strategy
-
-**Test isolation**:
-- Each test uses temporary directories
-- Database tests use in-memory SQLite (`:memory:`)
-- Network tests use mock servers or recorded responses
-- No tests depend on external services (16colo.rs)
-
-**Memory leak detection**:
-```zig
-test "downloadPack does not leak memory" {
-    const allocator = testing.allocator;  // Leak detection
-    
-    try downloadPack(allocator, "test-pack", .{});
-    
-    // testing.allocator will fail test if leaks detected
-}
-```
-
-**Performance benchmarks**:
-```zig
-test "FTS5 search completes in < 500ms" {
-    const start = std.time.milliTimestamp();
-    
-    const results = try db.searchArchive(allocator, "dragon");
-    defer allocator.free(results);
-    
-    const duration = std.time.milliTimestamp() - start;
-    try testing.expect(duration < 500);
-}
-```
+This test strategy is intentionally aligned to the MVP runtime, not to future search or mirror promises.
 
 ---
 
 ## Integration Points
 
-### Existing Ansilust Codebase
+### Ansilust Rendering Integration
 
-**Parser integration**:
-```zig
-// From ansilust parsers module
-const parsers = @import("parsers");
+The download runtime integrates with ansilust only at display time:
 
-pub fn validateDownloadedFile(file_path: []const u8) !void {
-    // Use ansilust parser to validate format
-    const format = try parsers.detectFormat(file_path);
-    const valid = try parsers.validate(file_path, format);
-    
-    if (!valid) {
-        return error.InvalidFormat;
-    }
-}
-```
+- `random.zig` reads the chosen file
+- `ansilust.parsers.ansi.parse` parses it
+- `ansilust.renderToUtf8Ansi` renders it for the current stdout context
 
-**Renderer integration**:
-```zig
-// From ansilust renderers module
-const renderers = @import("renderers");
+This means the Stage 1 runtime is already useful as a downloader-plus-player without requiring broader archive management features.
 
-pub fn displayArtwork(file_path: []const u8, format: Format) !void {
-    // Render using ansilust utf8ansi renderer
-    const renderer = renderers.Utf8AnsiRenderer.init(allocator);
-    try renderer.renderFile(file_path);
-}
-```
+### Build Integration
 
-### Third-Party Tool Integration
-
-**Database schema documentation**:
-- Publish schema at `https://ansilust.com/.well-known/schemas/index-db-schema-v1.sql`
-- Include comments explaining each table and field
-- Provide example queries for common operations
-
-**Event emission** (future):
-```zig
-pub const DownloadEvent = union(enum) {
-    pack_downloaded: struct { pack_name: []const u8, path: []const u8 },
-    database_updated: struct { old_version: u32, new_version: u32 },
-    artwork_available: struct { file: ArtFile, pack: Pack },
-};
-
-pub const EventCallback = fn (event: DownloadEvent) void;
-
-pub fn registerCallback(callback: EventCallback) void {
-    // Allow screensavers, viewers to hook into events
-}
-```
+- `build.zig` installs the standalone `16c` executable
+- `src/download/lib.zig` defines the checked-in public module surface for download functionality
+- no shipped build wiring currently proves alternate executable aliases or ansilust-side integration flags
 
 ---
 
 ## Performance Considerations
 
-### Expected Performance Characteristics
+### Current Expectations
 
-**Database operations**:
-- Simple queries (pack by name): < 10ms
-- FTS5 search (entire archive): < 500ms
-- Database update check: < 1s (network-bound)
-- Patch application: < 100ms per patch
+- local replay should dominate the common loop path once `random/` or `local/` has artwork
+- remote fallback is lightweight because Stage 1 downloads only one artwork file at a time
+- the hardcoded archive provider keeps metadata lookup trivial
+- HTTP download implementation is simple rather than optimized
+- rendering cost is bounded by one file per iteration, not by pack extraction or large-index queries
 
-**Download operations**:
-- HTTP pack download: Network-bound (aim for > 1MB/s throughput)
-- Resume support: Negligible overhead (Range header)
-- ZIP extraction: > 10MB/s (I/O-bound, not CPU)
+### Non-Goals For Stage 1
 
-**Memory usage**:
-- Database: < 100MB (entire .index.db loaded into memory by SQLite)
-- HTTP client: < 10MB (streaming downloads, 8KB buffer)
-- ZIP extraction: < 2x largest file size (decompress buffer)
-- CLI command: < 50MB total (arena allocator for request)
-
-### Optimization Strategies
-
-**Database optimizations**:
-- Create indexes on frequently queried fields (year, artist, extension)
-- Use prepared statements for repeated queries
-- Enable SQLite WAL mode (concurrent reads)
-- Vacuum database periodically (reclaim space)
-
-**Network optimizations**:
-- Connection pooling for FTP (reuse connections)
-- HTTP keep-alive (multiple requests per connection)
-- Streaming downloads (no buffer entire file)
-- Resume support (avoid re-downloading)
-
-**Filesystem optimizations**:
-- Batch filesystem operations (create all directories first)
-- Use memory-mapped files for large ZIP extraction (future)
-- Preallocate file space before download (avoid fragmentation)
+- no pack-scale synchronization
+- no search indexing performance target
+- no database update scheduler
+- no concurrent mirror bandwidth management
 
 ---
 
 ## API Surface
 
-### Public Library API
+### Shipped Public Surface
 
-#### Core Functions
+`src/download/lib.zig` currently exports:
 
-```zig
-/// Initialize 16colors download library
-pub fn init(allocator: Allocator) !Library {
-    // Detect platform, resolve paths, open database
-}
+- `database`
+- `commands.random`
+- `RandomPlaybackLoop`
+- `ScreensaverPlaybackLoop`
+- `protocols.http`
+- `storage.paths`
+- `storage.files`
 
-/// Search archive for files
-pub fn searchArchive(
-    lib: *Library,
-    query: []const u8
-) ![]SearchResult {
-    // FTS5 full-text search
-}
-
-/// Download a pack by name
-pub fn downloadPack(
-    lib: *Library,
-    pack_name: []const u8,
-    options: DownloadOptions
-) !void {
-    // Automatic protocol selection, progress tracking
-}
-
-/// Sync mirror with filters
-pub fn syncMirror(
-    lib: *Library,
-    filters: MirrorFilters,
-    dry_run: bool
-) !SyncStats {
-    // Incremental sync, apply filters, return statistics
-}
-
-/// Get pack information from database
-pub fn getPack(
-    lib: *Library,
-    pack_name: []const u8
-) !Pack {
-    // Query database for pack metadata
-}
-
-/// List packs matching criteria
-pub fn listPacks(
-    lib: *Library,
-    filters: struct {
-        year: ?u16 = null,
-        group: ?[]const u8 = null,
-        artist: ?[]const u8 = null,
-    }
-) ![]Pack {
-    // Filtered pack listing
-}
-```
-
-#### CLI Commands API
+Representative Stage 1 runtime entrypoints are:
 
 ```zig
-/// CLI command handler (internal, not public library API)
-pub const Commands = struct {
-    /// Execute 16c download command
-    pub fn download(args: []const []const u8) !void;
-    
-    /// Execute 16c search command
-    pub fn search(args: []const []const u8) !void;
-    
-    /// Execute 16c list command
-    pub fn list(args: []const []const u8) !void;
-    
-    /// Execute 16c mirror command
-    pub fn mirror(args: []const []const u8) !void;
-    
-    /// Execute 16c stats command
-    pub fn stats(args: []const []const u8) !void;
-};
+pub fn executeRandomOne(allocator: Allocator) !void;
+pub fn executeRandomLoop(allocator: Allocator, mode: PlaybackMode) !void;
+pub fn executeScreensaverWithMode(allocator: Allocator, mode: PlaybackMode) !void;
+pub fn loadFromRoot(allocator: Allocator, root_path: []const u8, config_file_name: []const u8) !Stage1Config;
+pub fn init(allocator: Allocator) !ArchiveDatabase;
+pub fn download(self: *HttpClient, url: []const u8, dest_path: []const u8) !void;
 ```
+
+This is a runtime-oriented API surface, not yet a full archive-client SDK.
 
 ---
 
-## Security Considerations
+## Staged Future Architecture
 
-### Path Traversal Prevention
+The following items remain later-stage architecture and must not be treated as shipped design truth:
 
-**ZIP extraction security**:
-- Validate all paths before extraction
-- Reject absolute paths (starting with `/`)
-- Reject parent references (`..`)
-- Ensure destination within allowed directory
+- `.index.db` as the canonical archive metadata store
+- SQLite-backed search, FTS, pack lookup, and yearly listing
+- mirror sync and filtering workflows
+- pack download, ZIP extraction, and long-lived `packs/` population
+- alias executables such as `16colors` or `16`
+- `ansilust --16colors` integration mode
+- richer `config.toml` source policies beyond `auto`
+- protocol expansion beyond the current HTTP/curl path
 
-**Input sanitization**:
-- Validate pack names (alphanumeric, hyphen, underscore only)
-- Reject paths with null bytes
-- Limit filename length (max 255 characters)
+### Growth Path
 
-### Network Security
+Future stages should layer onto the current seams rather than replace the Stage 1 baseline narrative:
 
-**HTTPS certificate validation**:
-- Use system CA certificates
-- Never disable certificate verification
-- Fail download on certificate errors
-
-**FTP security**:
-- Use explicit TLS (FTPS) if available
-- Fall back to plain FTP only if necessary
-- Warn user if using insecure connection
-
-### Resource Limits
-
-**ZIP bomb protection**:
-- Limit maximum extracted size (e.g., 10GB)
-- Limit maximum file count per archive (e.g., 10,000 files)
-- Monitor disk space before extraction
-- Abort if limits exceeded
-
-**Memory limits**:
-- Streaming downloads (no buffer entire file)
-- Incremental ZIP extraction (process entry-by-entry)
-- Database query result limits (max 1000 results)
+1. Expand `ArchiveDatabase` from hardcoded source to shipped database-backed metadata.
+2. Promote search and pack workflows only when code, tests, and build wiring exist.
+3. Add real pack storage behavior under `packs/` when extraction and lifecycle rules are implemented.
+4. Grow protocol support only after the runtime proves native clients or fallback logic.
 
 ---
 
 ## Design Decisions and Rationale
 
-### Key Decisions
+### Decision 1: Standalone `16c` first
 
-**Decision 1: SQLite for .index.db**
-- **Rationale**: Mature, fast, embedded, supports FTS5 and JSON
-- **Alternatives considered**: Custom binary format, JSON files
-- **Trade-offs**: External dependency (SQLite C library), but gains performance and features
+- **Rationale**: one executable keeps the MVP easy to build, test, and explain
+- **Trade-off**: integrated ansilust archive UX waits until later stages
 
-**Decision 2: Auto-update by default (no opt-out)**
-- **Rationale**: Zero-friction UX, users don't think about database updates
-- **Alternatives considered**: Manual updates, opt-in auto-update
-- **Trade-offs**: Opinionated, but aligns with modern tools (brew, apt, npm)
+### Decision 2: Local-first playback before metadata-rich archive features
 
-**Decision 3: Dual CLI (16c + ansilust)**
-- **Rationale**: Eliminates context ambiguity (archive vs local file)
-- **Alternatives considered**: Single CLI with flags, single CLI with auto-detection
-- **Trade-offs**: Two executables, but clearer user mental model
+- **Rationale**: the runtime becomes immediately useful for replay and screensaver scenarios
+- **Trade-off**: broad archive browsing and search are deferred
 
-**Decision 4: Platform-specific paths (Pictures/ on macOS/Windows)**
-- **Rationale**: User-browsable artwork, follows OS conventions
-- **Alternatives considered**: Hidden directories (~/.local/share everywhere)
-- **Trade-offs**: Platform-specific code, but better UX for non-technical users
+### Decision 3: Stable archive abstraction without shipping SQLite yet
 
-**Decision 5: Filesystem for download state, database for archive index**
-- **Rationale**: Simple, fast, no sync issues
-- **Alternatives considered**: Track downloads in database
-- **Trade-offs**: No centralized "what's downloaded" query, but simpler implementation
+- **Rationale**: `ArchiveDatabase` gives later stages a seam without forcing unfinished database behavior into the MVP
+- **Trade-off**: current archive content is intentionally tiny and curated
 
-**Decision 6: Default exclusions (NSFW, executables)**
-- **Rationale**: Safety and security for public/institutional use
-- **Alternatives considered**: Include everything by default
-- **Trade-offs**: Requires explicit opt-in, but safer default
+### Decision 4: Shared directory layout now, fuller storage semantics later
+
+- **Rationale**: establishing `random/`, `packs/`, and `local/` early avoids later path churn
+- **Trade-off**: some directories exist before all workflows that will eventually use them
+
+### Decision 5: Minimal Stage 1 config
+
+- **Rationale**: only ship knobs that the runtime actually honors
+- **Trade-off**: richer source and playback policy stays out of current guarantees
 
 ---
 
-## Open Questions for Implementation Phase
+## Design Status
 
-**Protocol Selection**:
-- What is the actual performance difference between HTTP, FTP, RSYNC?
-- Should we implement HTTP/2 support?
-- How does RSYNC bandwidth limiting work in practice?
-
-**Database**:
-- Should we use sqlite3 C library (FFI) or pure Zig implementation (if available)?
-- What is the optimal FTS5 tokenizer configuration for artwork filenames?
-- Should we support database compression (smaller .index.db)?
-
-**FTP Client**:
-- Implement custom FTP client in Zig or use C library?
-- How do we handle different FTP server list formats?
-
-**Concurrency**:
-- Should mirror sync download multiple packs in parallel?
-- What is the optimal concurrency level (connection limit)?
-- How do we handle progress reporting for parallel downloads?
-
-**Error Recovery**:
-- How many retry attempts for network failures?
-- What is the exponential backoff strategy?
-- Should we implement circuit breaker pattern for repeated failures?
-
----
-
-## Phase 3: Design Phase - Complete
-
-This design document provides the technical architecture for the 16colors download client. It focuses on structure, patterns, and approach without full implementation code. The design follows Zig best practices for memory safety, explicit error handling, and performance.
-
-**Next Phase**: Phase 4 - Plan Phase (create detailed implementation roadmap)
-
-**Key Deliverables**:
-- ✅ Architecture overview with component relationships
-- ✅ Module organization and dependency flow
-- ✅ Data structure descriptions (no full implementations)
-- ✅ Algorithm approaches (high-level pseudocode)
-- ✅ Error handling strategy with error sets
-- ✅ Memory management patterns and ownership rules
-- ✅ Testing approach and categories
-- ✅ Integration points with existing codebase
-- ✅ Performance considerations and optimization strategies
-- ✅ API surface descriptions (interfaces, not implementations)
-- ✅ Security considerations and mitigation strategies
-- ✅ Design decisions with rationale
-
-**Ready for user review and authorization to proceed to Plan Phase.**
+This design now describes the shipped Stage 1 runtime centered on `16c`, local-first playback, a hardcoded archive abstraction, HTTP-only remote fallback, and renderer-backed display. It intentionally separates future `.index.db`, search, mirror, pack, and protocol growth from current architectural truth so the document stays consistent with `.ok/download.ok.md` and the checked-in runtime.

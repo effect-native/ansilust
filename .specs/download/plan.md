@@ -1,843 +1,153 @@
-# 16colors CLI & Download Client - Implementation Plan
+# 16colors Download Plan
 
-## Document Overview
+This plan tracks the download/archive surface against the shipped Stage 1 runtime instead of the older pre-runtime roadmap. It separates what is already present in the `16c` executable from the broader archive client still planned for later phases.
 
-This document provides the implementation roadmap for the 16colors download client, organized into phases with clear validation checkpoints and progress tracking.
-
-**Related Documents**:
-- `instructions.md` - User stories and initial requirements capture
-- `requirements.md` - Formal EARS-based requirements
-- `design.md` - Technical architecture and implementation strategy
-
----
-
-## Implementation Strategy
-
-### Core Principle: Abstraction-First Development
-
-**Key Decision**: Build against database abstraction from day 1, implement with hardcoded data initially, swap to SQLite later without changing dependent code.
-
-**Benefits**:
-- No throwaway code
-- No refactoring when adding SQLite
-- Interface-driven development
-- Standard storage locations from start
-
-### Phased Approach
-
-```
-Phase 5.1: Minimal Viable Product (random-1 command)
-  ↓
-Phase 5.2: Direct Downloads (download pack by name)
-  ↓
-Phase 5.3: Local Browsing (list, show)
-  ↓
-Phase 5.4: SQLite Implementation (swap hardcoded → database)
-  ↓
-Phase 5.5: Advanced Features (search, mirror, stats)
-```
-
----
-
-## Phase 5.1: Minimal Viable Product - `16c random-1`
-
-### Objective
-
-Implement the absolute minimum end-to-end flow:
-```bash
-16c random-1
-# 1. Picks random ANSI/ASCII file from hardcoded list
-# 2. Downloads it via HTTP
-# 3. Saves to ~/Pictures/16colors/random/
-# 4. Displays it with ansilust renderer
-# 5. Exit 0
-```
-
-### Success Criteria
-
-- [ ] Command completes in < 5 seconds (typical network)
-- [ ] Artwork displays correctly
-- [ ] File saved to correct platform-specific location
-- [ ] No crashes, no memory leaks
-- [ ] Exit code 0 on success, 1 on failure
-- [ ] Works on Linux, macOS, Windows
-
----
-
-### Task 5.1.1: Database Abstraction Interface
-
-**Objective**: Define database interface that works with hardcoded data now, SQLite later.
-
-**Deliverables**:
-- [ ] Create `src/download/database/interface.zig`
-- [ ] Define `ArchiveDatabase` struct with tagged union implementation
-- [ ] Define `FileEntry` struct (pack_name, filename, source_url, year, artist, extension)
-- [ ] Define `Pack` struct (name, year, group_name, zip_url)
-- [ ] Define interface methods:
-  - [ ] `init(allocator) -> ArchiveDatabase`
-  - [ ] `getRandomFile() -> FileEntry`
-  - [ ] `searchFiles(query) -> []FileEntry` (stub, returns empty)
-  - [ ] `getPack(name) -> Pack` (stub, returns error.NotImplemented)
-  - [ ] `listPacksByYear(year) -> []Pack` (stub, returns empty)
-  - [ ] `deinit()`
-
-**Acceptance Criteria**:
-- Interface compiles with Zig 0.11.0+
-- All methods have doc comments
-- Error unions used for fallible operations
-- No implementation code yet (just signatures)
-
-**Validation**:
-```bash
-zig build
-# Should compile with no errors
-```
-
----
-
-### Task 5.1.2: Hardcoded Database Implementation
-
-**Objective**: Implement database interface with curated hardcoded data.
-
-**Deliverables**:
-- [ ] Create `src/download/database/hardcoded.zig`
-- [ ] Define `HardcodedImpl` struct
-- [ ] Curate 20-30 ANSI/ASCII files with metadata:
-  - [ ] Mix of years (1990s, 2000s, 2020s)
-  - [ ] Mix of formats (ANS, ASC)
-  - [ ] Mix of styles (ASCII art, ANSI art, detailed, block)
-  - [ ] Verified URLs from 16colo.rs
-  - [ ] All files < 100KB (fast downloads)
-  - [ ] Diverse artists and groups
-- [ ] Implement `getRandomFile()`:
-  - [ ] Use `std.crypto.random` for selection
-  - [ ] Return random file from curated list
-- [ ] Implement stub methods (searchFiles, getPack, listPacksByYear)
-- [ ] Wire into `ArchiveDatabase.Implementation` union
-
-**Data Format**:
-```zig
-const CURATED_FILES = [_]FileEntry{
-    .{
-        .pack_name = "mist1025",
-        .filename = "CXC-STICK.ASC",
-        .source_url = "https://16colo.rs/pack/mist1025/CXC-STICK.ASC",
-        .year = 2025,
-        .artist = "CoaXCable",
-        .extension = "asc",
-    },
-    // ... 19-29 more entries
-};
-```
-
-**Acceptance Criteria**:
-- At least 20 curated files with complete metadata
-- All URLs verified to be accessible
-- Random selection uniform distribution
-- No memory allocations (comptime data)
-
-**Validation**:
-```bash
-zig test src/download/database/hardcoded.zig
-# Test: getRandomFile returns valid FileEntry
-# Test: getRandomFile varies across calls
-# Test: stub methods return expected values
-```
-
----
-
-### Task 5.1.3: Platform Paths Module
-
-**Objective**: Detect platform and resolve 16colors directory paths.
-
-**Deliverables**:
-- [ ] Create `src/download/storage/paths.zig`
-- [ ] Define `Platform` enum (linux, macos, windows)
-- [ ] Define `PlatformPaths` struct:
-  - [ ] `sixteen_colors_root: []const u8`
-  - [ ] `random_dir: []const u8`
-  - [ ] `packs_dir: []const u8`
-  - [ ] `local_dir: []const u8`
-- [ ] Implement `Platform.detect() -> Platform`:
-  - [ ] Use `std.builtin.os.tag` for detection
-- [ ] Implement `Platform.getPaths(allocator) -> PlatformPaths`:
-  - [ ] Linux: `~/.local/share/16colors/` (or `$XDG_DATA_HOME/16colors/`)
-  - [ ] macOS: `~/Pictures/16colors/`
-  - [ ] Windows: `%USERPROFILE%\Pictures\16colors\`
-- [ ] Implement path construction for subdirectories
-- [ ] Implement directory creation (mkdir -p equivalent)
-
-**Path Resolution**:
-```
-Linux:   ~/.local/share/16colors/
-         ├── random/
-         ├── packs/
-         └── local/
-
-macOS:   ~/Pictures/16colors/
-         ├── random/
-         ├── packs/
-         └── local/
-
-Windows: %USERPROFILE%\Pictures\16colors\
-         ├── random\
-         ├── packs\
-         └── local\
-```
-
-**Acceptance Criteria**:
-- Platform detected correctly on all three OS types
-- Paths use correct separators (`/` vs `\`)
-- Home directory expansion works (`~` → actual path)
-- Environment variable expansion works (`$XDG_DATA_HOME`, `%USERPROFILE%`)
-- Directories created with correct permissions (0755)
-- If creation fails, return clear error
-
-**Validation**:
-```bash
-zig test src/download/storage/paths.zig
-# Test: Platform.detect returns correct platform
-# Test: getPaths returns correct paths for each platform
-# Test: Directory creation succeeds
-# Test: Permission denied returns error.PermissionDenied
-```
-
----
-
-### Task 5.1.4: HTTP Download Module
-
-**Objective**: Download files via HTTP with basic error handling.
-
-**Deliverables**:
-- [ ] Create `src/download/protocols/http.zig`
-- [ ] Define `HttpClient` struct
-- [ ] Implement `init(allocator) -> HttpClient`
-- [ ] Implement `download(url, dest_path) -> void`:
-  - [ ] Use `std.http.Client` for requests
-  - [ ] Set User-Agent: `ansilust/VERSION (https://github.com/user/ansilust)`
-  - [ ] Write response body to file
-  - [ ] Stream download (don't buffer entire file in memory)
-  - [ ] Verify HTTP status 200 (fail on 404, 500, etc.)
-- [ ] Implement `deinit()`
-- [ ] Define error set: `HttpError` (NetworkFailure, HttpError, FileNotFound, Timeout)
-
-**Download Flow**:
-```
-1. Create HTTP client
-2. Send GET request to URL
-3. Check status code (200 OK)
-4. Open destination file for writing
-5. Stream response body to file (8KB chunks)
-6. Close file
-7. Return success or error
-```
-
-**Acceptance Criteria**:
-- Downloads complete successfully for valid URLs
-- Invalid URLs return error.NetworkFailure
-- HTTP 404 returns error.FileNotFound
-- HTTP 500 returns error.HttpError
-- Files written correctly (no corruption)
-- No memory leaks (std.testing.allocator)
-- Timeout after 30 seconds
-
-**Validation**:
-```bash
-zig test src/download/protocols/http.zig
-# Test: download valid URL succeeds
-# Test: download invalid URL returns error
-# Test: download 404 returns error.FileNotFound
-# Test: downloaded file matches expected content
-# Test: no memory leaks
-```
-
-**Note**: No resume support in Phase 5.1 (add in Phase 5.2)
-
----
-
-### Task 5.1.5: Storage Module
-
-**Objective**: Save downloaded files to standard locations with proper naming.
-
-**Deliverables**:
-- [ ] Create `src/download/storage/files.zig`
-- [ ] Define `FileStorage` struct
-- [ ] Implement `saveToRandom(allocator, source_path, original_filename) -> saved_path`:
-  - [ ] Generate timestamped filename: `{timestamp}-{original_filename}`
-  - [ ] Timestamp format: `YYYYMMDDHHmmss` (e.g., `20251101153042`)
-  - [ ] Move/copy file to `random/` subdirectory
-  - [ ] Return full path to saved file
-- [ ] Implement `cleanupRandom(keep_count)`:
-  - [ ] List files in `random/` directory
-  - [ ] Sort by timestamp (oldest first)
-  - [ ] Delete all but last N files (default N=10)
-- [ ] Handle filesystem errors (disk full, permissions, etc.)
-
-**Filename Examples**:
-```
-random/20251101153042-CXC-STICK.ASC
-random/20251101154523-dragon.ans
-random/20251101160815-logo.asc
-```
-
-**Acceptance Criteria**:
-- Files saved with correct timestamp format
-- Original filename preserved after timestamp
-- Old files cleaned up when limit exceeded
-- Permissions errors return error.PermissionDenied
-- Disk full returns error.DiskFull
-
-**Validation**:
-```bash
-zig test src/download/storage/files.zig
-# Test: saveToRandom creates correct filename
-# Test: saveToRandom saves file to correct location
-# Test: cleanupRandom deletes oldest files
-# Test: cleanupRandom keeps N newest files
-```
-
----
-
-### Task 5.1.6: CLI Entry Point
-
-**Objective**: Parse command-line arguments and execute `random-1` command.
-
-**Deliverables**:
-- [ ] Create `src/cli/sixteenc.zig`
-- [ ] Implement `main()` function:
-  - [ ] Setup allocator (GeneralPurposeAllocator)
-  - [ ] Parse command-line arguments
-  - [ ] Recognize `random-1` command
-  - [ ] Call into download library
-  - [ ] Handle errors with user-friendly messages
-  - [ ] Exit with appropriate code (0=success, 1=error)
-- [ ] Implement simple argument parser (no fancy CLI library yet)
-- [ ] Print usage on invalid arguments
-
-**Usage**:
-```bash
-16c random-1          # Execute random-1 command
-16c --help            # Print help (future)
-16c --version         # Print version (future)
-```
-
-**Error Messages**:
-```
-Error: Network failure - could not download file
-Try again or check your internet connection.
-
-Error: Permission denied - cannot create directory
-Please check permissions for ~/Pictures/16colors/
-
-Error: Unknown command 'foo'
-Usage: 16c random-1
-```
-
-**Acceptance Criteria**:
-- `random-1` command recognized and executed
-- Invalid commands show usage and exit 1
-- Errors display helpful messages
-- No memory leaks (GPA reports clean shutdown)
-
-**Validation**:
-```bash
-zig build
-./zig-out/bin/16c random-1
-# Should download and display artwork
-
-./zig-out/bin/16c invalid
-# Should show error and usage
-
-echo $?
-# Should be 1 (error exit code)
-```
-
----
-
-### Task 5.1.7: Integration - Random Command Flow
-
-**Objective**: Wire all modules together for end-to-end `random-1` functionality.
-
-**Deliverables**:
-- [ ] Create `src/download/commands/random.zig`
-- [ ] Implement `executeRandomOne(allocator) -> void`:
-  - [ ] Initialize platform paths
-  - [ ] Create directories if needed
-  - [ ] Initialize database (hardcoded impl)
-  - [ ] Get random file from database
-  - [ ] Download file via HTTP to temp location
-  - [ ] Save to `random/` directory
-  - [ ] Cleanup old files (keep last 10)
-  - [ ] Call ansilust renderer to display file
-  - [ ] Cleanup temp file
-- [ ] Handle all error paths with proper cleanup
-- [ ] Use `defer` and `errdefer` for resource management
-
-**Flow**:
-```
-1. Detect platform → Get paths
-2. Create ~/Pictures/16colors/random/ if needed
-3. Init database (hardcoded)
-4. Get random file entry
-5. Download to /tmp/16c-random-{timestamp}.tmp
-6. Save to random/{timestamp}-{filename}
-7. Cleanup old files in random/
-8. Render with ansilust
-9. Delete temp file
-10. Exit 0
-```
-
-**Error Handling**:
-```
-IF platform paths fail → Error message, exit 1
-IF directory creation fails → Error message, exit 1
-IF download fails → Error message, cleanup temp, exit 1
-IF renderer fails → Error message, file saved but not displayed, exit 1
-```
-
-**Acceptance Criteria**:
-- All steps execute in correct order
-- Errors at any step handled gracefully
-- Resources cleaned up on all paths (success and error)
-- No memory leaks
-- No temporary files left on disk after execution
-
-**Validation**:
-```bash
-zig build test
-zig build
-./zig-out/bin/16c random-1
-
-# Verify:
-ls ~/Pictures/16colors/random/
-# Should show downloaded file
-
-# Run again:
-./zig-out/bin/16c random-1
-# Should show different artwork (likely)
-
-# Run 15 times:
-for i in {1..15}; do ./zig-out/bin/16c random-1; done
-# Should only keep last 10 files in random/
-```
-
----
-
-### Task 5.1.8: Ansilust Renderer Integration
-
-**Objective**: Call ansilust UTF8ANSI renderer to display downloaded artwork.
-
-**Deliverables**:
-- [ ] Add dependency on ansilust renderer module
-- [ ] Implement renderer call in `random.zig`:
-  - [ ] Detect file format (ANS vs ASC)
-  - [ ] Call appropriate renderer
-  - [ ] Display to stdout
-  - [ ] Handle render errors gracefully
-- [ ] Handle terminal detection (skip if not a TTY)
-
-**Renderer Call**:
-```zig
-const renderers = @import("renderers");
-
-pub fn displayArtwork(file_path: []const u8) !void {
-    // Detect format from extension
-    const format = detectFormat(file_path);
-    
-    // Render to stdout
-    const renderer = try renderers.Utf8AnsiRenderer.init(allocator);
-    defer renderer.deinit();
-    
-    try renderer.renderFile(file_path);
-}
-```
-
-**Acceptance Criteria**:
-- ANS files render correctly
-- ASC files render correctly
-- Renderer errors return descriptive messages
-- Non-TTY output skips rendering (or outputs raw)
-
-**Validation**:
-```bash
-# Should display artwork
-./zig-out/bin/16c random-1
-
-# Should skip rendering or output raw
-./zig-out/bin/16c random-1 > output.txt
-```
-
-**Note**: If ansilust renderer not ready, stub with:
-```zig
-pub fn displayArtwork(file_path: []const u8) !void {
-    std.debug.print("Would render: {s}\n", .{file_path});
-}
-```
-
----
-
-### Task 5.1.9: Build Configuration
-
-**Objective**: Configure Zig build system for CLI executable.
-
-**Deliverables**:
-- [ ] Update `build.zig`:
-  - [ ] Add `16c` executable target
-  - [ ] Link download library modules
-  - [ ] Link ansilust renderer
-  - [ ] Install to `zig-out/bin/16c`
-  - [ ] Add aliases: `16colors`, `16` (symlinks)
-- [ ] Add test step for download modules
-- [ ] Add install step
-
-**Build Commands**:
-```bash
-zig build                    # Build 16c executable
-zig build test               # Run all tests
-zig build install            # Install to zig-out/bin/
-```
-
-**Acceptance Criteria**:
-- `zig build` produces `zig-out/bin/16c`
-- `zig build test` runs all download module tests
-- Executable runs without external dependencies (except system libs)
-
-**Validation**:
-```bash
-zig build
-ls zig-out/bin/16c
-# Should exist
-
-./zig-out/bin/16c random-1
-# Should execute
-```
-
----
-
-### Task 5.1.10: Testing and Validation
-
-**Objective**: Comprehensive testing of Phase 5.1 implementation.
-
-**Test Categories**:
-
-**Unit Tests**:
-- [ ] Database interface (hardcoded impl)
-- [ ] Platform path resolution
-- [ ] HTTP download (with mock server)
-- [ ] File storage (temp directory)
-- [ ] Random selection distribution
-
-**Integration Tests**:
-- [ ] End-to-end random-1 command (with real HTTP)
-- [ ] Error handling (network failure, disk full, permissions)
-- [ ] Cross-platform (Linux, macOS, Windows)
-
-**System Tests**:
-- [ ] Memory leak detection (run with testing allocator)
-- [ ] Performance (< 5 seconds typical)
-- [ ] File cleanup (old files deleted)
-- [ ] Concurrent executions (no conflicts)
-
-**Manual Testing**:
-- [ ] Run on actual systems (Linux, macOS, Windows)
-- [ ] Verify artwork displays correctly
-- [ ] Check file locations
-- [ ] Test error scenarios (unplug network, remove permissions, etc.)
-
-**Acceptance Criteria**:
-- All unit tests pass
-- All integration tests pass
-- No memory leaks detected
-- Works on all three platforms
-- Performance within targets
-
-**Validation**:
-```bash
-# Run all tests
-zig build test --summary all
-
-# Check for memory leaks
-zig build test -Doptimize=Debug
-
-# Manual verification
-./zig-out/bin/16c random-1
-ls ~/Pictures/16colors/random/
-# Verify files exist and artwork displayed
-```
-
----
-
-### Phase 5.1 Completion Checklist
-
-- [ ] All tasks (5.1.1 through 5.1.10) completed
-- [ ] All unit tests passing
-- [ ] All integration tests passing
-- [ ] No memory leaks detected
-- [ ] Works on Linux, macOS, Windows
-- [ ] `16c random-1` executes successfully
-- [ ] Artwork displays correctly
-- [ ] Files saved to correct locations
-- [ ] Documentation updated (README usage example)
-- [ ] Code formatted (`zig fmt`)
-- [ ] Build succeeds with zero warnings
-
-**Validation Command**:
-```bash
-zig build test && \
-zig build && \
-./zig-out/bin/16c random-1 && \
-ls ~/Pictures/16colors/random/ && \
-echo "Phase 5.1 Complete!"
-```
-
----
-
-## Phase 5.2: Direct Pack Downloads (Future)
-
-### Objective
-Implement `16c download <pack>` command for direct pack downloads.
-
-**Scope**:
-- [ ] URL construction for pack downloads
-- [ ] ZIP extraction
-- [ ] Save to `packs/{year}/{pack_name}/` directory
-- [ ] Progress reporting
-- [ ] Resume support (HTTP Range requests)
-
-**Deferred to Phase 5.2**
-
----
-
-## Phase 5.3: Local Browsing (Future)
-
-### Objective
-Implement local mirror browsing commands.
-
-**Scope**:
-- [ ] `16c list` - List downloaded packs
-- [ ] `16c show <file>` - Display from local mirror
-- [ ] Filesystem-based pack discovery
-- [ ] Local file search (grep-style)
-
-**Deferred to Phase 5.3**
-
----
-
-## Phase 5.4: SQLite Implementation (Future)
-
-### Objective
-Replace hardcoded database with SQLite implementation.
-
-**Scope**:
-- [ ] SQLite schema creation
-- [ ] FTS5 index setup
-- [ ] Implement all database interface methods with SQL
-- [ ] Database migrations
-- [ ] Auto-update mechanism
-- [ ] Patch file application
-
-**Key Task**: Swap `Implementation.hardcoded` → `Implementation.sqlite`
-
-**No dependent code changes required** (interface stays the same)
-
-**Deferred to Phase 5.4**
-
----
-
-## Phase 5.5: Advanced Features (Future)
-
-### Objective
-Implement search, mirror sync, statistics, and analytics.
-
-**Scope**:
-- [ ] FTS5 full-text search
-- [ ] Mirror sync with filters
-- [ ] NSFW/executable exclusions
-- [ ] Statistics and analytics
-- [ ] FTP client for year browsing
-- [ ] RSS feed parsing
-
-**Deferred to Phase 5.5**
-
----
-
-## Risk Management
-
-### Risk 1: Ansilust Renderer Not Ready
-**Mitigation**: Stub renderer with simple file output
-```zig
-pub fn displayArtwork(path: []const u8) !void {
-    std.debug.print("Artwork: {s}\n", .{path});
-    // TODO: Call real renderer when available
-}
-```
-
-### Risk 2: HTTP Downloads Slow
-**Mitigation**: 
-- Choose small files for hardcoded list (< 100KB)
-- Add timeout (30 seconds)
-- Clear error message if slow
-
-### Risk 3: Platform Path Issues
-**Mitigation**:
-- Comprehensive testing on all platforms
-- Clear error messages for permission issues
-- Fallback instructions in error message
-
-### Risk 4: Curated Files Become Unavailable
-**Mitigation**:
-- Verify all URLs before hardcoding
-- Fallback to next random file on 404
-- Add refresh mechanism for curated list (future)
-
----
-
-## Progress Tracking
-
-### Phase 5.1 Tasks
-
-| Task | Status | Notes |
-|------|--------|-------|
-| 5.1.1 Database Interface | ✅ Complete | `src/download/database/interface.zig` with tests |
-| 5.1.2 Hardcoded Implementation | ✅ Complete | `src/download/database/hardcoded.zig` with curated files |
-| 5.1.3 Platform Paths | ✅ Complete | `src/download/storage/paths.zig` with tests (paths_test.zig) |
-| 5.1.4 HTTP Download | ✅ Complete | `src/download/protocols/http.zig` with tests (http_test.zig) |
-| 5.1.5 Storage Module | ✅ Complete | `src/download/storage/files.zig` with tests (files_test.zig) |
-| 5.1.6 CLI Entry Point | ✅ Complete | `src/cli/sixteenc.zig` builds as `16c` binary |
-| 5.1.7 Integration | ✅ Complete | `src/download/commands/random.zig` wires all modules |
-| 5.1.8 Renderer Integration | 🔄 In Progress | Stubbed - awaiting UTF8ANSI renderer CLI integration |
-| 5.1.9 Build Configuration | ✅ Complete | `16c` executable in build.zig with download module |
-| 5.1.10 Testing | 🔄 In Progress | Unit tests pass, end-to-end validation pending |
-
-**Legend**: ⬜ Not Started | 🔄 In Progress | ✅ Complete | ❌ Blocked
-
----
-
-## Current Status Summary (2025-11-27)
-
-**Implementation**: Phase 5.1 ~90% complete
-
-**Completed**:
-- Full download client infrastructure (database, HTTP, storage, paths)
-- `16c` CLI executable with `random-1` command
-- Platform path detection (Linux, macOS, Windows)
-- Hardcoded database with curated artwork entries
-- HTTP download with error handling
-- File storage with timestamp naming and cleanup
-
-**Gaps**:
-- Renderer integration (displays file path only, not artwork)
-- End-to-end cross-platform testing
-- Full validation suite
-
-**Next Steps**:
-1. Integrate UTF8ANSI renderer into random command (blocked on renderer CLI integration)
-2. Complete end-to-end testing on Linux/macOS/Windows
-3. Begin Phase 5.2 (direct pack downloads)
-
----
-
-## Validation Gates
-
-### Gate 1: Database Abstraction (After 5.1.2)
-**Criteria**:
-- [ ] Interface compiles
-- [ ] Hardcoded impl returns valid data
-- [ ] Random selection works
-
-**Command**: `zig test src/download/database/*.zig`
-
----
-
-### Gate 2: Platform & HTTP (After 5.1.4)
-**Criteria**:
-- [ ] Platform detected correctly
-- [ ] Paths resolved for all platforms
-- [ ] HTTP downloads succeed
-- [ ] No memory leaks
-
-**Command**: `zig test src/download/{storage,protocols}/*.zig`
-
----
-
-### Gate 3: End-to-End (After 5.1.7)
-**Criteria**:
-- [ ] `16c random-1` executes successfully
-- [ ] File saved to correct location
-- [ ] Artwork displays
-- [ ] No crashes or leaks
-
-**Command**: `./zig-out/bin/16c random-1`
-
----
-
-### Gate 4: Multi-Platform (After 5.1.10)
-**Criteria**:
-- [ ] Works on Linux
-- [ ] Works on macOS  
-- [ ] Works on Windows
-- [ ] All tests pass on all platforms
-
-**Command**: Run `zig build test` on each platform
-
----
-
-## Success Metrics
-
-### Phase 5.1 Success Criteria
-
-**Functionality**:
-- ✅ `16c random-1` downloads and displays random artwork
-- ✅ Files saved to platform-appropriate locations
-- ✅ Works offline after first download (uses cached files)
-
-**Performance**:
-- ✅ Total execution time < 5 seconds (typical network)
-- ✅ Memory usage < 10MB
-- ✅ Disk usage < 10MB (10 cached files × ~100KB each)
-
-**Quality**:
-- ✅ Zero memory leaks
-- ✅ Zero undefined behavior
-- ✅ 100% doc comment coverage (public APIs)
-- ✅ All tests passing
-
-**Cross-Platform**:
-- ✅ Works on Linux (x86_64)
-- ✅ Works on macOS (Intel, Apple Silicon)
-- ✅ Works on Windows (x86_64)
-
----
-
-## Dependencies and Blockers
-
-### Required for Phase 5.1
-- ✅ Zig 0.11.0+ installed
-- ✅ Ansilust renderer available (or stubbed)
-- ✅ Internet connection (for downloads)
-- ✅ Filesystem write permissions
-
-### Blocked By
-- None (Phase 5.1 has no blockers)
-
-### Blocks
-- Phase 5.2 (requires Phase 5.1 complete)
-- Phase 5.3 (requires Phase 5.1 complete)
-- Phase 5.4 (requires Phase 5.1 complete)
-
----
-
-## Phase 4: Plan Phase - Complete
-
-This implementation plan provides a detailed roadmap for Phase 5.1 (Minimal Viable Product). The plan focuses on delivering `16c random-1` functionality with proper abstractions that enable future enhancements without refactoring.
-
-**Key Principles**:
-- ✅ Abstraction-first (database interface defined now, SQLite later)
-- ✅ Standard storage locations from day 1
-- ✅ No throwaway code (everything builds on itself)
-- ✅ Clear validation gates at each step
-- ✅ Explicit deferrals for future phases
-
-**Next Phase**: Phase 5 - Implementation Phase (execute Phase 5.1 tasks)
-
-**Ready for user review and authorization to proceed to Implementation Phase.**
+## Execution Baseline
+
+- The current repository already ships the Stage 1 runtime through the standalone `16c` executable.
+- The shipped command surface is `random`, `screensaver`, and `random-1`, plus `--help` and `--version`.
+- The shipped playback path is renderer-backed: the runtime parses ANSI art and renders through ansilust instead of treating display integration as future work.
+- Looping playback is local-pool-first for `random` and `screensaver`: the runtime scans `random/` and `local/` for playable `.ans` and `.asc` files before any remote fallback point.
+- `random-1` remains the only shipped remote bridge: it can replay a local file first, and if the local pool is empty it falls back to the hardcoded archive source, saves the result under `random/`, and displays it.
+- Minimal Stage 1 config loading is already shipped for `random` and `screensaver`; the evidenced config surface is limited to `playback.dwell_seconds` plus `source.mode = "auto"`.
+- Archive-scale features such as `.index.db`, pack downloads, extraction, search, mirror sync, metadata persistence, and broader local archive management remain intentionally pending.
+
+## Legacy Plan Translation
+
+- The old plan treated renderer integration, end-to-end runtime wiring, and the basic `16c` surface as still unfinished. That is now stale.
+- The current planning problem is no longer "make `16c random-1` basically exist." The shipped baseline already exists and is usable.
+- Future work should grow from the shipped Stage 1 runtime instead of re-describing it as an MVP still waiting on renderer hookup or CLI assembly.
+- The remaining roadmap is now archive growth: richer source data, pack acquisition, indexing, search, sync, and local library management.
+
+## Milestones
+
+- [x] M1. Stage 1 runtime foundation shipped
+- [x] M2. Renderer-backed playback and looping command surface shipped
+- [ ] M3. Archive acquisition growth
+- [ ] M4. Indexed browsing and search
+- [ ] M5. Mirror sync and broader archive management
+
+## Phase Status Table
+
+| Phase | Status | What it means now |
+|------|--------|-------------------|
+| Phase 1 - Shipped Stage 1 runtime | [x] Complete | `16c` ships `random`, `screensaver`, and `random-1`; playback is renderer-backed; local-pool-first looping and minimal config are present |
+| Phase 2 - Archive acquisition growth | [ ] Pending | Pack downloads, extraction, and archive-aware acquisition remain future work |
+| Phase 3 - Indexed browsing and search | [ ] Pending | `.index.db`, metadata storage, pack/file search, and local browsing commands are not shipped yet |
+| Phase 4 - Mirror sync and local archive management | [ ] Pending | Mirror refresh, broader local library management, and large-scale archive workflows remain future work |
+
+## Work Packages
+
+### [WP-RUN-001] Shipped Stage 1 Runtime Surface
+
+**Intent**: Record the current download/runtime baseline as already landed so later work builds on repository truth.
+
+**Acceptance**:
+- The plan treats `16c random`, `16c screensaver`, and `16c random-1` as shipped command surfaces.
+- Renderer-backed playback is treated as current behavior, not a future dependency.
+- Looping playback is explicitly local-pool-first for `random` and `screensaver`.
+- `random-1` remains the only shipped remote fallback path.
+
+**Status**: [x] Complete
+
+### [WP-RUN-002] Stage 1 Runtime Hardening
+
+**Intent**: Finish small adjacent runtime cleanup without inflating the archive roadmap.
+
+**Acceptance**:
+- Current docs stay aligned with the shipped CLI, playback, and config surface.
+- Remaining Stage 1 polish items are framed as hardening only.
+- Runtime cleanup does not get confused with archive-growth milestones.
+- Known limitations such as the current `cleanupRandom` stub stay explicit until implemented.
+
+**Status**: [~] In Progress
+
+### [WP-ARCH-001] Archive Acquisition Beyond `random-1`
+
+**Intent**: Grow from the one-piece remote bridge into pack-aware archive acquisition.
+
+**Acceptance**:
+- Pack download commands are defined and implemented beyond the hardcoded single-file source.
+- Pack acquisition includes archive-aware storage under `packs/`.
+- Pack extraction and preserved pack layout are handled by owned code.
+- Progress/error reporting is documented against implemented behavior.
+
+**Status**: [ ] Pending
+
+### [WP-INDEX-001] `.index.db` And Metadata Authority
+
+**Intent**: Replace the hardcoded in-memory source list with a real local archive index.
+
+**Acceptance**:
+- `.index.db` exists as the owned local metadata/index authority.
+- Archive metadata and file records persist beyond the current hardcoded source list.
+- The runtime can query indexed archive information without changing the public CLI story.
+- Search and browse features consume the index instead of relying on ad hoc stubs.
+
+**Status**: [ ] Pending
+
+### [WP-INDEX-002] Search And Local Browsing Commands
+
+**Intent**: Add user-facing archive discovery once the index exists.
+
+**Acceptance**:
+- Search commands are backed by shipped index/query behavior.
+- Local browsing commands can enumerate downloaded packs and playable files.
+- Command help and tests describe the actual supported archive-browsing surface.
+- Search/browse scope is separated from sync and mirror management.
+
+**Status**: [ ] Pending
+
+### [WP-MIRROR-001] Mirror Sync And Archive Management
+
+**Intent**: Add broader long-lived archive workflows after acquisition and indexing exist.
+
+**Acceptance**:
+- Mirror sync is explicit owned behavior rather than spec-only intent.
+- Broader local archive management covers more than the current `random/` cache and user-managed `local/` pool.
+- Sync/update workflows are separated from the shipped Stage 1 playback baseline.
+- Large-scale archive operations are backed by code, tests, and docs before being treated as complete.
+
+**Status**: [ ] Pending
+
+## Detailed Progress Table
+
+| Area | Current truth | Remaining work |
+|------|---------------|----------------|
+| CLI surface | `16c`, `random`, `screensaver`, `random-1`, help/version are shipped | Add future archive commands only when implemented |
+| Playback integration | Parser + UTF8ANSI renderer path is shipped | Limit future work to polish, not baseline integration |
+| Local source policy | `random` and `screensaver` are local-pool-first over `random/` and `local/` | Grow into pack-aware local selection and broader library controls |
+| Remote source policy | `random-1` can fall back to one hardcoded remote entry | Replace with pack-aware acquisition and indexed sources |
+| Config | Minimal Stage 1 config for `playback.dwell_seconds` and `source.mode = "auto"` is shipped | Keep richer source/config management pending |
+| Storage | `16colors` root plus `random/`, `packs/`, and `local/` paths exist | Populate `packs/` with real archive workflows; expand local archive management later |
+| Indexing | No shipped `.index.db` yet | Add SQLite or other owned index implementation |
+| Search | No shipped search/browse commands yet | Add indexed search and local archive browsing |
+| Mirror sync | No shipped mirror sync yet | Add explicit sync/update workflows later |
+
+## Validation Checkpoints
+
+- **Docs truth**: `.specs/download/plan.md` must stay aligned with `.ok/download.ok.md` and the checked-in `16c` runtime surface.
+- **Build truth**: `build.zig` and `src/cli/sixteenc.zig` remain the source of truth for what commands are actually shipped.
+- **Runtime truth**: `src/download/commands/random.zig` and `src/download/commands/stage1_config.zig` remain the source of truth for local-pool-first playback, `random-1` fallback behavior, and minimal config scope.
+- **Archive-growth truth**: `.index.db`, pack acquisition, search, mirror sync, and broader local archive management stay pending until backed by code and tests.
+
+## Risks And Guardrails
+
+- Do not regress into describing renderer integration or the Stage 1 CLI/runtime surface as unfinished when the code already ships those behaviors.
+- Do not let future `.index.db`, search, or mirror plans rewrite current truth; they are pending growth layers.
+- Do not treat directory creation for `packs/` or `local/` as proof that pack management or local archive management is complete.
+- Keep Stage 1 hardening separate from archive-growth scope so small runtime cleanup does not turn into a vague "Phase 1 still in progress" claim.
+
+## Next Steps
+
+1. Keep the shipped Stage 1 runtime documented as complete while landing only adjacent hardening.
+2. Define and implement pack-aware downloads so archive acquisition grows beyond `random-1`.
+3. Introduce `.index.db` as the owned archive metadata/search boundary.
+4. Add search and local browsing commands on top of the shipped index.
+5. Add mirror sync and broader local archive management only after acquisition and indexing are real.
+
+## Success Criteria Validation
+
+- Stage 1 is considered complete in planning terms because the repo already ships the `16c` runtime surface, renderer-backed playback, and minimal config/runtime behavior.
+- Future completion claims for pack downloads, `.index.db`, search, mirror sync, and broader local archive management require direct implementation evidence.
+- This plan stays correct only if it distinguishes shipped runtime truth from later archive-client growth.
