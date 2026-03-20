@@ -2,7 +2,7 @@
 id: task-low-implement-local-art-pool-selection
 level: low
 status: pending
-blocked_by: ["task-low-add-red-tests-for-local-art-pool-selection"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 
