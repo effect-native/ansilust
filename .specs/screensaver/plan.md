@@ -4,9 +4,9 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ## Execution Baseline
 
-- Current repository truth has moved past the old `random-1`-only baseline: the repo now ships a `16c random` loop surface and routes playback through the ansilust renderer.
-- The current Stage 1 runtime is still partial: local-pool selection, explicit dwell and playback flag/config controls, and the dedicated `16c screensaver` session lifecycle remain open work.
-- The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices and now tracks the remaining Stage 1 gaps rather than restating already-landed runtime slices.
+- Current repository truth has moved past the old `random-1`-only baseline: the repo now ships looping `16c random` and dedicated `16c screensaver` command surfaces, and routes playback through the ansilust renderer.
+- The Stage 1 runtime surface now includes local-pool-first artwork selection, the 20-second default dwell and empty-pool policy, explicit `--instant` / `--streaming-speed <preset>` playback controls, and minimal config loading for `playback.dwell_seconds` plus `source.mode = "auto"`.
+- The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices and now records the landed Stage 1 runtime work alongside the still-future launch, bootstrap, packaging, and broader integration growth.
 - This file defines stable work packages for future delivery without treating spec-only behavior as shipped runtime truth.
 
 ## Legacy Tracker Translation
@@ -20,9 +20,9 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 ## Milestones
 
 - [x] M1. Governance and spec decomposition
-- [ ] M2. MVP runtime loop and command surface
-- [ ] M3. MVP display and presentation pipeline
-- [ ] M4. MVP art source and config foundation
+- [x] M2. MVP runtime loop and command surface
+- [x] M3. MVP display and presentation pipeline
+- [x] M4. MVP art source and config foundation
 - [ ] M5. Post-MVP growth, bootstrap, and launch integration
 
 ## Work Packages
@@ -88,7 +88,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `task-low-add-red-tests-for-screensaver-session-cleanup`
 - `task-low-implement-screensaver-session-cleanup`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
 ### [WP-DISP-001] Renderer-Backed Playback MVP
 
@@ -108,16 +108,15 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 **Status**: [x] Complete
 
-### [WP-DISP-002] MVP Layout, Dwell, And Streaming Policy
+### [WP-DISP-002] MVP Playback Policy Surface
 
-**Intent**: Define the remaining MVP presentation rules for sizing and pacing without blocking delivery on later visual polish.
+**Intent**: Capture the landed Stage 1 pacing and playback-mode policy without overstating later layout or transition work.
 
 **Acceptance**:
-- MVP sizing, centering, and SAUCE-handling policy is defined for runtime playback.
-- Resize behavior is explicit for MVP and future escalation is separated.
-- Artwork dwell behavior is explicit for looping playback and stays aligned with the current Stage 1 runtime gaps.
-- Streaming defaults and instant mode are scoped as MVP-visible behavior.
-- Transition effects and other polish remain clearly post-MVP.
+- Artwork dwell behavior is explicit for looping playback and is evidenced by the landed 20-second default plus one-file replay and empty-pool handling.
+- Streaming defaults and instant mode are shipped as MVP-visible behavior through the shared random/screensaver runtime.
+- Minimal Stage 1 playback config defaults are wired into the runtime without expanding into later filtering or presentation-policy scope.
+- Layout polish, resize policy, SAUCE-driven presentation rules, and transition effects remain clearly post-MVP until separate evidence exists.
 
 **Tasks**:
 - `task-high-add-stage1-playback-controls-and-config`
@@ -128,7 +127,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `task-low-add-red-tests-for-stage1-config-defaults`
 - `task-low-implement-stage1-playback-flags`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
 ### [WP-ART-001] MVP Art Source Boundary
 
@@ -144,29 +143,31 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 **Tasks**:
 - `task-high-complete-local-random-playback-mvp`
 - `task-med-add-local-art-pool-selection-to-random`
+- `task-low-add-red-tests-for-local-art-pool-selection`
+- `task-low-implement-local-art-pool-selection`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
-### [WP-CFG-001] Config And Launch Surface
+### [WP-CFG-001] Config Runtime Boundary
 
-**Intent**: Add the smallest durable config and launch boundary needed for screensaver use without overpromising packaging or desktop integration.
+**Intent**: Add the smallest durable config boundary needed for Stage 1 runtime use without overpromising launch artifacts or desktop integration.
 
 **Acceptance**:
 - MVP `~/.config/16c/config.toml` keys are limited to the runtime controls needed for early delivery.
-- Launch guidance defines only the first owned Omarchy-friendly boundary: ansilust owns the `16c screensaver` command surface plus example user-level launch artifacts, not idle detection or desktop policy.
-- MVP launch examples are limited to Omarchy-adjacent Wayland/user-service surfaces such as `systemd --user` units or idle-manager wiring examples once they exist in-repo.
+- The shared random/screensaver runtime loads missing-config defaults plus `playback.dwell_seconds` and `source.mode = "auto"` without claiming broader config maturity.
+- The owned Stage 1 boundary stops at the shipped `16c screensaver` command surface; launch artifacts, idle wiring, and desktop policy remain future-facing until they exist in-repo.
 - Packaging guidance cleanly separates owned artifacts from environment-specific examples and stays fenced to channels the repository can actually prove.
 - Config/configuration work stays decoupled from mirror/database and transition-polish expansion.
 - X11, XScreenSaver, and broader cross-desktop launch compatibility remain post-MVP follow-on work under later integration packages.
 
 **Tasks**:
-- `task-high-screensaver-art-source-config-and-integration`
 - `task-high-add-stage1-playback-controls-and-config`
 - `task-med-add-stage1-config-loading`
 - `task-low-add-red-tests-for-stage1-config-defaults`
 - `task-low-implement-stage1-config-loading`
+- `task-low-fix-stage1-config-build-error`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
 ### [WP-GROW-001] Library Growth, Bootstrap, And Integration Expansion
 
@@ -178,7 +179,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Any bootstrap flow is user-invoked or otherwise explicit; it is not a promised always-on sync service.
 - Bootstrap scope stops at obtaining more playable local art. Full background sync, broad remote catalog management, and metadata indexing remain later follow-on work unless the repo gains direct implementation evidence.
 - The growth path from minimum local pool to larger library is explicit.
-- Later system integration remains separated from runtime truth until owned artifacts exist; this includes Omarchy idle wiring beyond the initial launch boundary plus any X11/XScreenSaver-specific adapters.
+- Later system integration remains separated from runtime truth until owned artifacts exist; this includes launch artifacts, Omarchy idle wiring, layout/resize policy expansion, and any X11/XScreenSaver-specific adapters.
 - Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
 - Post-MVP work can extend the MVP without rewriting the earlier command and playback surfaces.
 
