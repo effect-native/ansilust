@@ -2,7 +2,7 @@
 id: task-low-refresh-screensaver-plan-status-after-stage1-work
 level: low
 status: pending
-blocked_by: ["task-med-promote-stage1-evidence-after-implementation", "task-low-update-constitutions-after-stage1-work"]
+blocked_by: ["task-low-update-constitutions-after-stage1-work"]
 expires_at: 2026-04-03T01:51:31Z
 ---
 
