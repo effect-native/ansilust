@@ -2,7 +2,7 @@
 id: task-low-rewrite-screensaver-ok-and-design-baseline
 level: low
 status: pending
-blocked_by: ["task-med-sync-screensaver-baseline-to-partial-stage1"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

@@ -2,7 +2,7 @@
 id: task-low-refresh-screensaver-plan-for-current-runtime-gaps
 level: low
 status: pending
-blocked_by: ["task-med-sync-screensaver-baseline-to-partial-stage1", "task-low-rewrite-screensaver-ok-and-design-baseline"]
+blocked_by: ["task-low-rewrite-screensaver-ok-and-design-baseline"]
 expires_at: 2026-04-03T01:51:31Z
 ---
 

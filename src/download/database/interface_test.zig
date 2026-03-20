@@ -32,28 +32,26 @@ test "ArchiveDatabase.getRandomFile returns valid FileEntry" {
     try testing.expect(std.mem.startsWith(u8, file.source_url, "https://16colo.rs/"));
 }
 
-test "ArchiveDatabase.getRandomFile returns different files" {
+test "ArchiveDatabase.getRandomFile matches current hardcoded catalog contract" {
     var db = try ArchiveDatabase.init(testing.allocator);
     defer db.deinit();
 
-    // Get multiple files and check for variety
-    // (Probabilistic test: may occasionally fail if very unlucky with RNG)
-    var files: [10]FileEntry = undefined;
-    for (&files) |*file| {
-        file.* = try db.getRandomFile();
-    }
+    const first = try db.getRandomFile();
+    const second = try db.getRandomFile();
 
-    // Check that we got at least 2 different files
-    var unique_count: usize = 0;
-    const first = files[0];
-    for (files[1..]) |file| {
-        if (!std.mem.eql(u8, file.filename, first.filename)) {
-            unique_count += 1;
-        }
-    }
+    try testing.expectEqualStrings("mist1025", first.pack_name);
+    try testing.expectEqualStrings("CXC-STICK.ASC", first.filename);
+    try testing.expectEqualStrings("https://16colo.rs/pack/mist1025/raw/CXC-STICK.ASC", first.source_url);
+    try testing.expectEqual(@as(u16, 2025), first.year);
+    try testing.expectEqualStrings("CoaXCable", first.artist.?);
+    try testing.expectEqualStrings("asc", first.extension);
 
-    // Expect at least some variety (probabilistic)
-    try testing.expect(unique_count > 0);
+    try testing.expectEqualStrings(first.pack_name, second.pack_name);
+    try testing.expectEqualStrings(first.filename, second.filename);
+    try testing.expectEqualStrings(first.source_url, second.source_url);
+    try testing.expectEqual(first.year, second.year);
+    try testing.expectEqualStrings(first.artist.?, second.artist.?);
+    try testing.expectEqualStrings(first.extension, second.extension);
 }
 
 test "ArchiveDatabase.searchFiles stub returns empty" {
