@@ -2,7 +2,7 @@
 id: task-low-implement-stage1-config-loading
 level: low
 status: pending
-blocked_by: ["task-med-add-stage1-config-loading", "task-low-add-red-tests-for-stage1-config-defaults"]
+blocked_by: ["task-low-add-red-tests-for-stage1-config-defaults"]
 expires_at: 2026-04-03T01:51:31Z
 ---
 
