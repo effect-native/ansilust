@@ -2,7 +2,7 @@
 id: task-low-implement-screensaver-session-cleanup
 level: low
 status: pending
-blocked_by: ["task-med-add-screensaver-session-cleanup", "task-low-add-red-tests-for-screensaver-session-cleanup"]
+blocked_by: ["task-low-add-red-tests-for-screensaver-session-cleanup"]
 expires_at: 2026-04-03T01:51:31Z
 ---
 
