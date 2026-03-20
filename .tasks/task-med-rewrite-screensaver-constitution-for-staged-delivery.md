@@ -1,7 +1,7 @@
 ---
 id: task-med-rewrite-screensaver-constitution-for-staged-delivery
 level: medium
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
