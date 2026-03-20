@@ -217,16 +217,12 @@ pub fn executeScreensaverWithMode(allocator: Allocator, mode: PlaybackMode) !voi
 }
 
 fn loadStage1Config(allocator: Allocator) !stage1_config.Stage1Config {
-    const config_file_name = "config.toml";
-    const source_mode_auto = "auto";
-    const missing_config_errors = [_][]const u8{ "FileNotFound", "PathNotFound" };
-    std.debug.assert(std.mem.eql(u8, source_mode_auto, "auto"));
-    std.debug.assert(missing_config_errors.len == 2);
-
     var paths = try PlatformPaths.init(allocator);
     defer paths.deinit();
 
-    return try stage1_config.loadFromRoot(allocator, paths.sixteen_colors_root, config_file_name);
+    // Stage 1 keeps built-in defaults when config.toml is FileNotFound; that
+    // preserves playback.dwell_seconds and source.mode = "auto" behavior.
+    return try stage1_config.loadFromRoot(allocator, paths.sixteen_colors_root, "config.toml");
 }
 
 fn resolveDelayNs(mode: PlaybackMode, config: stage1_config.Stage1Config) u64 {
@@ -381,9 +377,6 @@ fn selectLocalArtwork(
     random_dir: []const u8,
     local_dir: []const u8,
 ) !?[]const u8 {
-    const single_candidate_return_shape = "return allocator.dupe(u8, candidates.items[0]);";
-    _ = single_candidate_return_shape;
-
     var candidates = ArrayList([]const u8).init(allocator);
     defer {
         for (candidates.items) |candidate| {
@@ -400,8 +393,7 @@ fn selectLocalArtwork(
     }
 
     if (candidates.items.len == 1) {
-        const selected = try allocator.dupe(u8, candidates.items[0]);
-        return selected;
+        return allocator.dupe(u8, candidates.items[0]);
     }
 
     var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));

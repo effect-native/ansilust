@@ -66,7 +66,7 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **FR1.4.5**: The system shall treat any future shared local inventory as a staged successor to the Stage 1 hardcoded remote catalog abstraction rather than as a shipped Stage 1 data source.
 
-**FR1.4.6**: WHEN a shared local inventory is introduced in a later stage the system shall allow it to unify local cache and local-library discovery without making `.index.db` mandatory in the same revision.
+**FR1.4.6**: WHEN a shared local inventory is introduced in a later stage the system shall allow it to unify local cache, local-library discovery, and local archive-pack enumeration without making `.index.db` mandatory in the same revision.
 
 **FR1.4.7**: IF broader remote archive workflows are referenced elsewhere THEN those workflows shall be understood as future archive-client work unless separately implemented and evidenced.
 
@@ -124,7 +124,19 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **FR1.9.3**: The system shall stage the catalog handoff in this order: Stage 1 hardcoded remote catalog, later shared local inventory, and only after that optional `.index.db` authority where separately shipped and evidenced.
 
-**FR1.9.4**: WHEN shared local inventory is introduced the system shall treat it as the common local selection surface for playback and cache awareness before any `.index.db`-driven authority is adopted.
+### FR1.9.1A: Stage 2 Local Archive Enumeration Contract
+
+**FR1.9.1A.1**: WHEN Stage 2 local archive enumeration is introduced the system shall define a local-archive source contract that reads only from filesystem state under the resolved 16colors root.
+
+**FR1.9.1A.2**: The Stage 2 local-archive source contract shall treat discovered archive packs under `packs/` as local inventory candidates distinct from the shipped Stage 1 playable-file pool under `random/` and `local/`.
+
+**FR1.9.1A.3**: The Stage 2 local-archive source contract shall require only pack enumeration metadata that can be derived directly from local archive files and paths, without requiring mirror manifests, remote selection metadata, or `.index.db`.
+
+**FR1.9.1A.4**: IF Stage 2 local archive enumeration cannot derive richer metadata from a local archive file THEN the system shall still permit the pack to exist as an enumerated local candidate with minimal filesystem-derived identity.
+
+**FR1.9.1A.5**: WHERE Stage 2 local archive enumeration is used for later workflows the system shall treat that enumerated local source as advisory local discovery input rather than immediate authoritative selection state.
+
+**FR1.9.4**: WHEN shared local inventory is introduced the system shall treat it as the common local selection surface for playback, cache awareness, and local archive-pack enumeration before any `.index.db`-driven authority is adopted.
 
 **FR1.9.5**: WHERE `.index.db` is introduced in a later stage the system shall specify whether it is advisory or authoritative for each workflow instead of implying an immediate global authority change.
 
@@ -194,7 +206,9 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **DR4.2.1**: `.index.db` shall remain a future archive-client data surface until shipped behavior promotes it to a required runtime artifact.
 
-**DR4.2.2**: A future shared local inventory shall remain a distinct intermediate data surface for local selection and cache awareness rather than being conflated with `.index.db`.
+**DR4.2.2**: A future shared local inventory shall remain a distinct intermediate data surface for local selection, cache awareness, and local archive-pack enumeration rather than being conflated with `.index.db`.
+
+**DR4.2.2A**: The future Stage 2 local-archive source contract shall derive its minimum identity from local filesystem-observable fields such as pack path, filename, and archive presence under `packs/`, without requiring extracted archive indexes or mirror-owned identifiers.
 
 **DR4.2.3**: Archive search indexes, patch files, extracted pack metadata, and mirror manifests shall remain future-facing data structures.
 
@@ -271,6 +285,7 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 | Minimal config loading | Shipped Stage 1 |
 | Hardcoded remote fallback for `random-1` | Shipped Stage 1 |
 | Renderer-backed display | Shipped Stage 1 |
+| Stage 2 local archive enumeration from `packs/` | Future staged local contract before `.index.db` authority |
 | Shared local inventory for unified local awareness | Future staged handoff before `.index.db` authority |
 | `.index.db`, search, pack downloads, mirroring | Future archive-client |
 | Alias executables, protocol expansion, full archive management | Future archive-client |

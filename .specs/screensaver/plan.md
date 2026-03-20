@@ -189,14 +189,18 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Any bootstrap flow is user-invoked or otherwise explicit; it is not a promised always-on sync service.
 - Bootstrap scope stops at obtaining more playable local art. Full background sync, broad remote catalog management, and metadata indexing remain later follow-on work unless the repo gains direct implementation evidence.
 - The growth path from minimum local pool to larger library is explicit: (1) shipped Stage 1 plays from the current local pool, (2) a curated preseed may enlarge that shipped pool without changing runtime claims, (3) later optional bootstrap may download or unpack more art into the local pool, and (4) only after that would richer indexing, metadata-aware selection, or ongoing sync be considered.
-- Later system integration remains separated from runtime truth until owned artifacts exist; this includes launch artifacts, Omarchy idle wiring, layout/resize policy expansion, and any X11/XScreenSaver-specific adapters.
+- Later system integration remains separated from runtime truth until owned artifacts exist; this includes launch artifacts, idle-manager wiring, layout/resize policy expansion, and any X11/XScreenSaver-specific adapters.
 - Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
+- Stage 4 launch or integration claims are promotable only after the repo owns the relevant launch artifact, the relevant idle-manager/user-service artifact when idle activation is claimed, and any repo-shipped packaging/install artifact needed to deliver that behavior; screenshots, wiki snippets, or environment-local examples are not sufficient evidence.
 - Post-MVP work can extend the MVP without rewriting the earlier command and playback surfaces.
 
 **Boundary Notes**:
 - `Preseed`: content shipped or otherwise already local before Stage 1 runtime starts; valid for MVP because playback only sees local files.
 - `Bootstrap`: later explicit action that adds more local art; invalid to cite as shipped Stage 1 behavior until implementation exists.
 - `First-run growth`: later onboarding/helper layer that may call bootstrap or unpack additional art after install/start; also not part of Stage 1 shipped truth.
+- `Repo-owned launch artifacts required for Stage 4 claims`: any wrapper entrypoint, desktop/session launcher, user-service unit, idle hook, packaging manifest, install script, or other machine-readable artifact the repository itself ships and can test or review.
+- `Environment-specific examples`: Omarchy snippets, ad-hoc systemd commands, distro package recipes maintained elsewhere, XScreenSaver config fragments, and manual desktop settings instructions. These may document how a user could wire the repo-owned command, but they do not by themselves upgrade launch support into shipped truth.
+- `Ownership gate`: claiming `launch support` requires a repo-owned launch artifact; claiming `idle-manager integration` requires both the launch artifact and the repo-owned idle-manager or user-service artifact; claiming `packaged launch path` additionally requires the repo-owned packaging/install artifact for that channel.
 - `Non-goals for this package until separately evidenced`: background sync, always-on remote refresh, mandatory online setup, remote search/catalog UX, and database-dependent startup.
 
 **Tasks**:
@@ -222,7 +226,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Treat renderer-backed playback as the non-negotiable replacement for raw `cat` before adding presentation polish.
 - Separate `16c random` delivery from `16c screensaver` session controls so loop playback can land first.
 - Hold transitions, advanced render modes, overlays, X11/XScreenSaver adapters, and broader desktop-specific integration until the base loop is usable.
-- Treat Omarchy/systemd launch material as examples or owned user-service artifacts only; do not promise package-manager, installer, AUR, Nix, or other deployment channels unless `.ok/deployments.ok.md` says they are TRUE.
+- Treat Omarchy/systemd launch material as examples unless the repository ships the exact user-service or launcher artifact being referenced; do not promise package-manager, installer, AUR, Nix, or other deployment channels unless `.ok/deployments.ok.md` says they are TRUE and the relevant packaging artifact is repo-owned.
 - Update constitutional truth only after code, tests, or owned artifacts exist in-repo.
 
 ## Success Criteria Validation
@@ -230,4 +234,5 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, and session cleanup behavior is tested.
 - MVP completion does not require bootstrap downloads, first-run growth, or remote expansion flows; a curated local preseed is acceptable only insofar as it preserves the local-pool-only Stage 1 runtime boundary.
 - MVP Omarchy launch scope is complete only when the repo owns the command surface and any promised user-level launch artifacts; idle-manager policy, X11/XScreenSaver support, and extra packaging channels stay outside MVP until separately implemented.
+- Stage 4 launch claims are complete only when the repo owns the launch artifact itself, any claimed idle-manager/user-service wiring artifact, and any claimed packaging/install artifact for the delivery channel; environment-local examples remain illustrative only.
 - Post-MVP expansion is complete only when config growth, optional bootstrap/library expansion, environment integration, and any new deployment channels are backed by owned implementation and evidence rather than spec prose; background sync and metadata indexing stay non-promised until that evidence exists.

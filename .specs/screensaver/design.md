@@ -33,14 +33,17 @@ The first useful screensaver milestone is no longer "make a loop exist." The loo
 - Add `16c screensaver` as the same playback core plus screensaver-only terminal lifecycle.
 - Preserve the parser-to-IR-to-renderer handoff that is already checked in, rather than reintroducing raw file passthrough.
 - Add a small dwell policy and playback defaults, with hardcoded defaults acceptable until config loading actually ships.
-- Keep art source boundaries simple: use a playable local or fetched artwork set the current download surface can provide without making `.index.db` mandatory.
+- Keep art source boundaries simple: Stage 1 treats `random/` plus `local/` as the shipped playable local pool, with `random/` covering runtime-fetched intake and `local/` covering user-supplied files, without making `.index.db` mandatory.
+
+Stage 1 therefore ships one intentionally narrow truth: the runtime knows how to pick from a small local pool made of `random/` and `local/`, and it can still repopulate `random/` through the existing hardcoded remote fetch path when no local playable file exists. That truth must remain stable even after later pack-aware work ships; future growth expands the selector behind the same local-first contract instead of redefining what the shipped runtime already means.
 
 ### Stage 2: Local Pool Growth
 
 Once the loop exists, expand source selection without changing the runtime contract.
 
 - Add broader local cache and mirror enumeration.
-- Introduce database-backed or filesystem-backed rotation as an art-source provider behind the same selector boundary.
+- Introduce pack-aware local selection by letting the selector recognize `packs/` and other managed archive roots as additional local-library surfaces behind the same selector boundary.
+- Preserve Stage 1 compatibility by treating pack-aware inventory as an expansion of the local pool, not as a replacement for the shipped `random/` plus `local/` behavior.
 - Preserve the same renderer handoff and session lifecycle.
 
 ### Stage 3: User Configuration and Integration
@@ -81,8 +84,8 @@ The runtime coordinator owns the main loop and timing decisions.
 
 The source provider isolates selection policy from playback.
 
-- MVP: may choose from current downloadable/cacheable artwork without assuming `.index.db`.
-- Later: may query mirror inventory, filesystem scans, or `.index.db`.
+- MVP: chooses from the shipped local pool of `random/` plus `local/`, with last-resort repopulation of `random/` through the existing hardcoded remote fetch path, without assuming `.index.db`.
+- Later: may query pack inventory, mirror inventory, filesystem scans, or `.index.db`.
 - The runtime loop should see only a small contract such as "give me the next playable artwork descriptor."
 
 ### Playback Pipeline
@@ -146,18 +149,17 @@ Post-MVP selector growth can add:
 
 Before `.index.db` exists, the selector should use a strict local-first ladder that matches the repo's current evidence and MVP-first constraints.
 
-1. Try a small ansilust-owned curated seed set if one is present locally. This is the preferred first-run source because it gives the loop a deterministic playable baseline without requiring network fetch, mirror sync, or metadata services.
-2. Otherwise perform filesystem-backed discovery against the known local artwork roots rather than waiting for an index build.
-3. Within that scan, prefer `random/` first because current shipped behavior already downloads `random-1` and looped `random` output there and that directory is the only evidenced cache location in the repo today.
-4. Next prefer `packs/` as the future managed library root for broader downloaded or extracted collections.
-5. Next prefer `local/` for user-supplied or manually dropped artwork that should remain playable but is not required for MVP bootstrap.
-6. Only if all local tiers are empty may the runtime fall back to the remaining hardcoded remote-source behavior, using the existing hardcoded archive entry as a last-resort way to obtain one playable file and repopulate `random/`.
+1. In shipped Stage 1, scan only `random/` first and `local/` second, because those two roots define the actual local playable pool that exists without new pack machinery.
+2. Only if both Stage 1 roots are empty may the runtime fall back to the remaining hardcoded remote-source behavior, using the existing hardcoded archive entry as a last-resort way to obtain one playable file and repopulate `random/`.
+3. In Stage 2+, keep the same local-first contract but widen the scan to include pack-aware managed roots such as `packs/` between `random/` and `local/`, or alongside them under a selector mode that still resolves to local playable files before any network fetch.
+4. If a curated seed set is later introduced, treat it as one way to populate the managed local library surface rather than as a different runtime contract.
 
 This fallback order keeps Stage 1 unblocked:
 
 - It prefers already-local artwork over any network dependency.
-- It treats curated seeds as additive MVP insurance, not as a required background bootstrap system.
+- It preserves the shipped truth that `random/` plus `local/` are enough to define the local pool before pack support exists.
 - It preserves compatibility with current `random-1` evidence, where the repo can still fetch one hardcoded remote file and save it under `random/`.
+- It lets Stage 2 add managed packs as another local tier without breaking the Stage 1 runtime contract.
 - It does not promise `.index.db`, full mirror enumeration, or metadata-aware ranking before those surfaces actually ship.
 
 ### Selection Policy Within Local Tiers
@@ -165,15 +167,28 @@ This fallback order keeps Stage 1 unblocked:
 - The selector may stop at the first non-empty tier in the fallback ladder instead of merging all roots into one global ranked pool.
 - Within a chosen tier, selection may be simple random choice over playable files discovered by filename and parser support.
 - If a file fails to parse or render, the runtime should skip it, continue within the same tier when possible, and advance to the next fallback tier only if the tier proves effectively empty or unusable.
-- `random-1` remains compatible with its current hardcoded-fetch contract; the new ladder primarily governs future looping `random` and `screensaver` behavior before `.index.db` arrives.
+- `random-1` remains compatible with its current hardcoded-fetch contract; the new ladder primarily governs looping `random` and future `screensaver` behavior before `.index.db` arrives.
+
+### Transition From Stage 1 Pool To Pack-Aware Local Selection
+
+The growth path should be additive and selector-driven:
+
+- Step 1, shipped Stage 1: define the local pool as `random/` plus `local/`. `random/` is the runtime-owned intake cache and `local/` is the user-owned drop zone.
+- Step 2, early Stage 2: allow the selector to detect `packs/` as another local root, but keep the same playback contract and keep `random/` and `local/` fully valid even when `packs/` is absent.
+- Step 3, later Stage 2: let pack-aware selection understand extracted archives, pack boundaries, or remembered rotation state, but only inside the source-provider layer.
+- Step 4, post-MVP: add `.index.db` or richer metadata on top of those same roots to improve ranking and filtering, not to redefine what counts as playable local artwork.
+
+This transition keeps the shipped runtime stable because the runtime loop still asks for the next playable local artwork descriptor, while the source provider quietly grows from a two-root scan into a pack-aware local archive selector.
 
 ### Growth Roles For `random/`, `packs/`, And `local/`
 
 As the library grows past MVP, these three roots should remain distinct surfaces with different retention and rotation responsibilities rather than collapsing into one undifferentiated directory.
 
-- `random/` is the short-horizon intake surface. It remains the first playable local root for MVP compatibility because current `random-1` behavior already lands fetched artwork there. In Stage 2+, newly fetched or opportunistically downloaded pieces should enter rotation here first so the runtime can surface fresh material quickly without requiring pack curation or index rebuilds.
+- `random/` is the short-horizon intake surface. It remains the first playable local root for shipped Stage 1 compatibility because current `random-1` behavior already lands fetched artwork there. In Stage 2+, newly fetched or opportunistically downloaded pieces should enter rotation here first so the runtime can surface fresh material quickly without requiring pack curation or index rebuilds.
 - `packs/` is the managed durable library surface. In Stage 2+, downloaded archives, extracted collections, and future curated bundle material should accumulate here for long-term rotation. This directory is the default home for broad library growth once the system has more than one-off `random-1` fetches.
 - `local/` is the user-owned durable surface. It is always eligible for playback, but it stays conceptually separate from managed downloads because files here are user-supplied and should not be reorganized, deleted, or silently rewritten by the runtime.
+
+Pack-aware selection should therefore be understood as "local archive selection" rather than a separate remote mode. `packs/` joins the local pool as a managed archive surface, while `random/` and `local/` keep their shipped meanings intact.
 
 ### Retention Policy By Surface
 
