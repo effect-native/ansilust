@@ -2,7 +2,7 @@
 id: task-low-add-red-tests-for-random-dwell-and-empty-pool
 level: low
 status: pending
-blocked_by: ["task-med-add-random-dwell-and-empty-pool-policy"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

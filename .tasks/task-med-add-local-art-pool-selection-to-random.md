@@ -1,7 +1,7 @@
 ---
 id: task-med-add-local-art-pool-selection-to-random
 level: medium
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
