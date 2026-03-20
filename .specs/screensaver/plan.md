@@ -155,9 +155,11 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 **Acceptance**:
 - MVP `~/.config/16c/config.toml` keys are limited to the runtime controls needed for early delivery.
-- Launch and packaging guidance cleanly separates owned artifacts from environment-specific examples.
+- Launch guidance defines only the first owned Omarchy-friendly boundary: ansilust owns the `16c screensaver` command surface plus example user-level launch artifacts, not idle detection or desktop policy.
+- MVP launch examples are limited to Omarchy-adjacent Wayland/user-service surfaces such as `systemd --user` units or idle-manager wiring examples once they exist in-repo.
+- Packaging guidance cleanly separates owned artifacts from environment-specific examples and stays fenced to channels the repository can actually prove.
 - Config/configuration work stays decoupled from mirror/database and transition-polish expansion.
-- The plan identifies what remains post-MVP for Omarchy/systemd integration.
+- X11, XScreenSaver, and broader cross-desktop launch compatibility remain post-MVP follow-on work under later integration packages.
 
 **Tasks**:
 - `task-high-screensaver-art-source-config-and-integration`
@@ -174,7 +176,8 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 **Acceptance**:
 - Bootstrap behavior is defined as post-MVP and does not block the first playable loop.
 - The growth path from minimum local pool to larger library is explicit.
-- Later system integration remains separated from runtime truth until owned artifacts exist.
+- Later system integration remains separated from runtime truth until owned artifacts exist; this includes Omarchy idle wiring beyond the initial launch boundary plus any X11/XScreenSaver-specific adapters.
+- Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
 - Post-MVP work can extend the MVP without rewriting the earlier command and playback surfaces.
 
 **Tasks**:
@@ -198,10 +201,12 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Keep `.index.db`, mirror sync, and curated bootstrap out of the MVP critical path.
 - Treat renderer-backed playback as the non-negotiable replacement for raw `cat` before adding presentation polish.
 - Separate `16c random` delivery from `16c screensaver` session controls so loop playback can land first.
-- Hold transitions, advanced render modes, overlays, and desktop-specific integration until the base loop is usable.
+- Hold transitions, advanced render modes, overlays, X11/XScreenSaver adapters, and broader desktop-specific integration until the base loop is usable.
+- Treat Omarchy/systemd launch material as examples or owned user-service artifacts only; do not promise package-manager, installer, AUR, Nix, or other deployment channels unless `.ok/deployments.ok.md` says they are TRUE.
 - Update constitutional truth only after code, tests, or owned artifacts exist in-repo.
 
 ## Success Criteria Validation
 
 - MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, and session cleanup behavior is tested.
-- Post-MVP expansion is complete only when config growth, bootstrap/library expansion, and environment integration are backed by owned implementation and evidence rather than spec prose.
+- MVP Omarchy launch scope is complete only when the repo owns the command surface and any promised user-level launch artifacts; idle-manager policy, X11/XScreenSaver support, and extra packaging channels stay outside MVP until separately implemented.
+- Post-MVP expansion is complete only when config growth, bootstrap/library expansion, environment integration, and any new deployment channels are backed by owned implementation and evidence rather than spec prose.

@@ -18,8 +18,11 @@ FR1.1.1: The system shall provide a `16c random` command that continuously rotat
 FR1.1.2: The system shall provide a `16c screensaver` command that runs the same artwork rotation in screensaver mode.
 FR1.1.3: WHEN `16c screensaver` starts the system shall enter an isolated terminal presentation mode suitable for fullscreen artwork playback.
 FR1.1.4: WHILE `16c screensaver` is active the system shall hide transient terminal chrome needed for artwork playback.
-FR1.1.5: WHEN `16c screensaver` receives keyboard input the system shall exit the session promptly.
-FR1.1.6: WHEN `16c random` or `16c screensaver` receives a termination signal the system shall restore terminal state before exiting.
+FR1.1.5: WHEN `16c screensaver` receives any keyboard input the system shall treat that input as an exit request and shall end the session promptly without requiring a confirmation step.
+FR1.1.6: WHEN `16c screensaver` exits because of keyboard input the system shall restore the terminal presentation state it changed for screensaver playback before the process returns control to the caller.
+FR1.1.7: WHEN `16c random` or `16c screensaver` receives `SIGINT`, `SIGTERM`, `SIGHUP`, or `SIGQUIT` the system shall begin an orderly shutdown path instead of leaving the terminal in its screensaver presentation state.
+FR1.1.8: WHEN `16c random` or `16c screensaver` handles `SIGINT`, `SIGTERM`, `SIGHUP`, or `SIGQUIT` the system shall restore cursor visibility, input mode, alternate-screen usage, and other terminal state it changed before exiting.
+FR1.1.9: IF terminal-state restoration cannot complete during signal-triggered shutdown THEN the system shall still attempt best-effort cleanup before exit.
 
 ### FR1.2: Stage 1 - Playable MVP Artwork Selection
 FR1.2.1: The system shall select artwork from a local on-disk pool available at runtime.
@@ -60,7 +63,7 @@ FR1.6.5: WHERE multi-monitor integration is enabled the system shall document th
 ## NFR2: Non-Functional Requirements
 
 NFR2.1: The Stage 1 MVP shall start playback from a non-empty local artwork pool without requiring network access.
-NFR2.2: The Stage 1 MVP shall leave the terminal in a recoverable state after normal exit, input-triggered exit, or signal-triggered exit.
+NFR2.2: The Stage 1 MVP shall leave the terminal in a recoverable state after normal exit, input-triggered exit, or signal-triggered exit, including on `SIGINT`, `SIGTERM`, `SIGHUP`, and `SIGQUIT`.
 NFR2.3: The Stage 1 MVP shall keep its runtime dependency surface smaller than the full mirror, database, and desktop-integration program.
 NFR2.4: Later-stage features shall be additive and shall not be prerequisites for the Stage 1 playable loop.
 NFR2.5: Requirement boundaries shall remain explicit so MVP completion is not blocked on post-MVP growth work.
@@ -94,7 +97,7 @@ DEP6.4: Stage 4 depends on future packaging and external-launch documentation or
 
 ## SC7: Success Criteria
 
-SC7.1: Stage 1 is complete when a user with local artwork can run `16c random` for continuous playback and `16c screensaver` for input-dismissible playback without needing mirror, database, or desktop-integration setup.
+SC7.1: Stage 1 is complete when a user with local artwork can run `16c random` for continuous playback and `16c screensaver` for input-dismissible playback, and both commands restore terminal state on input exit and on `SIGINT`, `SIGTERM`, `SIGHUP`, and `SIGQUIT`, without needing mirror, database, or desktop-integration setup.
 SC7.2: Stage 2 is complete when the artwork pool can grow beyond the MVP local source through defined local archive and optional metadata-backed selection paths.
 SC7.3: Stage 3 is complete when persistent configuration can control selection and playback behavior without redefining the Stage 1 command contract.
 SC7.4: Stage 4 is complete when documented launch and idle-integration surfaces can start and dismiss the screensaver in supported environments.

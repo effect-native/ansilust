@@ -170,6 +170,45 @@ Renderer integration is the architectural seam that replaces the current `cat` b
 - Avoid promising fit/fill/native scaling, SAUCE-perfect layout, or streaming simulation until those capabilities are actually implemented.
 - Treat metadata overlays and richer transitions as separate later layers, not part of the core handoff.
 
+## Terminal Sizing And Presentation Policy
+
+Stage 1 needs a presentation policy that is usable in ordinary terminals without inventing resize math or visual modes the repo does not yet evidence. The MVP should therefore treat the active terminal size as a hard viewport, center only when that can be done with straightforward padding, and use SAUCE as a source of parser or renderer hints rather than as a promise of full-screen layout correction.
+
+### Terminal Size Detection
+
+- Detect terminal rows and columns at playback start for each artwork presentation.
+- Treat the detected size as the current viewport limit for that render pass.
+- For `screensaver`, detect size after entering the alternate screen so layout uses the active presentation surface.
+- If terminal size cannot be determined, fall back to rendering without extra centering logic rather than failing the session.
+
+### MVP Sizing Rules
+
+- The MVP render target is the current terminal cell grid; there is no fit, fill, zoom, or aspect-correct scaling mode yet.
+- If artwork fits within the current viewport, it may be positioned with simple whole-cell offsets.
+- If artwork exceeds the viewport in either dimension, the MVP may show only the renderer's natural visible region for that terminal instead of shrinking or reflowing the art.
+- Oversized artwork is therefore acceptable as clipped-by-viewport in Stage 1 as long as playback remains legible enough to view and exit cleanly.
+
+### MVP Centering Rules
+
+- Centering is a presentation nicety, not a correctness requirement for Stage 1 playback.
+- When artwork dimensions are smaller than the terminal and whole-cell padding is cheap to compute, center it horizontally and vertically using blank-space margins.
+- When exact centering would require capabilities outside the current renderer handoff, prefer top-left anchored playback over inventing partial layout state.
+- Do not promise sub-cell alignment, animated repositioning, or per-frame re-centering during streaming playback in the MVP.
+
+### SAUCE-Aware Presentation Hints
+
+- Preserve and parse SAUCE metadata because it can contain width and classic rendering hints that affect how the artwork should be interpreted.
+- In Stage 1, SAUCE may influence parser or renderer inputs that are already part of ansilust's document model, such as declared columns or classic flags like iCE colors.
+- In Stage 1, SAUCE shall not be treated as a guarantee of aspect-ratio correction, font emulation, metadata overlays, or automatic fullscreen layout policy.
+- If SAUCE conflicts with the current terminal viewport, prefer a playable terminal render over attempting unsupported correction passes.
+
+### Practical MVP Outcomes
+
+- Small artwork in a larger terminal should usually appear centered when that only requires blank padding.
+- Large artwork may render from its natural origin and be clipped by the terminal viewport.
+- SAUCE-aware width and classic mode hints may improve interpretation, but they do not create new scaling or presentation modes in Stage 1.
+- Resize-specific behavior remains a separate policy surface so sizing promises here stay limited to the start-of-playback contract.
+
 ## Session Lifecycle
 
 The session lifecycle differs by command mode.
