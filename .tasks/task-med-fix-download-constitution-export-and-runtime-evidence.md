@@ -2,7 +2,7 @@
 id: task-med-fix-download-constitution-export-and-runtime-evidence
 level: medium
 status: pending
-blocked_by: ["task-high-reconcile-download-spec-stack-to-stage1-runtime"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

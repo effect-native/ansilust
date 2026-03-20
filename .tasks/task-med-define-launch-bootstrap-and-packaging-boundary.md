@@ -2,7 +2,7 @@
 id: task-med-define-launch-bootstrap-and-packaging-boundary
 level: medium
 status: pending
-blocked_by: ["task-high-plan-postmvp-archive-and-integration-growth"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

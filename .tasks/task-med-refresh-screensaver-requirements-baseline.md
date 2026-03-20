@@ -2,7 +2,7 @@
 id: task-med-refresh-screensaver-requirements-baseline
 level: medium
 status: pending
-blocked_by: ["task-high-reconcile-screensaver-spec-contract-to-stage1-runtime"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

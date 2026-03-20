@@ -2,7 +2,7 @@
 id: task-med-remove-stage1-runtime-polish-debt
 level: medium
 status: pending
-blocked_by: ["task-high-harden-stage1-runtime-and-tests"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 
