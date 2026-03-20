@@ -38,6 +38,14 @@ pub const RandomPlaybackLoop = struct {
     }
 };
 
+pub const ScreensaverPlaybackLoop = struct {
+    playback: RandomPlaybackLoop = .{},
+
+    pub fn run(self: ScreensaverPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
+        try self.playback.run(allocator, iterations);
+    }
+};
+
 /// Execute the random-1 command
 ///
 /// Flow:
@@ -57,6 +65,11 @@ pub const RandomPlaybackLoop = struct {
 /// - Various errors from download, storage, or renderer operations
 pub fn executeRandomOne(allocator: Allocator) !void {
     try executeRandom(allocator, true);
+}
+
+pub fn executeScreensaver(allocator: Allocator) !void {
+    const screensaver = ScreensaverPlaybackLoop{};
+    try screensaver.run(allocator, null);
 }
 
 fn executeRandom(allocator: Allocator, allow_remote_fallback: bool) !void {

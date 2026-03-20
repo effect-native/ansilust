@@ -7,6 +7,7 @@ pub const commands = struct {
     pub const random = @import("commands/random.zig");
 };
 pub const RandomPlaybackLoop = commands.random.RandomPlaybackLoop;
+pub const ScreensaverPlaybackLoop = commands.random.ScreensaverPlaybackLoop;
 pub const protocols = struct {
     pub const http = @import("protocols/http.zig");
 };

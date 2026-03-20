@@ -1,12 +1,11 @@
 //! 16c CLI entry point
 //!
 //! Command-line interface for the 16colors archive downloader.
-//! Currently supports: random, random-1
+//! Currently supports: random, screensaver, random-1
 
 const std = @import("std");
 const download = @import("download");
 const random = download.commands.random;
-const RandomPlaybackLoop = download.RandomPlaybackLoop;
 
 fn ArrayList(comptime T: type) type {
     return std.array_list.AlignedManaged(T, null);
@@ -31,8 +30,10 @@ pub fn main() !void {
 
     // Execute command
     if (std.mem.eql(u8, command, "random")) {
-        const playback = RandomPlaybackLoop{};
+        const playback = download.RandomPlaybackLoop{};
         try playback.run(allocator, null);
+    } else if (std.mem.eql(u8, command, "screensaver")) {
+        try random.executeScreensaver(allocator);
     } else if (std.mem.eql(u8, command, "random-1")) {
         try random.executeRandomOne(allocator);
     } else if (std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
@@ -71,6 +72,7 @@ fn writeUsage(writer: anytype) !void {
     try writer.writeAll("Usage: 16c <command>\n\n");
     try writer.writeAll("Commands:\n");
     try writer.writeAll("  random      Download and continuously display random artwork\n");
+    try writer.writeAll("  screensaver Run the dedicated screensaver session entrypoint\n");
     try writer.writeAll("  --help      Show this help message\n");
     try writer.writeAll("  --version   Show version information\n\n");
 }
@@ -79,7 +81,8 @@ fn writeHelp(writer: anytype) !void {
     try writer.writeAll("16c - 16colors Archive Downloader\n\n");
     try writeUsage(writer);
     try writer.writeAll("Examples:\n");
-    try writer.writeAll("  16c random    # Display random ANSI/ASCII art in a loop\n\n");
+    try writer.writeAll("  16c random       # Display random ANSI/ASCII art in a loop\n");
+    try writer.writeAll("  16c screensaver  # Start the dedicated screensaver session mode\n\n");
 }
 
 fn writeVersion(writer: anytype) !void {
