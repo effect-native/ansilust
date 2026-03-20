@@ -1,7 +1,7 @@
 ---
 id: task-high-harden-stage1-runtime-and-tests
 level: high
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---

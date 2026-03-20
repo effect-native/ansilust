@@ -1,7 +1,7 @@
 ---
 id: task-high-plan-postmvp-archive-and-integration-growth
 level: high
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---

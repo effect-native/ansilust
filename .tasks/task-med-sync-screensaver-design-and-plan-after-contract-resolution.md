@@ -1,7 +1,7 @@
 ---
 id: task-med-sync-screensaver-design-and-plan-after-contract-resolution
 level: medium
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---

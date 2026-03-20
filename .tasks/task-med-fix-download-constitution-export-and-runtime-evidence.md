@@ -1,7 +1,7 @@
 ---
 id: task-med-fix-download-constitution-export-and-runtime-evidence
 level: medium
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
