@@ -2,7 +2,7 @@
 id: task-med-add-stage1-playback-flag-surface
 level: medium
 status: pending
-blocked_by: ["task-high-add-stage1-playback-controls-and-config"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 
