@@ -6,6 +6,8 @@
 const std = @import("std");
 const download = @import("download");
 const random = download.commands.random;
+const PlaybackMode = random.PlaybackMode;
+const StreamingSpeed = random.StreamingSpeed;
 
 fn ArrayList(comptime T: type) type {
     return std.array_list.AlignedManaged(T, null);
@@ -30,10 +32,11 @@ pub fn main() !void {
 
     // Execute command
     if (std.mem.eql(u8, command, "random")) {
-        const playback = download.RandomPlaybackLoop{};
-        try playback.run(allocator, null);
+        const mode = try parsePlaybackMode(args[2..]);
+        try random.executeRandomLoop(allocator, mode);
     } else if (std.mem.eql(u8, command, "screensaver")) {
-        try random.executeScreensaver(allocator);
+        const mode = try parsePlaybackMode(args[2..]);
+        try random.executeScreensaverWithMode(allocator, mode);
     } else if (std.mem.eql(u8, command, "random-1")) {
         try random.executeRandomOne(allocator);
     } else if (std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
@@ -45,6 +48,56 @@ pub fn main() !void {
         printUsage();
         return error.UnknownCommand;
     }
+}
+
+fn parsePlaybackMode(args: []const []const u8) !PlaybackMode {
+    var instant = false;
+    var streaming_speed: ?StreamingSpeed = null;
+
+    var index: usize = 0;
+    while (index < args.len) : (index += 1) {
+        const arg = args[index];
+
+        if (std.mem.eql(u8, arg, "--instant")) {
+            instant = true;
+            continue;
+        }
+
+        if (std.mem.eql(u8, arg, "--streaming-speed")) {
+            index += 1;
+            if (index >= args.len) {
+                std.debug.print("Error: --streaming-speed requires a preset (slow, normal, fast)\n", .{});
+                return error.MissingStreamingSpeedPreset;
+            }
+
+            streaming_speed = try parseStreamingSpeed(args[index]);
+            continue;
+        }
+
+        std.debug.print("Error: Unknown flag '{s}'\n", .{arg});
+        return error.UnknownFlag;
+    }
+
+    if (instant and streaming_speed != null) {
+        std.debug.print("Error: --instant and --streaming-speed cannot be used together\n", .{});
+        return error.ConflictingPlaybackFlags;
+    }
+
+    if (instant) return .instant;
+    if (streaming_speed) |preset| return .{ .streaming = preset };
+    return .standard;
+}
+
+fn parseStreamingSpeed(value: []const u8) !StreamingSpeed {
+    if (std.mem.eql(u8, value, "slow")) return .slow;
+    if (std.mem.eql(u8, value, "normal")) return .normal;
+    if (std.mem.eql(u8, value, "fast")) return .fast;
+
+    std.debug.print(
+        "Error: Invalid streaming speed preset '{s}'. Supported presets: slow, normal, fast\n",
+        .{value},
+    );
+    return error.InvalidStreamingSpeedPreset;
 }
 
 fn printUsage() void {
@@ -69,10 +122,13 @@ fn printVersion() void {
 }
 
 fn writeUsage(writer: anytype) !void {
-    try writer.writeAll("Usage: 16c <command>\n\n");
+    try writer.writeAll("Usage: 16c <command> [options]\n\n");
     try writer.writeAll("Commands:\n");
     try writer.writeAll("  random      Download and continuously display random artwork\n");
     try writer.writeAll("  screensaver Run the dedicated screensaver session entrypoint\n");
+    try writer.writeAll("\nPlayback options (random, screensaver):\n");
+    try writer.writeAll("  --instant                   Skip dwell delay between artworks\n");
+    try writer.writeAll("  --streaming-speed <preset>  Preserve selected playback mode: slow, normal, fast\n");
     try writer.writeAll("  --help      Show this help message\n");
     try writer.writeAll("  --version   Show version information\n\n");
 }
@@ -81,8 +137,10 @@ fn writeHelp(writer: anytype) !void {
     try writer.writeAll("16c - 16colors Archive Downloader\n\n");
     try writeUsage(writer);
     try writer.writeAll("Examples:\n");
-    try writer.writeAll("  16c random       # Display random ANSI/ASCII art in a loop\n");
-    try writer.writeAll("  16c screensaver  # Start the dedicated screensaver session mode\n\n");
+    try writer.writeAll("  16c random                             # Display random ANSI/ASCII art in a loop\n");
+    try writer.writeAll("  16c random --instant                   # Replay local/random artwork without dwell\n");
+    try writer.writeAll("  16c screensaver                        # Start the dedicated screensaver session mode\n");
+    try writer.writeAll("  16c screensaver --streaming-speed fast # Preserve the selected streaming preset\n\n");
 }
 
 fn writeVersion(writer: anytype) !void {

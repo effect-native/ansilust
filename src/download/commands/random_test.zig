@@ -40,7 +40,16 @@ test "16c random stage1 local pool is selected before remote fallback" {
 test "16c random stage1 dwell defaults to 20 seconds" {
     const source = @embedFile("random.zig");
 
-    try testing.expect(std.mem.indexOf(u8, source, "delay_ns: u64 = 20 * std.time.ns_per_s") != null);
+    try testing.expect(std.mem.indexOf(u8, source, ".standard, .streaming => 20 * std.time.ns_per_s") != null);
+}
+
+test "16c playback runtime carries explicit playback mode through random and screensaver loops" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "pub const PlaybackMode = union(enum)") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "mode: PlaybackMode = .standard") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "pub fn executeRandomLoop") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "pub fn executeScreensaverWithMode") != null);
 }
 
 test "16c random stage1 local pool explicitly replays a single playable file" {

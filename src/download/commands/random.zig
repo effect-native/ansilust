@@ -18,8 +18,28 @@ fn handleScreensaverSignal(_: c_int) callconv(.c) void {
     screensaver_exit_requested.store(true, .seq_cst);
 }
 
+pub const PlaybackMode = union(enum) {
+    standard,
+    instant,
+    streaming: StreamingSpeed,
+
+    pub fn delayNs(self: PlaybackMode) u64 {
+        return switch (self) {
+            .instant => 0,
+            .standard, .streaming => 20 * std.time.ns_per_s,
+        };
+    }
+};
+
+pub const StreamingSpeed = enum {
+    slow,
+    normal,
+    fast,
+};
+
 pub const RandomPlaybackLoop = struct {
-    delay_ns: u64 = 20 * std.time.ns_per_s,
+    mode: PlaybackMode = .standard,
+    delay_ns: u64 = PlaybackMode.standard.delayNs(),
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
         _ = self;
@@ -151,7 +171,24 @@ pub fn executeRandomOne(allocator: Allocator) !void {
 }
 
 pub fn executeScreensaver(allocator: Allocator) !void {
-    const screensaver = ScreensaverPlaybackLoop{};
+    try executeScreensaverWithMode(allocator, .standard);
+}
+
+pub fn executeRandomLoop(allocator: Allocator, mode: PlaybackMode) !void {
+    const playback = RandomPlaybackLoop{
+        .mode = mode,
+        .delay_ns = mode.delayNs(),
+    };
+    try playback.run(allocator, null);
+}
+
+pub fn executeScreensaverWithMode(allocator: Allocator, mode: PlaybackMode) !void {
+    const screensaver = ScreensaverPlaybackLoop{
+        .playback = .{
+            .mode = mode,
+            .delay_ns = mode.delayNs(),
+        },
+    };
     try screensaver.run(allocator, null);
 }
 
