@@ -1,39 +1,48 @@
 # Screensaver OK
 
-This file governs ansilust's current screensaver and author-experience runtime reality. It translates `.specs/screensaver/` into binary constitutional truth so reconciliation stays anchored to checked-in CLI behavior rather than future showcase-flow ambitions.
+This file governs ansilust's current screensaver reality and its shortest-path delivery ladder. It translates `.specs/screensaver/` intent into binary constitutional truth anchored to checked-in CLI, download, and renderer evidence instead of promoting the full showcase spec as shipped behavior.
 
 ## Governing References
 
-- `.specs/screensaver/instructions.md`
-- `build.zig`
-- `src/cli/sixteenc.zig`
-- `src/download/commands/random.zig`
-- `.ok/download.ok.md`
+- Constitution source intent: `.specs/screensaver/instructions.md`
+- Gap framing: `.tasks/artifacts/gaps-snapshot-20260320001837.md`
+- Live CLI surface: `src/cli/sixteenc.zig`
+- Live one-shot runtime path: `src/download/commands/random.zig`
+- Neighbor constitutions: `.ok/download.ok.md`, `.ok/render-utf8ansi.ok.md`
 
-## Ideal End State
+## Live Checked-In Evidence
 
-- TRUE: `.specs/screensaver/` is an active spec area that now has constitutional coverage in this file.
-- TRUE: `.specs/screensaver/instructions.md` describes a future `16c` random-rotation and fullscreen screensaver surface, and this file intentionally promotes only repository-evidenced facts into present-tense truth.
-- TRUE: Current shipped `16c` CLI surface is limited to `random-1`, `--help`/`-h`, and `--version`/`-v`.
-- TRUE: Current repository evidence supports single-artwork fetch-and-display via `16c random-1`; continuous `16c random` rotation and `16c screensaver` fullscreen mode are not current truth.
-- TRUE: Current `16c random-1` behavior is download-first MVP behavior that stores one file in the `random/` cache and displays it by subprocessing `cat`.
-- TRUE: Current repository evidence does not show screensaver-only input handling, alternate-screen management, cursor hiding, fullscreen window integration, config parsing from `~/.config/16c/config.toml`, filtering, metadata overlays, or systemd idle integration.
-- TRUE: Current repository evidence does not show the spec-described mirror-query and pre-cache orchestration surfaces such as `.index.db`-backed random rotation, bundled curated artwork, post-install bootstrap, or background `16c download` expansion during screensaver use.
-- TRUE: `.specs/screensaver/**` may describe future random rotation, streaming animation, fullscreen screensaver mode, pre-cache/bootstrap, and idle-manager integration, but only assertions promoted here are constitutional truth for screensaver reconciliation.
+- The checked-in `16c` CLI surface is currently limited to `random-1`, `--help`/`-h`, and `--version`/`-v` in `src/cli/sixteenc.zig`.
+- The only evidenced artwork-display flow for this surface is `16c random-1` in `src/download/commands/random.zig`, which creates platform directories, asks the hardcoded archive database for one file, downloads it, stores it in `random/`, and displays it by subprocessing `cat`.
+- The active download constitution in `.ok/download.ok.md` says the current source of random artwork is still a hardcoded in-memory database entry, not a shipped `.index.db` or mirror-query surface.
+- The active renderer constitution in `.ok/render-utf8ansi.ok.md` says renderer-backed UTF8ANSI output exists in the repo, but `.ok/download.ok.md` also says that renderer integration is not the current download-surface display path.
+- The screensaver gap snapshot in `.tasks/artifacts/gaps-snapshot-20260320001837.md` says the remaining problem is decomposition: the repo still lacks a staged ladder from `random-1` to a usable looping screensaver MVP.
+
+## Capability Ladder
+
+- TRUE: Stage 0 current reality is `16c random-1`: one random artwork is fetched, cached under `random/`, printed once, and the process exits.
+- TRUE: Stage 0 is the only current screensaver-adjacent runtime truth evidenced by `src/cli/sixteenc.zig`, `src/download/commands/random.zig`, and `.ok/download.ok.md`.
+- TRUE: A shortest-path screensaver MVP is not current truth yet; the repo does not currently evidence a looping `16c random`, a `16c screensaver` command, alternate-screen lifecycle handling, cursor hiding, exit-on-input behavior, or renderer-backed playback.
+- FUTURE: Stage 1 shortest-path MVP is a local looping playback surface that promotes `random-1` into repeated artwork rotation without depending on fullscreen integration, `.index.db`, bootstrap downloads, filters, overlays, or user config.
+- FUTURE: Stage 1 shortest-path MVP becomes current truth only when checked-in code and tests show a looped command surface plus a real playback handoff instead of the current one-shot `cat` path.
+- FUTURE: Stage 2 builds on the looping MVP by adding a dedicated `16c screensaver` session lifecycle such as alternate-screen entry and restore, cursor hide and restore, exit on input, signal-safe cleanup, and terminal-sized presentation behavior.
+- FUTURE: Stage 3 builds on the looping MVP by integrating broader archive selection and experience layers such as renderer-backed streaming presentation, richer local artwork pools, mirror or `.index.db` selection, config parsing, filtering, metadata overlays, and bootstrap or pre-cache growth.
+- FUTURE: Stage 4 builds on the prior stages by adding external environment integration such as owned docs or artifacts for systemd user services, hypridle or swayidle hooks, DPMS-aware lifecycle behavior, and multi-monitor launch patterns.
+- TRUE: The shortest path remains intentionally decomposed: local looping playback comes before fullscreen session management, and fullscreen session management comes before mirror, config, and desktop-environment integrations.
+- TRUE: `.specs/screensaver/**` may describe all later stages together, but this constitution separates them so near-term execution can ship a looping MVP before the larger archive and system-integration program.
 
 ## States We Do Not Want
 
-- FALSE: Spec-only commands `16c random` or `16c screensaver` are treated as shipped behavior without matching CLI and build evidence.
-- FALSE: Download-spec aspirations such as `.index.db`, pack rotation, curated bootstrap, or local-mirror queries are treated as current screensaver guarantees without checked-in evidence in this surface.
-- FALSE: Renderer aspirations such as streaming baud simulation, scaling modes, SAUCE-driven layout, or fullscreen terminal cleanup are treated as present-tense runtime truth without implemented evidence.
-- FALSE: Example service files, Hyprland rules, or config snippets in `.specs/screensaver/**` are treated as installed or supported artifacts when they do not exist in the repository.
-- FALSE: Spec-defined runtime affordances such as `--instant`, fit/fill/native render modes, metadata overlays, terminal resize handling, signal-driven cleanup, or exit-on-any-input are treated as current guarantees without checked-in implementation evidence.
-- FALSE: Spec-defined user-environment integration such as `~/.config/16c/config.toml`, `~/.config/systemd/user/16c-screensaver.service`, hypridle hooks, DPMS-aware lifecycle handling, or multi-monitor launch flows are treated as shipped support without checked-in product artifacts or documentation owned by this surface.
+- FALSE: Spec-only commands `16c random` or `16c screensaver` are treated as shipped behavior without matching CLI, runtime, and test evidence.
+- FALSE: The shortest-path looping MVP is treated as blocked on `.index.db`, mirror sync, curated bootstrap, systemd integration, or other later-stage infrastructure when local-loop playback can be delivered separately.
+- FALSE: Renderer ambitions such as streaming baud simulation, scaling modes, SAUCE-driven layout, or metadata overlays are treated as current screensaver guarantees without checked-in implementation evidence on this surface.
+- FALSE: Example service files, Hyprland rules, config snippets, or idle-manager examples in `.specs/screensaver/**` are treated as installed or supported artifacts when no owned repo artifacts or docs currently exist.
+- FALSE: Later-stage ladder items override present-tense truth; until a stage is evidenced in checked-in code, tests, or owned artifacts, it remains future-facing here.
 
 ## Required Governance Rules
 
-- TRUE: Changes to the `16c` experience surface for random rotation, fullscreen behavior, config handling, or idle/system integration require updating this file in the same reconciliation loop.
-- TRUE: Screensaver completion claims must be backed by checked-in CLI code, config artifacts, or tests; spec prose and examples are not sufficient evidence.
-- TRUE: Claims about mirror-backed selection, pre-cache/bootstrap behavior, terminal-state management, config keys, or environment integration must be backed by checked-in command surfaces, owned docs, or validation artifacts rather than by spec examples alone.
-- TRUE: Downstream orchestration may rely only on screensaver guarantees declared TRUE here.
-- TRUE: Screensaver scope remains binary: a capability is either evidenced and governed here or it is still future, absent, or unevidenced.
+- TRUE: Changes to the `16c` command surface, playback path, fullscreen lifecycle, config handling, mirror selection, or idle-system integration require updating this file in the same reconciliation loop.
+- TRUE: Screensaver advancement claims must identify which ladder stage became current truth and must be backed by checked-in code, tests, or owned artifacts; spec prose and examples are not sufficient evidence.
+- TRUE: Every new TRUE implementation claim in this file must cite at least one live checked-in code, test, or artifact path that demonstrates the claim.
+- TRUE: Downstream orchestration may rely only on screensaver guarantees declared TRUE here, not on FUTURE ladder stages.
+- TRUE: Screensaver scope remains binary at each stage boundary: a capability is either evidenced and governed here as current truth or it remains future, partial, or unevidenced.
