@@ -4,14 +4,15 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ## Execution Baseline
 
-- Current repository truth remains the `.ok/screensaver.ok.md` MVP: shipped behavior is still `16c random-1` only.
-- The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices.
+- Current repository truth has moved past the old `random-1`-only baseline: the repo now ships a `16c random` loop surface and routes playback through the ansilust renderer.
+- The current Stage 1 runtime is still partial: local-pool selection, explicit dwell and playback flag/config controls, and the dedicated `16c screensaver` session lifecycle remain open work.
+- The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices and now tracks the remaining Stage 1 gaps rather than restating already-landed runtime slices.
 - This file defines stable work packages for future delivery without treating spec-only behavior as shipped runtime truth.
 
 ## Legacy Tracker Translation
 
 - `tracker/tasks/FEAT-SCREEN-001.md` is archival context only; it helps preserve useful intent from the pre-DotOK workflow but does not define current blockers, priority, or execution authority.
-- `GAP-DL-001` is no longer treated as a single live gate for screensaver delivery. Its useful intent is translated into staged DotOK work instead: MVP local-art decoupling lives in `WP-RUN-001` and `WP-ART-001`, while later cache/bootstrap and integration growth live in `WP-CFG-001` and `WP-GROW-001`.
+- `GAP-DL-001` is no longer treated as a single live gate for screensaver delivery. Its useful intent is translated into staged DotOK work instead: MVP local-art decoupling now lives in `WP-ART-001`, while later cache/bootstrap and integration growth live in `WP-CFG-001` and `WP-GROW-001`.
 - `GAP-DB-001` is no longer treated as a single live gate for screensaver delivery. Its useful intent is translated into post-MVP metadata/index/config growth instead: database-backed selection and richer library management belong under `WP-ART-001`, `WP-CFG-001`, and `WP-GROW-001`, not the MVP runtime or renderer path.
 - The old tracker acceptance stack now maps into the current sequence: looping playback and command surfaces land first (`WP-RUN-001`, `WP-RUN-002`), renderer-backed presentation next (`WP-DISP-001`, `WP-DISP-002`), then art-source/config boundaries (`WP-ART-001`, `WP-CFG-001`), with bootstrap, metadata growth, packaging, and environment-specific integration deferred to `WP-GROW-001`.
 - Any future reference to legacy tracker IDs in this area should be read as historical rationale only and translated into `.tasks/` work under these work packages instead of being revived as active authority.
@@ -52,27 +53,21 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ### [WP-RUN-001] Continuous Random Command MVP
 
-**Intent**: Add the first usable looping `16c random` runtime surface so screensaver delivery no longer stops at one-shot `random-1`.
+**Intent**: Capture the already-landed looping `16c random` runtime surface so screensaver delivery no longer stops at one-shot `random-1`.
 
 **Acceptance**:
 - `16c random` is a first-class CLI surface with dedicated command/module ownership.
-- The runtime can rotate through multiple artworks using a defined dwell policy.
-- MVP art selection works from a local pool without depending on the full `.index.db` mirror stack.
-- Failure behavior is explicit when no playable local art is available.
+- The runtime can execute repeated playback iterations instead of one-shot `random-1` only.
+- The loop path reuses one owned playback entry point rather than shelling out to an external display path.
+- Remaining dwell policy, local-pool selection, and empty-pool behavior are explicitly deferred to still-open work packages.
 
 **Tasks**:
 - `task-high-screensaver-command-and-runtime-loop`
 - `task-med-add-continuous-random-command-surface`
 - `task-low-extend-16c-cli-for-random-command`
 - `task-low-add-looping-random-command-module`
-- `task-med-add-timing-and-rotation-policy`
-- `task-low-define-artwork-dwell-defaults`
-- `task-med-decouple-mvp-art-selection-from-full-mirror`
-- `task-low-define-random-packs-and-local-rotation-surface`
-- `task-low-define-fallback-order-before-index-db`
-- `task-low-define-minimum-local-art-pool-strategy`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
 ### [WP-RUN-002] Screensaver Session Controls MVP
 
@@ -85,9 +80,13 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - MVP fullscreen-session behavior is explicit even before window-manager integration lands.
 
 **Tasks**:
-- `task-med-add-screensaver-session-controls`
-- `task-low-define-screensaver-input-exit-and-signal-cleanup`
-- `task-low-define-alt-screen-cursor-lifecycle`
+- `task-high-add-screensaver-session-mode`
+- `task-med-add-screensaver-cli-surface`
+- `task-low-add-red-tests-for-screensaver-cli-surface`
+- `task-low-implement-screensaver-cli-surface`
+- `task-med-add-screensaver-session-cleanup`
+- `task-low-add-red-tests-for-screensaver-session-cleanup`
+- `task-low-implement-screensaver-session-cleanup`
 
 **Status**: [ ] Pending
 
@@ -107,26 +106,27 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `task-low-route-random-display-through-ansilust-renderer`
 - `task-low-add-renderer-backed-16c-playback-tests`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
-### [WP-DISP-002] MVP Layout And Streaming Policy
+### [WP-DISP-002] MVP Layout, Dwell, And Streaming Policy
 
-**Intent**: Define the first shippable presentation rules for sizing and pacing without blocking delivery on later visual polish.
+**Intent**: Define the remaining MVP presentation rules for sizing and pacing without blocking delivery on later visual polish.
 
 **Acceptance**:
 - MVP sizing, centering, and SAUCE-handling policy is defined for runtime playback.
 - Resize behavior is explicit for MVP and future escalation is separated.
+- Artwork dwell behavior is explicit for looping playback and stays aligned with the current Stage 1 runtime gaps.
 - Streaming defaults and instant mode are scoped as MVP-visible behavior.
 - Transition effects and other polish remain clearly post-MVP.
 
 **Tasks**:
-- `task-med-define-layout-and-resize-behavior`
-- `task-low-define-terminal-sizing-centering-and-sauce-policy`
-- `task-low-define-resize-handling-and-render-mode-escalation`
-- `task-med-scope-streaming-and-transition-effects`
-- `task-low-isolate-mvp-streaming-behavior`
-- `task-low-define-instant-and-streaming-speed-flags`
-- `task-low-defer-nonessential-transition-effects`
+- `task-high-add-stage1-playback-controls-and-config`
+- `task-med-add-random-dwell-and-empty-pool-policy`
+- `task-low-add-red-tests-for-random-dwell-and-empty-pool`
+- `task-low-implement-random-dwell-and-empty-pool-policy`
+- `task-med-add-stage1-playback-flag-surface`
+- `task-low-add-red-tests-for-stage1-config-defaults`
+- `task-low-implement-stage1-playback-flags`
 
 **Status**: [ ] Pending
 
@@ -142,11 +142,8 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - The spec leaves room for later bootstrap and broader library growth without promising them in the MVP.
 
 **Tasks**:
-- `task-med-decouple-mvp-art-selection-from-full-mirror`
-- `task-low-define-random-packs-and-local-rotation-surface`
-- `task-low-define-fallback-order-before-index-db`
-- `task-low-define-minimum-local-art-pool-strategy`
-- `task-low-capture-screensaver-mvp-vs-post-mvp-dependencies`
+- `task-high-complete-local-random-playback-mvp`
+- `task-med-add-local-art-pool-selection-to-random`
 
 **Status**: [ ] Pending
 
@@ -164,9 +161,10 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 **Tasks**:
 - `task-high-screensaver-art-source-config-and-integration`
-- `task-med-design-config-launch-and-packaging-surface`
-- `task-low-define-16c-config-toml-mvp-keys`
-- `task-low-author-omarchy-systemd-and-packaging-boundary`
+- `task-high-add-stage1-playback-controls-and-config`
+- `task-med-add-stage1-config-loading`
+- `task-low-add-red-tests-for-stage1-config-defaults`
+- `task-low-implement-stage1-config-loading`
 
 **Status**: [ ] Pending
 
