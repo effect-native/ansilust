@@ -1,7 +1,7 @@
 ---
 id: task-med-remove-flaky-download-randomness-check
 level: medium
-status: pending
+status: in_progress
 blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---

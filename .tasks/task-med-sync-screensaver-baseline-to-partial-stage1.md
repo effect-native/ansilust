@@ -2,7 +2,7 @@
 id: task-med-sync-screensaver-baseline-to-partial-stage1
 level: medium
 status: pending
-blocked_by: ["task-med-sync-download-constitution-to-current-runtime"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

@@ -2,7 +2,7 @@
 id: task-low-rewrite-archive-database-randomness-test-deterministically
 level: low
 status: pending
-blocked_by: ["task-med-remove-flaky-download-randomness-check"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 
