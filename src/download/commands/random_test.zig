@@ -36,3 +36,24 @@ test "16c random stage1 local pool is selected before remote fallback" {
 
     try testing.expect(local_scan_index < remote_index);
 }
+
+test "16c random stage1 dwell defaults to 20 seconds" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "delay_ns: u64 = 20 * std.time.ns_per_s") != null);
+}
+
+test "16c random stage1 local pool explicitly replays a single playable file" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "if (candidates.items.len == 1)") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "return allocator.dupe(u8, candidates.items[0]);") != null);
+}
+
+test "16c random stage1 empty local pool fails with helpful guidance" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "error.EmptyLocalArtworkPool") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "random/") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "local/") != null);
+}
