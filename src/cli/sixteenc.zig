@@ -96,3 +96,29 @@ test "16c help exposes random command surface" {
     try std.testing.expect(std.mem.indexOf(u8, output.items, "16c random") != null);
     try std.testing.expect(std.mem.indexOf(u8, output.items, "random-1") == null);
 }
+
+test "16c usage and help expose screensaver command surface" {
+    var usage_output = ArrayList(u8).init(std.testing.allocator);
+    defer usage_output.deinit();
+
+    var usage_writer = usage_output.writer();
+    try writeUsage(&usage_writer);
+
+    try std.testing.expect(std.mem.indexOf(u8, usage_output.items, "screensaver") != null);
+
+    var help_output = ArrayList(u8).init(std.testing.allocator);
+    defer help_output.deinit();
+
+    var help_writer = help_output.writer();
+    try writeHelp(&help_writer);
+
+    try std.testing.expect(std.mem.indexOf(u8, help_output.items, "16c screensaver") != null);
+}
+
+test "16c includes distinct screensaver command dispatch path" {
+    const source = try std.fs.cwd().readFileAlloc(std.testing.allocator, "src/cli/sixteenc.zig", 64 * 1024);
+    defer std.testing.allocator.free(source);
+
+    try std.testing.expect(std.mem.indexOf(u8, source, "std.mem.eql(u8, command, \"screensaver\")") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "std.mem.eql(u8, command, \"random\") and std.mem.eql(u8, command, \"screensaver\")") == null);
+}
