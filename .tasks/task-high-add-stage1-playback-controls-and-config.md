@@ -1,7 +1,7 @@
 ---
 id: task-high-add-stage1-playback-controls-and-config
 level: high
-status: in_progress
+status: done
 blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
