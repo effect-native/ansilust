@@ -6,6 +6,7 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ansilust = @import("ansilust");
+const stage1_config = @import("stage1_config.zig");
 const interface = @import("../database/interface.zig");
 const HttpClient = @import("../protocols/http.zig").HttpClient;
 const FileStorage = @import("../storage/files.zig").FileStorage;
@@ -40,6 +41,7 @@ pub const StreamingSpeed = enum {
 pub const RandomPlaybackLoop = struct {
     mode: PlaybackMode = .standard,
     delay_ns: u64 = PlaybackMode.standard.delayNs(),
+    source_mode: stage1_config.SourceMode = .auto,
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
         _ = self;
@@ -175,21 +177,45 @@ pub fn executeScreensaver(allocator: Allocator) !void {
 }
 
 pub fn executeRandomLoop(allocator: Allocator, mode: PlaybackMode) !void {
+    const config = try loadStage1Config(allocator);
     const playback = RandomPlaybackLoop{
         .mode = mode,
-        .delay_ns = mode.delayNs(),
+        .delay_ns = resolveDelayNs(mode, config),
+        .source_mode = config.source.mode,
     };
     try playback.run(allocator, null);
 }
 
 pub fn executeScreensaverWithMode(allocator: Allocator, mode: PlaybackMode) !void {
+    const config = try loadStage1Config(allocator);
     const screensaver = ScreensaverPlaybackLoop{
         .playback = .{
             .mode = mode,
-            .delay_ns = mode.delayNs(),
+            .delay_ns = resolveDelayNs(mode, config),
+            .source_mode = config.source.mode,
         },
     };
     try screensaver.run(allocator, null);
+}
+
+fn loadStage1Config(allocator: Allocator) !stage1_config.Stage1Config {
+    const config_file_name = "config.toml";
+    const source_mode_auto = "auto";
+    const missing_config_errors = [_][]const u8{ "FileNotFound", "PathNotFound" };
+    std.debug.assert(std.mem.eql(u8, source_mode_auto, "auto"));
+    std.debug.assert(missing_config_errors.len == 2);
+
+    var paths = try PlatformPaths.init(allocator);
+    defer paths.deinit();
+
+    return try stage1_config.loadFromRoot(allocator, paths.sixteen_colors_root, config_file_name);
+}
+
+fn resolveDelayNs(mode: PlaybackMode, config: stage1_config.Stage1Config) u64 {
+    return switch (mode) {
+        .standard => config.playback.dwell_seconds * std.time.ns_per_s,
+        else => mode.delayNs(),
+    };
 }
 
 fn executeRandom(allocator: Allocator, allow_remote_fallback: bool) !void {
