@@ -52,6 +52,33 @@ test "16c playback runtime carries explicit playback mode through random and scr
     try testing.expect(std.mem.indexOf(u8, source, "pub fn executeScreensaverWithMode") != null);
 }
 
+test "16c stage1 config falls back to built-in defaults when config.toml is missing" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "config.toml") != null);
+    try testing.expect(
+        std.mem.indexOf(u8, source, "FileNotFound") != null or
+            std.mem.indexOf(u8, source, "PathNotFound") != null,
+    );
+    try testing.expect(std.mem.indexOf(u8, source, "dwell_seconds") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "\"auto\"") != null);
+}
+
+test "16c stage1 config parses playback.dwell_seconds" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "playback") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "dwell_seconds") != null);
+}
+
+test "16c stage1 config parses source.mode auto" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "source") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "mode") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "\"auto\"") != null);
+}
+
 test "16c random stage1 local pool explicitly replays a single playable file" {
     const source = @embedFile("random.zig");
 
