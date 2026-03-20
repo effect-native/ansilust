@@ -19,8 +19,19 @@ fn ArrayList(comptime T: type) type {
 
 var screensaver_exit_requested = std.atomic.Value(bool).init(false);
 
+const screensaver_enter_sequence = "\x1b[?1049h\x1b[?25l";
+const screensaver_leave_sequence = "\x1b[?25h\x1b[?1049l";
+
 fn handleScreensaverSignal(_: c_int) callconv(.c) void {
     screensaver_exit_requested.store(true, .seq_cst);
+}
+
+pub fn writeScreensaverEnter(writer: anytype) !void {
+    try writer.writeAll(screensaver_enter_sequence);
+}
+
+pub fn writeScreensaverLeave(writer: anytype) !void {
+    try writer.writeAll(screensaver_leave_sequence);
 }
 
 pub const PlaybackMode = union(enum) {
@@ -138,14 +149,14 @@ const ScreensaverSession = struct {
         if (!self.manage_terminal) return;
 
         const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-        try stdout_file.writeAll("\x1b[?1049h\x1b[?25l");
+        try writeScreensaverEnter(stdout_file.writer());
     }
 
     fn restoreTerminal(self: *ScreensaverSession) void {
         if (!self.manage_terminal) return;
 
         const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-        stdout_file.writeAll("\x1b[?25h\x1b[?1049l") catch {};
+        writeScreensaverLeave(stdout_file.writer()) catch {};
     }
 
     fn installSignalHandlers(self: *ScreensaverSession) void {

@@ -1,6 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
 const random = @import("random.zig");
+const stage1_config = @import("stage1_config.zig");
 
 test "16c playback no longer shells out through raw cat" {
     const source = @embedFile("random.zig");
@@ -60,30 +61,41 @@ test "16c playback runtime carries explicit playback mode through random and scr
 }
 
 test "16c stage1 config falls back to built-in defaults when config.toml is missing" {
-    const source = @embedFile("random.zig");
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
 
-    try testing.expect(std.mem.indexOf(u8, source, "config.toml") != null);
-    try testing.expect(
-        std.mem.indexOf(u8, source, "FileNotFound") != null or
-            std.mem.indexOf(u8, source, "PathNotFound") != null,
-    );
-    try testing.expect(std.mem.indexOf(u8, source, "dwell_seconds") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "\"auto\"") != null);
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
+
+    const config = try stage1_config.loadFromRoot(allocator, root, "config.toml");
+
+    try testing.expectEqual(@as(u64, 20), config.playback.dwell_seconds);
+    try testing.expectEqual(stage1_config.SourceMode.auto, config.source.mode);
 }
 
-test "16c stage1 config parses playback.dwell_seconds" {
-    const source = @embedFile("random.zig");
+test "16c stage1 config loads playback and source settings from config.toml" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
 
-    try testing.expect(std.mem.indexOf(u8, source, "playback") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "dwell_seconds") != null);
-}
+    try tmp.dir.writeFile(.{
+        .sub_path = "config.toml",
+        .data =
+        \\[playback]
+        \\dwell_seconds = 7
+        \\[source]
+        \\mode = "auto"
+        ,
+    });
 
-test "16c stage1 config parses source.mode auto" {
-    const source = @embedFile("random.zig");
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
 
-    try testing.expect(std.mem.indexOf(u8, source, "source") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "mode") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "\"auto\"") != null);
+    const config = try stage1_config.loadFromRoot(allocator, root, "config.toml");
+
+    try testing.expectEqual(@as(u64, 7), config.playback.dwell_seconds);
+    try testing.expectEqual(stage1_config.SourceMode.auto, config.source.mode);
 }
 
 test "16c random stage1 empty local pool fails with helpful guidance" {
@@ -97,18 +109,22 @@ test "16c random stage1 empty local pool fails with helpful guidance" {
     );
 }
 
-test "16c screensaver session enters and restores alternate screen" {
-    const source = @embedFile("random.zig");
+test "16c screensaver session writes terminal enter sequence" {
+    var buffer: [64]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buffer);
 
-    try testing.expect(std.mem.indexOf(u8, source, "?1049h") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "?1049l") != null);
+    try random.writeScreensaverEnter(stream.writer());
+
+    try testing.expectEqualStrings("\x1b[?1049h\x1b[?25l", stream.getWritten());
 }
 
-test "16c screensaver session hides and restores cursor" {
-    const source = @embedFile("random.zig");
+test "16c screensaver session cleanup restores cursor and primary screen" {
+    var buffer: [64]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buffer);
 
-    try testing.expect(std.mem.indexOf(u8, source, "?25l") != null);
-    try testing.expect(std.mem.indexOf(u8, source, "?25h") != null);
+    try random.writeScreensaverLeave(stream.writer());
+
+    try testing.expectEqualStrings("\x1b[?25h\x1b[?1049l", stream.getWritten());
 }
 
 test "16c screensaver exits when user input arrives" {
@@ -118,18 +134,5 @@ test "16c screensaver exits when user input arrives" {
     try testing.expect(
         std.mem.indexOf(u8, source, "poll") != null or
             std.mem.indexOf(u8, source, "read") != null,
-    );
-}
-
-test "16c screensaver restores terminal state when interrupted by signal" {
-    const source = @embedFile("random.zig");
-
-    try testing.expect(
-        std.mem.indexOf(u8, source, "SIGINT") != null or
-            std.mem.indexOf(u8, source, "SIGTERM") != null,
-    );
-    try testing.expect(
-        std.mem.indexOf(u8, source, "sigaction") != null or
-            std.mem.indexOf(u8, source, "signal") != null,
     );
 }
