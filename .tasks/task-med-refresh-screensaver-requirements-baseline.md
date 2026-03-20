@@ -1,7 +1,7 @@
 ---
 id: task-med-refresh-screensaver-requirements-baseline
 level: medium
-status: pending
+status: in_progress
 blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---

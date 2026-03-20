@@ -2,7 +2,7 @@
 id: task-low-update-download-ok-public-surface-evidence
 level: low
 status: pending
-blocked_by: ["task-med-fix-download-constitution-export-and-runtime-evidence"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

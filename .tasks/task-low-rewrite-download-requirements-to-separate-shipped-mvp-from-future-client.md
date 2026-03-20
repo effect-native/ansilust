@@ -2,7 +2,7 @@
 id: task-low-rewrite-download-requirements-to-separate-shipped-mvp-from-future-client
 level: low
 status: pending
-blocked_by: ["task-med-rewrite-download-requirements-for-current-mvp"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

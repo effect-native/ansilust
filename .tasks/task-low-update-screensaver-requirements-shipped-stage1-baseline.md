@@ -2,7 +2,7 @@
 id: task-low-update-screensaver-requirements-shipped-stage1-baseline
 level: low
 status: pending
-blocked_by: ["task-med-refresh-screensaver-requirements-baseline"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

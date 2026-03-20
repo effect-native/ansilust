@@ -2,7 +2,7 @@
 id: task-low-rewrite-download-design-for-shipped-stage1-architecture
 level: low
 status: pending
-blocked_by: ["task-med-rewrite-download-design-and-plan-for-current-runtime"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

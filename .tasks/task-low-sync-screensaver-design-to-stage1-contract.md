@@ -2,7 +2,7 @@
 id: task-low-sync-screensaver-design-to-stage1-contract
 level: low
 status: pending
-blocked_by: ["task-med-sync-screensaver-design-and-plan-after-contract-resolution"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

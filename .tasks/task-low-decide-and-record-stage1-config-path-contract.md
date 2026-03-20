@@ -2,7 +2,7 @@
 id: task-low-decide-and-record-stage1-config-path-contract
 level: low
 status: pending
-blocked_by: ["task-med-resolve-screensaver-signal-and-config-contract"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

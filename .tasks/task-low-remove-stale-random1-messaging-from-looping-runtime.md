@@ -2,7 +2,7 @@
 id: task-low-remove-stale-random1-messaging-from-looping-runtime
 level: low
 status: pending
-blocked_by: ["task-med-remove-stage1-runtime-polish-debt"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

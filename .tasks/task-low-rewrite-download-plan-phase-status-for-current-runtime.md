@@ -2,7 +2,7 @@
 id: task-low-rewrite-download-plan-phase-status-for-current-runtime
 level: low
 status: pending
-blocked_by: ["task-med-rewrite-download-design-and-plan-for-current-runtime"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 

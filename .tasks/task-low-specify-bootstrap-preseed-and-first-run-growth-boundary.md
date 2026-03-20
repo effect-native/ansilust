@@ -2,7 +2,7 @@
 id: task-low-specify-bootstrap-preseed-and-first-run-growth-boundary
 level: low
 status: pending
-blocked_by: ["task-med-define-launch-bootstrap-and-packaging-boundary"]
+blocked_by: []
 expires_at: 2026-04-03T15:55:56Z
 ---
 
