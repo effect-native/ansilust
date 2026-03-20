@@ -2,7 +2,7 @@
 id: task-med-scope-streaming-and-transition-effects
 level: medium
 status: pending
-blocked_by: ["task-high-screensaver-display-and-presentation-pipeline"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 

@@ -2,7 +2,7 @@
 id: task-med-decouple-mvp-art-selection-from-full-mirror
 level: medium
 status: pending
-blocked_by: ["task-high-screensaver-art-source-config-and-integration"]
+blocked_by: []
 expires_at: 2026-03-27T00:18:37Z
 ---
 
