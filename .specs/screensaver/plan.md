@@ -8,6 +8,14 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices.
 - This file defines stable work packages for future delivery without treating spec-only behavior as shipped runtime truth.
 
+## Legacy Tracker Translation
+
+- `tracker/tasks/FEAT-SCREEN-001.md` is archival context only; it helps preserve useful intent from the pre-DotOK workflow but does not define current blockers, priority, or execution authority.
+- `GAP-DL-001` is no longer treated as a single live gate for screensaver delivery. Its useful intent is translated into staged DotOK work instead: MVP local-art decoupling lives in `WP-RUN-001` and `WP-ART-001`, while later cache/bootstrap and integration growth live in `WP-CFG-001` and `WP-GROW-001`.
+- `GAP-DB-001` is no longer treated as a single live gate for screensaver delivery. Its useful intent is translated into post-MVP metadata/index/config growth instead: database-backed selection and richer library management belong under `WP-ART-001`, `WP-CFG-001`, and `WP-GROW-001`, not the MVP runtime or renderer path.
+- The old tracker acceptance stack now maps into the current sequence: looping playback and command surfaces land first (`WP-RUN-001`, `WP-RUN-002`), renderer-backed presentation next (`WP-DISP-001`, `WP-DISP-002`), then art-source/config boundaries (`WP-ART-001`, `WP-CFG-001`), with bootstrap, metadata growth, packaging, and environment-specific integration deferred to `WP-GROW-001`.
+- Any future reference to legacy tracker IDs in this area should be read as historical rationale only and translated into `.tasks/` work under these work packages instead of being revived as active authority.
+
 ## Milestones
 
 - [x] M1. Governance and spec decomposition

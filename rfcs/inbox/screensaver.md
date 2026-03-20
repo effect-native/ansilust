@@ -1,12 +1,12 @@
 # Ansilust Screensaver for Omarchy Linux
 
-> **Note**: Full specification available at `.specs/screensaver/instructions.md`
+> **Note**: Active screensaver planning now spans `.ok/screensaver.ok.md` and `.specs/screensaver/{requirements,design,plan}.md`.
 
 ## Concept
 
 Create a screensaver for Omarchy Linux that continuously scrolls through classic ANSI art from the [16colo.rs](https://16colo.rs) BBS art archive, bringing retro computing aesthetics to modern Linux systems.
 
-**Status**: Specification complete (see `.specs/screensaver/`)
+**Status**: Decomposed into a staged delivery ladder; shipped runtime truth remains Stage 0 only (`16c random-1`) while the active screensaver stack now lives in `.ok/screensaver.ok.md` plus `.specs/screensaver/requirements.md`, `.specs/screensaver/design.md`, and `.specs/screensaver/plan.md`.
 
 ## Core Features
 
@@ -45,11 +45,11 @@ Create a screensaver for Omarchy Linux that continuously scrolls through classic
 ## Technical Integration
 
 ### Omarchy Linux Integration
-- XScreenSaver module compatibility
-- Wayland/X11 support
-- systemd integration for idle detection
-- Configuration via standard Linux screensaver settings
-- Respect user theme (dark/light mode)
+- Future launch/integration layer for Omarchy-friendly idle and fullscreen wiring
+- Future Wayland/X11 launch documentation or wrappers
+- Future systemd or idle-manager examples as owned artifacts
+- Future configuration via documented launch surfaces rather than assumed desktop settings
+- Future theme-awareness only after playback and launch stages exist
 
 ### Architecture
 ```
@@ -98,31 +98,36 @@ ansilust-screensaver --preview
 - Cache size limit
 - Update frequency
 
-## Development Phases
+## Delivery Ladder
 
-### Phase 1: Basic Screensaver
-- [ ] XScreenSaver/systemd integration
-- [ ] Simple random art display
-- [ ] Basic transition effects
-- [ ] Configuration file support
+### Stage 0: Current Repository Truth
+- [x] `16c random-1` fetches one artwork, stores it locally, prints it once, and exits
+- [x] Screensaver-adjacent behavior is limited to this one-shot path
+- [ ] Continuous playback
+- [ ] Dedicated `16c screensaver` session lifecycle
+- [ ] Renderer-backed playback on the download surface
 
-### Phase 2: Art Management
-- [ ] 16colo.rs API integration
-- [ ] Local caching system
-- [ ] Offline mode
-- [ ] Art filtering options
+### Stage 1: Playable Loop MVP
+- [ ] Add looping `16c random` playback from a local playable pool
+- [ ] Add `16c screensaver` using the same loop with input-exit behavior
+- [ ] Replace raw `cat` display with ansilust parser-to-renderer handoff
+- [ ] Keep this stage independent of `.index.db`, mirror sync, bootstrap downloads, filters, and desktop integration
 
-### Phase 3: Enhanced Display
-- [ ] Advanced transition effects
-- [ ] Metadata overlay
-- [ ] Multiple terminal backend support
-- [ ] Performance optimization
+### Stage 2: Session And Source Growth
+- [ ] Add alternate-screen, cursor lifecycle, and signal-safe cleanup for screensaver sessions
+- [ ] Expand beyond the minimum playable pool into richer local archive selection
+- [ ] Introduce metadata-backed or filesystem-backed rotation behind the same playback contract
+- [ ] Preserve the Stage 1 command/runtime surface while source depth improves
 
-### Phase 4: User Customization
-- [ ] Favorites/playlists
-- [ ] Theme integration
-- [ ] GUI configuration tool
-- [ ] Statistics tracking
+### Stage 3: Config And Experience Expansion
+- [ ] Add persistent config for duration, playback mode, and future selection controls
+- [ ] Add filtering, metadata overlay, and richer presentation policies as additive features
+- [ ] Keep these controls optional so the base loop stays usable without config
+
+### Stage 4: Environment Integration
+- [ ] Add owned docs or artifacts for systemd user services, hypridle/swayidle hooks, and launch surfaces
+- [ ] Define packaging/bootstrap paths for making artwork available offline
+- [ ] Document multi-monitor and desktop-environment behavior after the runtime exists
 
 ## Why This Matters
 
@@ -167,7 +172,7 @@ ansilust-screensaver --preview
 
 ---
 
-**Status**: Concept/Planning Phase  
+**Status**: Staged planning with Stage 0 current truth only (`16c random-1`)  
 **Priority**: Low-Medium (fun showcase project)  
-**Dependencies**: Ansilust rendering engine, Omarchy Linux packaging  
+**Dependencies**: Stage 1 depends on local artwork enumeration plus ansilust-owned rendering; later stages add `.index.db`/mirror growth, config, packaging, and idle-manager integration only after the playable loop exists  
 **Target Audience**: Omarchy Linux users, ANSI art enthusiasts, retro computing fans
