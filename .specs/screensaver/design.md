@@ -147,6 +147,31 @@ Post-MVP selector growth can add:
 - exclusion rules and curated playlists
 - cache invalidation and inventory refresh policies
 
+### Pre-`.index.db` Fallback Order
+
+Before `.index.db` exists, the selector should use a strict local-first ladder that matches the repo's current evidence and MVP-first constraints.
+
+1. Try a small ansilust-owned curated seed set if one is present locally. This is the preferred first-run source because it gives the loop a deterministic playable baseline without requiring network fetch, mirror sync, or metadata services.
+2. Otherwise perform filesystem-backed discovery against the known local artwork roots rather than waiting for an index build.
+3. Within that scan, prefer `random/` first because current shipped behavior already downloads `random-1` output there and that directory is the only evidenced cache location in the repo today.
+4. Next prefer `packs/` as the future managed library root for broader downloaded or extracted collections.
+5. Next prefer `local/` for user-supplied or manually dropped artwork that should remain playable but is not required for MVP bootstrap.
+6. Only if all local tiers are empty may the runtime fall back to the remaining hardcoded remote-source behavior, using the existing hardcoded archive entry as a last-resort way to obtain one playable file and repopulate `random/`.
+
+This fallback order keeps Stage 1 unblocked:
+
+- It prefers already-local artwork over any network dependency.
+- It treats curated seeds as additive MVP insurance, not as a required background bootstrap system.
+- It preserves compatibility with current `random-1` evidence, where the repo can still fetch one hardcoded remote file and save it under `random/`.
+- It does not promise `.index.db`, full mirror enumeration, or metadata-aware ranking before those surfaces actually ship.
+
+### Selection Policy Within Local Tiers
+
+- The selector may stop at the first non-empty tier in the fallback ladder instead of merging all roots into one global ranked pool.
+- Within a chosen tier, selection may be simple random choice over playable files discovered by filename and parser support.
+- If a file fails to parse or render, the runtime should skip it, continue within the same tier when possible, and advance to the next fallback tier only if the tier proves effectively empty or unusable.
+- `random-1` remains compatible with its current hardcoded-fetch contract; the new ladder primarily governs future looping `random` and `screensaver` behavior before `.index.db` arrives.
+
 ## Renderer Handoff
 
 Renderer integration is the architectural seam that replaces the current `cat` behavior.

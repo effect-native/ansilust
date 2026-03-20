@@ -30,6 +30,19 @@ FR1.2.2: WHEN the local artwork pool contains at least one supported file the sy
 FR1.2.3: IF the local artwork pool is empty THEN the system shall exit with a helpful message that explains how to obtain artwork.
 FR1.2.4: The system shall support one-shot artwork viewing through the existing `random-1` command without changing its current MVP contract.
 FR1.2.5: WHILE Stage 1 is the active delivery target the system shall not require `.index.db` or mirror-query infrastructure to select artwork.
+FR1.2.6: WHILE Stage 1 is the active delivery target the system shall treat the minimum local artwork pool as the union of the existing platform-managed `random/` cache and `local/` user-art directories under the 16colors data root.
+FR1.2.7: WHEN `random-1` saves a supported artwork into the `random/` cache the system shall make that file eligible for subsequent `16c random` and `16c screensaver` selection without requiring any extra import step.
+FR1.2.8: WHEN a user places a supported artwork into the `local/` directory the system shall make that file eligible for subsequent `16c random` and `16c screensaver` selection without requiring metadata sidecars or mirror provenance.
+FR1.2.9: IF the minimum local artwork pool contains exactly one supported file THEN the system shall still allow Stage 1 playback by replaying that file on each rotation interval until more artwork is available or the session exits.
+FR1.2.10: WHILE Stage 1 is the active delivery target the system shall not require enumeration of `packs/` or any full-mirror archive layout to make `16c random` and `16c screensaver` usable.
+
+#### Stage 1 Minimum Local Art Pool Strategy
+
+- The smallest usable offline pool is one playable ANSI file in either the existing `random/` cache or the existing `local/` drop folder under the platform-specific 16colors root.
+- This stays aligned with current repo reality: `16c random-1` already writes downloaded artwork into `random/`, `PlatformPaths` already defines `random/`, `packs/`, and `local/`, and the shipped parser surface is ANSI-only today.
+- Stage 1 therefore reuses what already exists instead of inventing a new bootstrap format, seed bundle, or metadata database.
+- Empty-pool guidance should point users to the two concrete fill paths that already fit the repo: run `16c random-1` at least once, or copy supported ANSI art into `local/`.
+- `packs/` remains a Stage 2 growth source because depending on mirror-shaped archive inventory would reintroduce the bootstrap work Stage 1 is explicitly avoiding.
 
 ### FR1.3: Stage 1 - Playable MVP Playback
 FR1.3.1: The system shall render selected artwork through ansilust-owned rendering rather than by subprocessing raw `cat` output.
@@ -81,6 +94,9 @@ TC3.4: Stage 1 shall preserve the existing shipped `16c random-1` behavior until
 
 DR4.1: The Stage 1 MVP shall define a local artwork pool abstraction that can enumerate supported artwork files from disk.
 DR4.2: The Stage 1 MVP shall define the minimum artwork metadata needed for rotation, such as file path and format suitability.
+DR4.2.1: The Stage 1 local artwork pool abstraction shall enumerate supported ANSI artwork from `random/` and `local/` before any later-stage archive or database source is considered.
+DR4.2.2: The Stage 1 pool descriptor shall require only file path, basename, and format suitability for playback; archive pack metadata, year, group, and artist fields shall remain optional until Stage 2 metadata-backed selection exists.
+DR4.2.3: The Stage 1 empty-pool message shall name `random/` and `local/` as the concrete directories the user can populate.
 DR4.3: Stage 2 metadata-backed selection shall define the indexed artwork fields required for random selection and filtering.
 DR4.4: The Stage 1 MVP shall define a default playback duration of 20 seconds per artwork and a fixed immediate-cut rotation policy.
 DR4.5: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
@@ -94,6 +110,7 @@ IR5.3: Stage 4 launch surfaces shall integrate with external desktop tools throu
 ## DEP6: Dependencies
 
 DEP6.1: Stage 1 depends on a local artwork enumeration path and ansilust-owned artwork rendering.
+DEP6.1.1: The minimum usable Stage 1 pool depends only on the already-defined 16colors data-root directories `random/` and `local/`, plus at least one supported ANSI file in either location.
 DEP6.2: Stage 2 depends on future download-surface work that produces local archive inventory and, if enabled, `.index.db` indexing.
 DEP6.3: Stage 3 depends on a future config surface for persisted screensaver settings.
 DEP6.4: Stage 4 depends on future packaging and external-launch documentation or artifacts.
