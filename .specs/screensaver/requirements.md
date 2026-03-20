@@ -2,11 +2,11 @@
 
 ## Scope and Staging
 
-This document decomposes screensaver delivery into a shortest-path playable MVP plus deferred expansion layers. It is aligned with current constitutional truth in `.ok/screensaver.ok.md`, `.ok/download.ok.md`, and `.ok/render-utf8ansi.ok.md`: the repository now ships narrow Stage 1 continuous rotation through `16c random`, a fullscreen-style `16c screensaver` terminal mode, and minimal config parsing, but it does not yet ship `.index.db`-backed selection, bundled pre-cache, or idle-manager integration.
+This document decomposes screensaver delivery into a shortest-path playable MVP plus deferred expansion layers. It is aligned with current constitutional truth in `.ok/screensaver.ok.md`, `.ok/download.ok.md`, and `.ok/render-utf8ansi.ok.md`: the repository now ships narrow Stage 1 continuous rotation through `16c random`, a fullscreen-style `16c screensaver` terminal mode, and minimal config parsing from `config.toml` under the resolved `16colors` root, but it does not yet ship `.index.db`-backed selection, bundled pre-cache, or idle-manager integration.
 
 ### Stage Boundaries
 
-- **Stage 1 - Playable MVP**: deliver a usable local-loop runtime for `16c random` and `16c screensaver` without requiring `.index.db`, mirror bootstrap, package pre-cache, expanded persistent configuration, or system integration.
+- **Stage 1 - Playable MVP**: deliver a usable local-loop runtime for `16c random` and `16c screensaver` without requiring `.index.db`, mirror bootstrap, package pre-cache, system integration, or any persistent configuration beyond the shipped `config.toml` lookup under the resolved `16colors` root.
 - **Stage 2 - Art-Source Growth**: expand artwork selection beyond the MVP local pool into richer local archive and metadata-backed sources.
 - **Stage 3 - Config Expansion**: add persistent user configuration and richer selection/display controls.
 - **Stage 4 - Launch and Integration**: add service, idle-manager, packaging, and desktop-environment launch surfaces.
@@ -44,7 +44,7 @@ FR1.2.10: WHILE Stage 1 is the active delivery target the system shall not requi
 - Empty-pool guidance should point users to the two concrete fill paths that already fit the repo: run `16c random-1` at least once, or copy supported ANSI art into `local/`.
 - `packs/` remains a Stage 2 growth source because depending on mirror-shaped archive inventory would reintroduce the bootstrap work Stage 1 is explicitly avoiding.
 
-### FR1.3: Stage 1 - Playable MVP Playback
+### FR1.3: Stage 1 - Playable MVP Playback And Minimal Config
 FR1.3.1: The system shall render selected artwork through ansilust-owned rendering rather than by subprocessing raw `cat` output.
 FR1.3.2: WHILE `16c random` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
 FR1.3.3: WHILE `16c screensaver` is active the system shall display one artwork at a time for a default viewing interval of 20 seconds before rotating.
@@ -58,6 +58,9 @@ FR1.3.10: IF `--instant` and `--streaming-speed` are both provided THEN the syst
 FR1.3.11: WHEN a 20-second viewing interval ends the system shall replace the current artwork immediately with the next selected artwork.
 FR1.3.12: WHEN artwork playback completes the system shall advance to another artwork without requiring process restart.
 FR1.3.13: WHEN the terminal size changes during Stage 1 playback the system shall preserve a usable display and exit path.
+FR1.3.14: The system shall load the shipped Stage 1 config file for `16c random` and `16c screensaver` from `config.toml` under the resolved `16colors` data root.
+FR1.3.15: IF that `config.toml` file is missing THEN the system shall fall back to built-in Stage 1 defaults.
+FR1.3.16: WHILE Stage 1 is the active delivery target the system shall treat the `16colors`-root `config.toml` path as the explicit shipped config-path contract and shall not require or imply `~/.config/16c/config.toml`.
 
 ### FR1.4: Stage 2 - Art-Source Growth
 FR1.4.1: WHERE local archive browsing is enabled the system shall select artwork from local archive surfaces beyond the Stage 1 pool.
@@ -68,7 +71,7 @@ FR1.4.5: WHERE curated bootstrap is enabled the system shall offer an additive w
 FR1.4.6: WHERE bundled or downloaded artwork growth is enabled the system shall preserve the distinction between official archive material and user-managed local artwork.
 
 ### FR1.5: Stage 3 - Config Expansion
-FR1.5.1: WHERE expanded persistent user configuration is enabled the system shall read screensaver settings from a documented config surface beyond the minimal Stage 1 runtime parsing contract.
+FR1.5.1: WHERE expanded persistent user configuration is enabled the system shall read screensaver settings from a documented config surface that extends or supersedes the minimal Stage 1 `config.toml`-in-`16colors`-root runtime contract.
 FR1.5.2: WHERE selection filters are enabled the system shall support filtering by archive metadata fields such as year, group, artist, or format.
 FR1.5.3: WHERE display controls are enabled the system shall support configurable artwork duration and playback mode selection.
 FR1.5.4: WHERE metadata overlays are enabled the system shall support showing and hiding artwork metadata during playback.
@@ -108,6 +111,8 @@ DR4.4: The Stage 1 MVP shall define a default playback duration of 20 seconds pe
 DR4.4.1: The Stage 1 MVP shall define `--instant` as a boolean command override for immediate full-frame playback.
 DR4.4.2: The Stage 1 MVP shall define `--streaming-speed <preset>` as a command override that selects from a documented preset set rather than arbitrary free-form timing input.
 DR4.4.3: The Stage 1 MVP shall keep playback-style overrides ephemeral to the current command invocation; persisted playback-mode configuration remains a Stage 3 concern.
+DR4.4.4: The Stage 1 MVP shall treat `config.toml` in the resolved `16colors` root as the shipped shared config file for `16c random` and `16c screensaver`.
+DR4.4.5: The Stage 1 MVP shall limit its evidenced persisted config surface to built-in defaults plus the minimal values currently parsed from that file, while broader config schema work remains a Stage 3 concern.
 DR4.5: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
 
 ## IR5: Integration Requirements
@@ -121,7 +126,7 @@ IR5.3: Stage 4 launch surfaces shall integrate with external desktop tools throu
 DEP6.1: Stage 1 depends on a local artwork enumeration path and ansilust-owned artwork rendering.
 DEP6.1.1: The minimum usable Stage 1 pool depends only on the already-defined 16colors data-root directories `random/` and `local/`, plus at least one supported ANSI file in either location.
 DEP6.2: Stage 2 depends on future download-surface work that produces local archive inventory and, if enabled, `.index.db` indexing.
-DEP6.3: Stage 3 depends on a future config surface for persisted screensaver settings.
+DEP6.3: Stage 3 depends on future config-surface work beyond the shipped Stage 1 `config.toml` contract in the resolved `16colors` root.
 DEP6.4: Stage 4 depends on future packaging and external-launch documentation or artifacts.
 
 ## SC7: Success Criteria

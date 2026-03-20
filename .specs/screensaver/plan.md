@@ -6,8 +6,17 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 - Current repository truth has moved past the old `random-1`-only baseline: the repo now ships looping `16c random` and dedicated `16c screensaver` command surfaces, and routes playback through the ansilust renderer.
 - The Stage 1 runtime surface now includes local-pool-first artwork selection, the 20-second default dwell and empty-pool policy, explicit `--instant` / `--streaming-speed <preset>` playback controls, and minimal config loading for `playback.dwell_seconds` plus `source.mode = "auto"`.
+- Stage 1 shipped truth stops at playing from the artwork already present in the local pool. Curated preseed content can satisfy that pool, but any later bootstrap download, cache expansion, or first-run library growth is outside shipped Stage 1 unless the repo later lands owned implementation and evidence.
 - The current `.tasks/` hierarchy completed the decomposition pass needed to break the monolith into governed slices and now records the landed Stage 1 runtime work alongside the still-future launch, bootstrap, packaging, and broader integration growth.
 - This file defines stable work packages for future delivery without treating spec-only behavior as shipped runtime truth.
+
+## Stage 1 Boundary: Local Pool Only
+
+- Shipped Stage 1 claims stop at a playable local pool consumed by `16c random` / `16c screensaver`; no network reachability, remote catalog, bootstrap prompt, cache hydration, or first-run fetch is required for MVP truth.
+- A curated preseed is allowed only as the source of that initial local pool. It is a packaging/content decision, not a runtime growth feature, and does not imply downloader, updater, mirror sync, or metadata maturity.
+- Optional bootstrap is post-MVP by definition. If it lands later, it must be documented as an explicit user-invoked flow that adds more local art after the Stage 1 runtime already works.
+- First-run growth is also post-MVP by definition. Future first-run helpers may offer to expand the library, but they must remain additive to the working local-pool-first runtime rather than becoming a hidden prerequisite.
+- Any future bootstrap or growth path must preserve the same runtime contract: once art exists locally, the shipped playback/session surfaces work without needing remote services.
 
 ## Legacy Tracker Translation
 
@@ -139,6 +148,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Screensaver runtime can operate from local files before mirror/database maturity.
 - The MVP may rely on a small curated preseeded local art set that ships in-repo or via other owned local assets, without requiring network fetch, background sync, or metadata indexing.
 - The spec leaves room for later bootstrap and broader library growth without promising them in the MVP.
+- Curated preseed remains bounded to "art already present locally when Stage 1 starts" and does not count as bootstrap, downloader, or first-run growth behavior.
 
 **Tasks**:
 - `task-high-complete-local-random-playback-mvp`
@@ -178,10 +188,16 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Curated preseeded art is treated separately from bootstrap: preseed provides the first local playable pool, while bootstrap is only an optional later flow for pulling or unpacking additional art.
 - Any bootstrap flow is user-invoked or otherwise explicit; it is not a promised always-on sync service.
 - Bootstrap scope stops at obtaining more playable local art. Full background sync, broad remote catalog management, and metadata indexing remain later follow-on work unless the repo gains direct implementation evidence.
-- The growth path from minimum local pool to larger library is explicit.
+- The growth path from minimum local pool to larger library is explicit: (1) shipped Stage 1 plays from the current local pool, (2) a curated preseed may enlarge that shipped pool without changing runtime claims, (3) later optional bootstrap may download or unpack more art into the local pool, and (4) only after that would richer indexing, metadata-aware selection, or ongoing sync be considered.
 - Later system integration remains separated from runtime truth until owned artifacts exist; this includes launch artifacts, Omarchy idle wiring, layout/resize policy expansion, and any X11/XScreenSaver-specific adapters.
 - Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
 - Post-MVP work can extend the MVP without rewriting the earlier command and playback surfaces.
+
+**Boundary Notes**:
+- `Preseed`: content shipped or otherwise already local before Stage 1 runtime starts; valid for MVP because playback only sees local files.
+- `Bootstrap`: later explicit action that adds more local art; invalid to cite as shipped Stage 1 behavior until implementation exists.
+- `First-run growth`: later onboarding/helper layer that may call bootstrap or unpack additional art after install/start; also not part of Stage 1 shipped truth.
+- `Non-goals for this package until separately evidenced`: background sync, always-on remote refresh, mandatory online setup, remote search/catalog UX, and database-dependent startup.
 
 **Tasks**:
 - `task-med-plan-cache-bootstrap-and-library-growth`
@@ -202,6 +218,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 ## Risk Mitigation
 
 - Keep `.index.db`, mirror sync, background library sync, and optional bootstrap out of the MVP critical path; allow only a small curated preseeded local pool to satisfy first-run playback.
+- Preserve a hard line between `local art already available` versus `art obtained after install/start`: the former can support Stage 1 claims, while the latter belongs only to post-MVP bootstrap or first-run growth work.
 - Treat renderer-backed playback as the non-negotiable replacement for raw `cat` before adding presentation polish.
 - Separate `16c random` delivery from `16c screensaver` session controls so loop playback can land first.
 - Hold transitions, advanced render modes, overlays, X11/XScreenSaver adapters, and broader desktop-specific integration until the base loop is usable.
@@ -211,5 +228,6 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 ## Success Criteria Validation
 
 - MVP is complete when `16c random` and `16c screensaver` exist as real CLI surfaces, playback uses the ansilust renderer, local art rotation works without full mirror coupling, and session cleanup behavior is tested.
+- MVP completion does not require bootstrap downloads, first-run growth, or remote expansion flows; a curated local preseed is acceptable only insofar as it preserves the local-pool-only Stage 1 runtime boundary.
 - MVP Omarchy launch scope is complete only when the repo owns the command surface and any promised user-level launch artifacts; idle-manager policy, X11/XScreenSaver support, and extra packaging channels stay outside MVP until separately implemented.
 - Post-MVP expansion is complete only when config growth, optional bootstrap/library expansion, environment integration, and any new deployment channels are backed by owned implementation and evidence rather than spec prose; background sync and metadata indexing stay non-promised until that evidence exists.

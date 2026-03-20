@@ -64,7 +64,11 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **FR1.4.4**: The system shall not require `.index.db`, search, pack downloads, archive listings, extraction, or metadata persistence for shipped Stage 1 playback.
 
-**FR1.4.5**: IF broader remote archive workflows are referenced elsewhere THEN those workflows shall be understood as future archive-client work unless separately implemented and evidenced.
+**FR1.4.5**: The system shall treat any future shared local inventory as a staged successor to the Stage 1 hardcoded remote catalog abstraction rather than as a shipped Stage 1 data source.
+
+**FR1.4.6**: WHEN a shared local inventory is introduced in a later stage the system shall allow it to unify local cache and local-library discovery without making `.index.db` mandatory in the same revision.
+
+**FR1.4.7**: IF broader remote archive workflows are referenced elsewhere THEN those workflows shall be understood as future archive-client work unless separately implemented and evidenced.
 
 ### FR1.5: Download And Storage Behavior
 
@@ -118,7 +122,15 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **FR1.9.2**: The system shall treat search, pack downloads by name, archive browsing, aliases, protocol expansion, mirroring, and full archive management as future-facing work.
 
-**FR1.9.3**: WHERE future archive-client capabilities are implemented the system shall specify them in later revisions of this document with separate evidenced requirements.
+**FR1.9.3**: The system shall stage the catalog handoff in this order: Stage 1 hardcoded remote catalog, later shared local inventory, and only after that optional `.index.db` authority where separately shipped and evidenced.
+
+**FR1.9.4**: WHEN shared local inventory is introduced the system shall treat it as the common local selection surface for playback and cache awareness before any `.index.db`-driven authority is adopted.
+
+**FR1.9.5**: WHERE `.index.db` is introduced in a later stage the system shall specify whether it is advisory or authoritative for each workflow instead of implying an immediate global authority change.
+
+**FR1.9.6**: IF `.index.db` is present before a later stage promotes it THEN the shipped runtime shall continue to behave according to the Stage 1 hardcoded-catalog and local-pool rules.
+
+**FR1.9.7**: WHERE future archive-client capabilities are implemented the system shall specify them in later revisions of this document with separate evidenced requirements.
 
 ---
 
@@ -182,7 +194,9 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 
 **DR4.2.1**: `.index.db` shall remain a future archive-client data surface until shipped behavior promotes it to a required runtime artifact.
 
-**DR4.2.2**: Archive search indexes, patch files, extracted pack metadata, and mirror manifests shall remain future-facing data structures.
+**DR4.2.2**: A future shared local inventory shall remain a distinct intermediate data surface for local selection and cache awareness rather than being conflated with `.index.db`.
+
+**DR4.2.3**: Archive search indexes, patch files, extracted pack metadata, and mirror manifests shall remain future-facing data structures.
 
 ---
 
@@ -257,6 +271,7 @@ This document defines the download-domain requirements for the shipped Stage 1 `
 | Minimal config loading | Shipped Stage 1 |
 | Hardcoded remote fallback for `random-1` | Shipped Stage 1 |
 | Renderer-backed display | Shipped Stage 1 |
+| Shared local inventory for unified local awareness | Future staged handoff before `.index.db` authority |
 | `.index.db`, search, pack downloads, mirroring | Future archive-client |
 | Alias executables, protocol expansion, full archive management | Future archive-client |
 

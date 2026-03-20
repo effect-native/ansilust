@@ -42,6 +42,20 @@ pub const StreamingSpeed = enum {
     fast,
 };
 
+const RuntimeMessaging = struct {
+    fetch_label: []const u8,
+    seed_hint: ?[]const u8 = null,
+};
+
+const random_one_messaging = RuntimeMessaging{
+    .fetch_label = "16c random-1",
+    .seed_hint = "16c random-1",
+};
+
+const loop_messaging = RuntimeMessaging{
+    .fetch_label = "16c random",
+};
+
 pub const RandomPlaybackLoop = struct {
     mode: PlaybackMode = .standard,
     delay_ns: u64 = 20 * std.time.ns_per_s,
@@ -49,7 +63,7 @@ pub const RandomPlaybackLoop = struct {
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
         _ = self;
-        try executeRandom(allocator, false);
+        try executeRandom(allocator, false, loop_messaging);
     }
 
     pub fn run(self: RandomPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
@@ -173,7 +187,7 @@ const ScreensaverSession = struct {
 /// # Errors
 /// - Various errors from download, storage, or renderer operations
 pub fn executeRandomOne(allocator: Allocator) !void {
-    try executeRandom(allocator, true);
+    try executeRandom(allocator, true, random_one_messaging);
 }
 
 pub fn executeScreensaver(allocator: Allocator) !void {
@@ -222,8 +236,8 @@ fn resolveDelayNs(mode: PlaybackMode, config: stage1_config.Stage1Config) u64 {
     };
 }
 
-fn executeRandom(allocator: Allocator, allow_remote_fallback: bool) !void {
-    std.debug.print("16c random-1: Fetching random artwork...\n", .{});
+fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: RuntimeMessaging) !void {
+    std.debug.print("{s}: Fetching random artwork...\n", .{messaging.fetch_label});
 
     // 1. Initialize platform paths
     var paths = try PlatformPaths.init(allocator);
@@ -242,10 +256,17 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool) !void {
     }
 
     if (!allow_remote_fallback) {
-        std.debug.print(
-            "No playable local artwork found in random/ or local/. Add a .ans or .asc file there, or run 16c random-1 to seed random/.\n",
-            .{},
-        );
+        if (messaging.seed_hint) |seed_hint| {
+            std.debug.print(
+                "No playable local artwork found in random/ or local/. Add a .ans or .asc file there, or run {s} to seed random/.\n",
+                .{seed_hint},
+            );
+        } else {
+            std.debug.print(
+                "No playable local artwork found in random/ or local/. Add a .ans or .asc file there.\n",
+                .{},
+            );
+        }
         return error.EmptyLocalArtworkPool;
     }
 
