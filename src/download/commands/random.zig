@@ -65,6 +65,15 @@ pub fn executeRandomOne(allocator: Allocator) !void {
     // Create directories if needed
     try paths.ensureDirectoriesExist();
 
+    if (try selectLocalArtwork(allocator, paths.random_dir, paths.local_dir)) |local_path| {
+        defer allocator.free(local_path);
+
+        std.debug.print("Selected local artwork: {s}\n", .{local_path});
+        try displayArtwork(local_path);
+        std.debug.print("\n✓ Done!\n", .{});
+        return;
+    }
+
     // 2. Initialize database
     var db = try ArchiveDatabase.init(allocator);
     defer db.deinit();
@@ -130,4 +139,55 @@ fn displayArtwork(file_path: []const u8) !void {
 
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
     try stdout_file.writeAll(buffer);
+}
+
+fn selectLocalArtwork(
+    allocator: Allocator,
+    random_dir: []const u8,
+    local_dir: []const u8,
+) !?[]const u8 {
+    var candidates = std.ArrayList([]const u8).init(allocator);
+    defer candidates.deinit();
+
+    try appendPlayableFilesFromDir(allocator, &candidates, random_dir);
+    try appendPlayableFilesFromDir(allocator, &candidates, local_dir);
+
+    if (candidates.items.len == 0) {
+        return null;
+    }
+
+    var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
+    const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
+    const selected_path = try allocator.dupe(u8, candidates.items[selected_index]);
+
+    for (candidates.items) |candidate| {
+        allocator.free(candidate);
+    }
+
+    return selected_path;
+}
+
+fn appendPlayableFilesFromDir(
+    allocator: Allocator,
+    candidates: *std.ArrayList([]const u8),
+    dir_path: []const u8,
+) !void {
+    var dir = try std.fs.openDirAbsolute(dir_path, .{ .iterate = true });
+    defer dir.close();
+
+    var iterator = dir.iterate();
+    while (try iterator.next()) |entry| {
+        if (entry.kind != .file) continue;
+        if (!isPlayableAnsiFile(entry.name)) continue;
+
+        const full_path = try std.fs.path.join(allocator, &[_][]const u8{ dir_path, entry.name });
+        errdefer allocator.free(full_path);
+        try candidates.append(full_path);
+    }
+}
+
+fn isPlayableAnsiFile(file_name: []const u8) bool {
+    const extension = std.fs.path.extension(file_name);
+    return std.ascii.eqlIgnoreCase(extension, ".ans") or
+        std.ascii.eqlIgnoreCase(extension, ".asc");
 }
