@@ -13,11 +13,11 @@ const PlatformPaths = @import("../storage/paths.zig").PlatformPaths;
 const ArchiveDatabase = interface.ArchiveDatabase;
 
 pub const RandomPlaybackLoop = struct {
-    delay_ns: u64 = 0,
+    delay_ns: u64 = 20 * std.time.ns_per_s,
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
         _ = self;
-        try executeRandomOne(allocator);
+        try executeRandom(allocator, false);
     }
 
     pub fn run(self: RandomPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
@@ -56,6 +56,10 @@ pub const RandomPlaybackLoop = struct {
 /// # Errors
 /// - Various errors from download, storage, or renderer operations
 pub fn executeRandomOne(allocator: Allocator) !void {
+    try executeRandom(allocator, true);
+}
+
+fn executeRandom(allocator: Allocator, allow_remote_fallback: bool) !void {
     std.debug.print("16c random-1: Fetching random artwork...\n", .{});
 
     // 1. Initialize platform paths
@@ -72,6 +76,14 @@ pub fn executeRandomOne(allocator: Allocator) !void {
         try displayArtwork(local_path);
         std.debug.print("\n✓ Done!\n", .{});
         return;
+    }
+
+    if (!allow_remote_fallback) {
+        std.debug.print(
+            "No playable local artwork found in random/ or local/. Add a .ans or .asc file there, or run 16c random-1 to seed random/.\n",
+            .{},
+        );
+        return error.EmptyLocalArtworkPool;
     }
 
     // 2. Initialize database
@@ -147,7 +159,12 @@ fn selectLocalArtwork(
     local_dir: []const u8,
 ) !?[]const u8 {
     var candidates = std.ArrayList([]const u8).init(allocator);
-    defer candidates.deinit();
+    defer {
+        for (candidates.items) |candidate| {
+            allocator.free(candidate);
+        }
+        candidates.deinit();
+    }
 
     try appendPlayableFilesFromDir(allocator, &candidates, random_dir);
     try appendPlayableFilesFromDir(allocator, &candidates, local_dir);
@@ -156,15 +173,13 @@ fn selectLocalArtwork(
         return null;
     }
 
-    var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
-    const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
-    const selected_path = try allocator.dupe(u8, candidates.items[selected_index]);
-
-    for (candidates.items) |candidate| {
-        allocator.free(candidate);
+    if (candidates.items.len == 1) {
+        return allocator.dupe(u8, candidates.items[0]);
     }
 
-    return selected_path;
+    var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
+    const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
+    return allocator.dupe(u8, candidates.items[selected_index]);
 }
 
 fn appendPlayableFilesFromDir(
