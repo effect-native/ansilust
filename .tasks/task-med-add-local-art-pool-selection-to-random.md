@@ -2,7 +2,7 @@
 id: task-med-add-local-art-pool-selection-to-random
 level: medium
 status: pending
-blocked_by: ["task-high-complete-local-random-playback-mvp"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

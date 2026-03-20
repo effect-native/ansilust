@@ -2,7 +2,7 @@
 id: task-high-add-screensaver-session-mode
 level: high
 status: pending
-blocked_by: ["task-high-complete-local-random-playback-mvp"]
+blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
 

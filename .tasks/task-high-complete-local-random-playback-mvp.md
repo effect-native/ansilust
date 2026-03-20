@@ -1,7 +1,7 @@
 ---
 id: task-high-complete-local-random-playback-mvp
 level: high
-status: pending
+status: in_progress
 blocked_by: []
 expires_at: 2026-04-03T01:51:31Z
 ---
