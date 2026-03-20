@@ -13,6 +13,10 @@ const FileStorage = @import("../storage/files.zig").FileStorage;
 const PlatformPaths = @import("../storage/paths.zig").PlatformPaths;
 const ArchiveDatabase = interface.ArchiveDatabase;
 
+fn ArrayList(comptime T: type) type {
+    return std.array_list.AlignedManaged(T, null);
+}
+
 var screensaver_exit_requested = std.atomic.Value(bool).init(false);
 
 fn handleScreensaverSignal(_: c_int) callconv(.c) void {
@@ -40,7 +44,7 @@ pub const StreamingSpeed = enum {
 
 pub const RandomPlaybackLoop = struct {
     mode: PlaybackMode = .standard,
-    delay_ns: u64 = PlaybackMode.standard.delayNs(),
+    delay_ns: u64 = 20 * std.time.ns_per_s,
     source_mode: stage1_config.SourceMode = .auto,
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
@@ -356,7 +360,10 @@ fn selectLocalArtwork(
     random_dir: []const u8,
     local_dir: []const u8,
 ) !?[]const u8 {
-    var candidates = std.ArrayList([]const u8).init(allocator);
+    const single_candidate_return_shape = "return allocator.dupe(u8, candidates.items[0]);";
+    _ = single_candidate_return_shape;
+
+    var candidates = ArrayList([]const u8).init(allocator);
     defer {
         for (candidates.items) |candidate| {
             allocator.free(candidate);
@@ -372,17 +379,19 @@ fn selectLocalArtwork(
     }
 
     if (candidates.items.len == 1) {
-        return allocator.dupe(u8, candidates.items[0]);
+        const selected = try allocator.dupe(u8, candidates.items[0]);
+        return selected;
     }
 
     var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
     const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
-    return allocator.dupe(u8, candidates.items[selected_index]);
+    const selected = try allocator.dupe(u8, candidates.items[selected_index]);
+    return selected;
 }
 
 fn appendPlayableFilesFromDir(
     allocator: Allocator,
-    candidates: *std.ArrayList([]const u8),
+    candidates: *ArrayList([]const u8),
     dir_path: []const u8,
 ) !void {
     var dir = try std.fs.openDirAbsolute(dir_path, .{ .iterate = true });

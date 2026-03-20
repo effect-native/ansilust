@@ -29,7 +29,7 @@ pub fn loadFromRoot(allocator: Allocator, root_path: []const u8, config_file_nam
     defer allocator.free(config_path);
 
     const contents = std.fs.cwd().readFileAlloc(allocator, config_path, 64 * 1024) catch |err| switch (err) {
-        error.FileNotFound, error.PathNotFound => return .{},
+        error.FileNotFound => return .{},
         else => return err,
     };
     defer allocator.free(contents);
