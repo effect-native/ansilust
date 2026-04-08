@@ -183,7 +183,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 
 ### [WP-GROW-001] Library Growth, Bootstrap, And Integration Expansion
 
-**Intent**: Stage later enhancements after the MVP works: richer local pools, optional bootstrap behavior, and deeper environment integration.
+**Intent**: Turn the constitution's post-Stage-1 FUTURE ladder into a deterministic doc-first sequence: first define the next source/config growth boundary, then define the owned launch/integration artifact gate, without treating any runtime feature work as part of this package.
 
 **Acceptance**:
 - Bootstrap behavior is defined as post-MVP and does not block the first playable loop.
@@ -191,6 +191,8 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - Any bootstrap flow is user-invoked or otherwise explicit; it is not a promised always-on sync service.
 - Bootstrap scope stops at obtaining more playable local art. Full background sync, broad remote catalog management, and metadata indexing remain later follow-on work unless the repo gains direct implementation evidence.
 - The growth path from minimum local pool to larger library is explicit: (1) shipped Stage 1 plays from the current local pool, (2) a curated preseed may enlarge that shipped pool without changing runtime claims, (3) later optional bootstrap may download or unpack more art into the local pool, and (4) only after that would richer indexing, metadata-aware selection, or ongoing sync be considered.
+- The next doc-owned source/config slice is limited to defining the first additive source mode beyond Stage 1 `auto` plus the smallest persisted config contract that remains independent of overlays, desktop policy, idle hooks, and package-time launch claims.
+- Launch and idle integration stay in a separate slice that defines artifact ownership gates only; service files, desktop launchers, idle hooks, and packaging artifacts do not become claimed runtime support until the repo owns and reconciles those artifacts separately.
 - Later system integration remains separated from runtime truth until owned artifacts exist; this includes launch artifacts, idle-manager wiring, layout/resize policy expansion, and any X11/XScreenSaver-specific adapters.
 - Packaging promises remain aligned with `.ok/deployments.ok.md`: future channels may be described here, but nothing becomes a supported deployment claim until the repository ships the artifact and deployment governance promotes it.
 - Stage 4 launch or integration claims are promotable only after the repo owns the relevant launch artifact, the relevant idle-manager/user-service artifact when idle activation is claimed, and any repo-shipped packaging/install artifact needed to deliver that behavior; screenshots, wiki snippets, or environment-local examples are not sufficient evidence.
@@ -204,12 +206,15 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `Environment-specific examples`: Omarchy snippets, ad-hoc systemd commands, distro package recipes maintained elsewhere, XScreenSaver config fragments, and manual desktop settings instructions. These may document how a user could wire the repo-owned command, but they do not by themselves upgrade launch support into shipped truth.
 - `Ownership gate`: claiming `launch support` requires a repo-owned launch artifact; claiming `idle-manager integration` requires both the launch artifact and the repo-owned idle-manager or user-service artifact; claiming `packaged launch path` additionally requires the repo-owned packaging/install artifact for that channel.
 - `Non-goals for this package until separately evidenced`: background sync, always-on remote refresh, mandatory online setup, remote search/catalog UX, and database-dependent startup.
+- `Execution split`: complete source/config boundary docs before launch/integration artifact docs so the config contract can grow without inheriting desktop-specific blockers, and so launch ownership can be reviewed without reopening source-mode scope.
 
 **Tasks**:
-- `task-med-plan-cache-bootstrap-and-library-growth`
-- `task-low-define-bootstrap-and-preseed-behavior`
-- `task-low-capture-screensaver-mvp-vs-post-mvp-dependencies`
-- `task-low-author-omarchy-systemd-and-packaging-boundary`
+- `task-high-define-screensaver-poststage1-boundary`
+- `task-med-spec-stage2-source-and-config-growth`
+- `task-low-author-stage2-source-mode-contract`
+- `task-low-author-persisted-screensaver-config-contract`
+- `task-med-own-launch-and-idle-integration-artifacts`
+- `task-low-author-launch-integration-artifact-ownership`
 
 **Status**: [ ] Pending
 

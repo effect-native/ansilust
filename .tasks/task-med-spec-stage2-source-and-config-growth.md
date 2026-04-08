@@ -2,7 +2,7 @@
 id: task-med-spec-stage2-source-and-config-growth
 level: medium
 status: pending
-blocked_by: [task-high-define-screensaver-poststage1-boundary]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

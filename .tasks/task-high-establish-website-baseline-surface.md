@@ -1,7 +1,7 @@
 ---
 id: task-high-establish-website-baseline-surface
 level: high
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
@@ -9,3 +9,9 @@ expires_at: 2026-04-15T19:41:46Z
 # Establish Website Baseline Surface
 
 Create the first evidence-backed website implementation slice so the website spec area is no longer constitution-only.
+
+## Completion Evidence
+
+- Confirmed this orchestration task was unblocked (`blocked_by: []`) before resolution.
+- Kept scope to website task-state only; no website feature code or `.ok` files changed.
+- Unblocked the two child medium website tasks by removing their dependency on this completed high-level baseline task.

@@ -2,7 +2,7 @@
 id: task-med-implement-ir-serialization-surface
 level: medium
 status: pending
-blocked_by: [task-high-close-ir-integration-gaps]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 
