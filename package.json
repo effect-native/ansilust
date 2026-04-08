@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "release": "./scripts/release.sh"
+    "release": "./scripts/release.sh",
+    "test:website-scaffold": "node --test ./scripts/website-root-scaffold.test.mjs"
   }
 }
