@@ -20,7 +20,7 @@ The Ansilust Intermediate Representation (IR) design transforms the normative re
 | Module | Responsibility |
 |--------|----------------|
 | `ansilust-ir/src/document.zig` | Root `Document` type, metadata tables, serialization entry points |
-| `ansilust-ir/src/document_builder.zig` | Safe construction facade for parsers, manages arenas and slab migration |
+| `ansilust-ir/src/document_builder.zig` | Placeholder only; not part of the supported IR contract until parser-construction work is specified and tested |
 | `ansilust-ir/src/cell_grid.zig` | Structure-of-arrays cell storage, grapheme map, accessor APIs |
 | `ansilust-ir/src/encoding.zig` | `SourceEncoding` enum, helpers for raw-byte preservation |
 | `ansilust-ir/src/color.zig` | Tagged union for colors, palette table management |
@@ -103,8 +103,8 @@ All modules follow the namespace container pattern. The public surface re-export
 ### 5.2 Ownership Rules
 
 - `Document` is the sole owner of all IR resources.
-- Parsers receive a mutable `DocumentBuilder` facade to enforce invariants during construction and to migrate arena-backed buffers into slab allocators during finalization.
-- `DocumentBuilder` exposes `pushCell`, `pushEvent`, and `finalize` so parsers can stream updates safely without violating coordinate or encoding checks.
+- Parsers currently construct IR through the supported `Document` APIs; a dedicated `DocumentBuilder` remains deferred until parser-construction requirements, invariants, and tests are explicitly specified.
+- The existing `document_builder.zig` file is therefore a non-contract placeholder and must not be treated as a supported public surface in this phase.
 - Renderers operate on read-only views; mutation utilities guarded behind `*Document` methods to ensure diff/dirty bookkeeping stays consistent.
 
 ---
@@ -116,7 +116,7 @@ All modules follow the namespace container pattern. The public surface re-export
 - Exposes `pub fn init(allocator: Allocator, width: usize, height: usize) !Document`.
 - `pub fn deinit(self: *Document)` releases all owned resources.
 - Provides metadata setters/getters and references to substructures.
-- Offers builder access via `pub fn builder(self: *Document) DocumentBuilder`.
+- Does not currently expose a supported builder facade; any future builder API requires a follow-up design + test pass before promotion.
 - Houses `pub fn resize(self: *Document, width: usize, height: usize) !void` delegating to `CellGrid.resize`.
 
 ### 6.2 `cell_grid.zig`

@@ -71,6 +71,20 @@ FR1.4.3: WHEN metadata-backed selection is active the system shall use `.index.d
 FR1.4.4: IF `.index.db` is unavailable during a metadata-backed mode THEN the system shall fall back to a defined non-indexed local selection path or return a helpful error.
 FR1.4.5: WHERE curated bootstrap is enabled the system shall offer an additive way to grow the local artwork pool.
 FR1.4.6: WHERE bundled or downloaded artwork growth is enabled the system shall preserve the distinction between official archive material and user-managed local artwork.
+FR1.4.7: WHERE the first additive Stage 2 source mode is introduced the system shall expose it as `source.mode = "local_archive"`.
+FR1.4.8: WHERE `source.mode = "local_archive"` is active the system shall derive selection candidates only from local filesystem state beneath the resolved 16colors root.
+FR1.4.9: WHERE `source.mode = "local_archive"` is active the system shall treat `packs/` as the primary managed archive surface while preserving `random/` and `local/` as eligible local fallback roots.
+FR1.4.10: IF `source.mode = "local_archive"` cannot derive richer archive metadata from local files or paths THEN the system shall still admit filesystem-derived local archive candidates without requiring `.index.db`.
+FR1.4.11: WHILE `source.mode = "local_archive"` is active the system shall not require remote fetch, mirror sync, bootstrap, or background growth to keep playback selection working.
+FR1.4.12: WHILE `source.mode = "auto"` remains the shipped default the system shall preserve the Stage 1 local-pool contract unless a later evidenced revision explicitly promotes a broader default policy.
+
+#### Stage 2 First Additive Source Mode Contract
+
+- `local_archive` is the first post-Stage-1 source-mode addition because it widens playback only to other already-local material and therefore does not smuggle in remote, mirror, or bootstrap promises.
+- `local_archive` is intentionally opt-in. Keeping `auto` as the shipped default preserves current Stage 1 truth instead of silently redefining the meaning of existing configs.
+- The `local_archive` ladder is local-only: prefer filesystem-derived candidates rooted in `packs/`, then continue to honor already-local playable material from `random/` and `local/`.
+- `.index.db` remains a later optional authority layer. If it exists before a later stage promotes it, `local_archive` still resolves from filesystem-derived local state rather than treating the database as required.
+- Mirror manifests, remote catalog metadata, and first-run growth remain out of scope for this source mode; they need separate later-stage evidence.
 
 ### FR1.5: Stage 3 - Config Expansion
 FR1.5.1: WHERE expanded persistent user configuration is enabled the system shall read screensaver settings from a documented config surface that extends or supersedes the minimal Stage 1 `config.toml`-in-`16colors`-root runtime contract.
@@ -109,6 +123,10 @@ DR4.2.1: The Stage 1 local artwork pool abstraction shall enumerate supported AN
 DR4.2.2: The Stage 1 pool descriptor shall require only file path, basename, and format suitability for playback; archive pack metadata, year, group, and artist fields shall remain optional until Stage 2 metadata-backed selection exists.
 DR4.2.3: The Stage 1 empty-pool message shall name `random/` and `local/` as the concrete directories the user can populate.
 DR4.3: Stage 2 metadata-backed selection shall define the indexed artwork fields required for random selection and filtering.
+DR4.3.1: The first additive Stage 2 source-mode literal shall be `local_archive`.
+DR4.3.2: The `local_archive` mode shall require only filesystem-derived local identity for archive candidates, including enough path information to resolve playable files beneath `packs/` without requiring `.index.db` records.
+DR4.3.3: The `local_archive` mode shall preserve `random/` and `local/` as valid already-local fallback roots when `packs/` is absent, sparse, or temporarily non-playable.
+DR4.3.4: The shipped default config literal shall remain `auto` until a later evidenced revision intentionally changes that default contract.
 DR4.4: The Stage 1 MVP shall define a default playback duration of 20 seconds per artwork and a fixed immediate-cut rotation policy.
 DR4.4.1: The Stage 1 MVP shall define `--instant` as a boolean command override for immediate full-frame playback.
 DR4.4.2: The Stage 1 MVP shall define `--streaming-speed <preset>` as a command override that selects from a documented preset set rather than arbitrary free-form timing input.

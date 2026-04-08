@@ -66,7 +66,9 @@ All core modules implemented and tested:
   - Convenience API (getCell, setCell, resize)
   - SAUCE hint application
   - Resource management (palettes, hyperlinks, fonts)
-- [x] `document_builder.zig` - Safe construction facade (stub)
+- [ ] `document_builder.zig` - Supported builder facade
+  - Decision: demoted from supported surface; current file remains a placeholder stub only
+  - Follow-up required before promotion: explicit parser-construction contract + tests
 - [x] `serialize.zig` - Binary format support (stub)
 - [x] `ghostty.zig` - Ghostty renderer bridge (stub)
 - [x] `opentui.zig` - OpenTUI conversion (stub)

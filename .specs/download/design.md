@@ -179,6 +179,8 @@ Stage 1 is local-first, not database-first:
 
 This is deliberate Stage 1 scaffolding, not an accidental partial SQLite client.
 
+For Stage 1 contract reconciliation, `getPack` is explicitly demoted from the current public contract until real runtime evidence exists. Its current checked-in meaning is only a future archive-database seam, not a shipped pack-lookup guarantee.
+
 ---
 
 ## Runtime Flows

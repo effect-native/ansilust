@@ -24,7 +24,7 @@ All 14 core modules created and compiling:
 8. **hyperlink.zig** (304 lines) - OSC 8 hyperlink registry
 9. **event_log.zig** (266 lines) - Terminal event capture with ordering
 10. **document.zig** (345 lines) - Root IR container
-11. **document_builder.zig** (stub) - Builder facade placeholder
+11. **document_builder.zig** (stub) - Placeholder only; explicitly not a supported IR contract surface
 12. **serialize.zig** (stub) - Binary format placeholder
 13. **ghostty.zig** (stub) - Ghostty bridge placeholder
 14. **opentui.zig** (stub) - OpenTUI conversion placeholder
