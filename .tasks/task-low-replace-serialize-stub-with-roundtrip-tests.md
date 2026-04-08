@@ -1,7 +1,7 @@
 ---
 id: task-low-replace-serialize-stub-with-roundtrip-tests
 level: low
-status: pending
+status: in_progress
 blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
@@ -14,3 +14,16 @@ Implement `src/ir/serialize.zig` beyond the current stub and add tests that prov
 
 - Direct parent medium task `task-med-implement-ir-serialization-surface` was resolved as governance.
 - This low task now carries the remaining atomic implementation-and-test work.
+
+## Red Phase Update
+
+- Red phase complete.
+- Added executable failing tests in `src/ir/serialize.zig` that define the minimum IR serialization roundtrip contract.
+- The new coverage pins both default-document roundtrip behavior and populated-document roundtrip behavior across document metadata, cell state, grapheme storage, hyperlink resources, and palette resources.
+- Production serialization implementation intentionally remains unchanged in RED phase.
+
+## Failure Evidence
+
+- Command: `zig test src/ir/serialize.zig`
+- Observed failure: `serialize: roundtrip preserves default document contract` fails with `SerializationFailed` at `src/ir/serialize.zig:26` because `serialize()` still returns the explicit stub error.
+- Observed failure: `serialize: roundtrip preserves populated cells and resources` fails with `SerializationFailed` at `src/ir/serialize.zig:26` for the same reason.
