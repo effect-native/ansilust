@@ -88,10 +88,13 @@ FR1.4.12: WHILE `source.mode = "auto"` remains the shipped default the system sh
 
 ### FR1.5: Stage 3 - Config Expansion
 FR1.5.1: WHERE expanded persistent user configuration is enabled the system shall read screensaver settings from a documented config surface that extends or supersedes the minimal Stage 1 `config.toml`-in-`16colors`-root runtime contract.
-FR1.5.2: WHERE selection filters are enabled the system shall support filtering by archive metadata fields such as year, group, artist, or format.
-FR1.5.3: WHERE display controls are enabled the system shall support configurable artwork duration and playback mode selection.
-FR1.5.4: WHERE metadata overlays are enabled the system shall support showing and hiding artwork metadata during playback.
-FR1.5.5: IF configuration input is invalid THEN the system shall report the problem and continue with safe defaults or exit clearly.
+FR1.5.2: WHERE the first additive persisted screensaver config contract is enabled the system shall keep the schema intentionally minimal by limiting it to shared playback timing plus source-selection defaults.
+FR1.5.3: WHERE that minimal persisted contract is used the system shall define `playback.dwell_seconds` and `source.mode` as the only required documented screensaver keys.
+FR1.5.4: WHERE `source.mode` is persisted for screensaver behavior the system shall accept only the documented literals `auto` and `local_archive` until a later evidenced schema revision adds more modes.
+FR1.5.5: WHERE selection filters are enabled the system shall support filtering by archive metadata fields such as year, group, artist, or format.
+FR1.5.6: WHERE display controls are enabled the system shall support configurable artwork duration and playback mode selection.
+FR1.5.7: WHERE metadata overlays are enabled the system shall support showing and hiding artwork metadata during playback.
+FR1.5.8: IF configuration input is invalid THEN the system shall report the problem and continue with safe defaults or exit clearly.
 
 ### FR1.6: Stage 4 - Launch and Integration
 FR1.6.1: WHERE desktop launch integration is enabled the system shall provide a documented way to start screensaver mode from an external launcher.
@@ -133,7 +136,17 @@ DR4.4.2: The Stage 1 MVP shall define `--streaming-speed <preset>` as a command 
 DR4.4.3: The Stage 1 MVP shall keep playback-style overrides ephemeral to the current command invocation; persisted playback-mode configuration remains a Stage 3 concern.
 DR4.4.4: The Stage 1 MVP shall treat `config.toml` in the resolved `16colors` root as the shipped shared config file for `16c random` and `16c screensaver`.
 DR4.4.5: The Stage 1 MVP shall limit its evidenced persisted config surface to built-in defaults plus the minimal values currently parsed from that file, while broader config schema work remains a Stage 3 concern.
+#### Stage 3 Minimal Persisted Config Contract
+
+- The first additive persisted screensaver contract stays inside the existing shared `config.toml` surface and does not yet imply a new config file path, per-user overlay layer, or desktop-specific settings store.
+- The smallest documented schema beyond Stage 1 dwell tuning is a two-table contract: `[playback]` owns `dwell_seconds`, and `[source]` owns `mode`.
+- `source.mode` may persist either `"auto"` or `"local_archive"`; no archive filters, metadata overlays, idle hooks, launch commands, monitor policy, or package-install settings are part of this first contract.
+- Later config growth may add filters, overlays, or integration settings, but those remain separate schema revisions rather than implied members of the minimal persisted contract.
+
 DR4.5: Stage 3 configuration shall define defaults for playback duration, selection behavior, and display options.
+DR4.5.1: The smallest persisted screensaver config schema beyond the Stage 1 dwell setting shall remain a shared two-table contract consisting of `playback.dwell_seconds` and `source.mode`.
+DR4.5.2: The persisted `source.mode` field shall admit only `auto` and `local_archive` until a later evidenced schema revision expands that enum.
+DR4.5.3: The minimal persisted config contract shall exclude metadata overlays, archive filters, launch integration, idle integration, monitor-layout policy, and package-time installation settings.
 
 ## IR5: Integration Requirements
 
