@@ -54,14 +54,19 @@ test "ArchiveDatabase.getRandomFile matches current hardcoded catalog contract" 
     try testing.expectEqualStrings(first.extension, second.extension);
 }
 
-test "ArchiveDatabase.searchFiles stub returns empty" {
+test "ArchiveDatabase.searchFiles returns curated file matches" {
     var db = try ArchiveDatabase.init(testing.allocator);
     defer db.deinit();
 
-    const results = try db.searchFiles("test query");
+    const results = try db.searchFiles("CXC-STICK");
 
-    // Stub implementation should return empty
-    try testing.expectEqual(@as(usize, 0), results.len);
+    try testing.expectEqual(@as(usize, 1), results.len);
+    try testing.expectEqualStrings("mist1025", results[0].pack_name);
+    try testing.expectEqualStrings("CXC-STICK.ASC", results[0].filename);
+    try testing.expectEqualStrings("https://16colo.rs/pack/mist1025/raw/CXC-STICK.ASC", results[0].source_url);
+    try testing.expectEqual(@as(u16, 2025), results[0].year);
+    try testing.expectEqualStrings("CoaXCable", results[0].artist.?);
+    try testing.expectEqualStrings("asc", results[0].extension);
 }
 
 test "ArchiveDatabase.getPack stub returns error" {
@@ -72,14 +77,17 @@ test "ArchiveDatabase.getPack stub returns error" {
     try testing.expectError(error.NotImplemented, db.getPack("mist1025"));
 }
 
-test "ArchiveDatabase.listPacksByYear stub returns empty" {
+test "ArchiveDatabase.listPacksByYear returns curated pack metadata" {
     var db = try ArchiveDatabase.init(testing.allocator);
     defer db.deinit();
 
     const packs = try db.listPacksByYear(2025);
 
-    // Stub implementation should return empty
-    try testing.expectEqual(@as(usize, 0), packs.len);
+    try testing.expectEqual(@as(usize, 1), packs.len);
+    try testing.expectEqualStrings("mist1025", packs[0].name);
+    try testing.expectEqual(@as(u16, 2025), packs[0].year);
+    try testing.expect(packs[0].group_name == null);
+    try testing.expectEqualStrings("https://16colo.rs/archive/2025/mist1025.zip", packs[0].zip_url);
 }
 
 test "FileEntry has expected structure" {
