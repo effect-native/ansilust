@@ -2,7 +2,7 @@
 id: task-low-replace-curl-shellout-with-std-http-client
 level: low
 status: pending
-blocked_by: [task-med-replace-network-and-cache-stubs]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

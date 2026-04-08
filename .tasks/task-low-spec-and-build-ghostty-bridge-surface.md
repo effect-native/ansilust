@@ -2,7 +2,7 @@
 id: task-low-spec-and-build-ghostty-bridge-surface
 level: low
 status: pending
-blocked_by: [task-med-implement-downstream-ir-bridges]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

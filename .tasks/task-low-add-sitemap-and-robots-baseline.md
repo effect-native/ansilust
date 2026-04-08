@@ -2,7 +2,7 @@
 id: task-low-add-sitemap-and-robots-baseline
 level: low
 status: pending
-blocked_by: [task-med-add-website-samples-and-gallery-baseline]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

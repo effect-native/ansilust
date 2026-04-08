@@ -2,7 +2,7 @@
 id: task-low-add-minimum-home-install-and-docs-routes
 level: low
 status: pending
-blocked_by: [task-med-create-website-application-skeleton]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

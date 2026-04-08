@@ -2,7 +2,7 @@
 id: task-low-implement-random-cache-cleanup-behavior
 level: low
 status: pending
-blocked_by: [task-med-replace-network-and-cache-stubs]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 

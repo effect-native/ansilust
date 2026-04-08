@@ -2,7 +2,7 @@
 id: task-low-decide-current-getpack-contract-vs-demotion
 level: low
 status: pending
-blocked_by: [task-med-expand-current-archive-database-surface]
+blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
 
