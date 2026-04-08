@@ -23,7 +23,8 @@ Add the first checked-in `website/` implementation scaffold so the website surfa
 - Confirmed the new red test fails against current repository reality because `./website` does not exist.
 - This failure is assertion-driven and isolates the highest-signal gap for the atomic scaffold task without implementing the scaffold.
 
-## Completion Evidence
+## Green-Phase Completion Evidence
 
-- Touched only the task record, the root package script surface, and the new executable website scaffold spec check.
-- Left production website implementation absent on purpose so the red contract remains failing until the scaffold is built.
+- Added the checked-in root `website/` directory by creating `website/package.json` as the minimal scaffold contract.
+- Updated the root `package.json` workspace list to include `website` while preserving the existing `packages/*` workspace.
+- Verified `npm run test:website-scaffold` passes once the scaffold exists with Bun, `dev`/`build`, React, and Tailwind CSS declared.
