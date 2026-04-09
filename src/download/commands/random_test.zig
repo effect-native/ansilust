@@ -45,6 +45,52 @@ test "16c random stage1 local pool selects the only playable local file" {
     try testing.expectEqualStrings(expected, selected);
 }
 
+test "16c random provisions repo-owned starter art into local when pool is empty" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("random");
+    try tmp.dir.makePath("local");
+
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
+
+    const random_dir = try std.fs.path.join(allocator, &.{ root, "random" });
+    defer allocator.free(random_dir);
+
+    const local_dir = try std.fs.path.join(allocator, &.{ root, "local" });
+    defer allocator.free(local_dir);
+
+    try testing.expectEqual(@as(usize, 1), try random.ensureStarterArtwork(allocator, random_dir, local_dir));
+
+    const selected = (try random.selectLocalArtwork(allocator, random_dir, local_dir)).?;
+    defer allocator.free(selected);
+
+    try testing.expect(std.mem.endsWith(u8, selected, "local/ansilust-starter.ans"));
+}
+
+test "16c random leaves existing local pool untouched when starter art is unnecessary" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("random");
+    try tmp.dir.makePath("local");
+    try tmp.dir.writeFile(.{ .sub_path = "local/user-owned.asc", .data = "ansi" });
+
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
+
+    const random_dir = try std.fs.path.join(allocator, &.{ root, "random" });
+    defer allocator.free(random_dir);
+
+    const local_dir = try std.fs.path.join(allocator, &.{ root, "local" });
+    defer allocator.free(local_dir);
+
+    try testing.expectEqual(@as(usize, 0), try random.ensureStarterArtwork(allocator, random_dir, local_dir));
+}
+
 test "16c random stage1 dwell defaults to 20 seconds" {
     const source = @embedFile("random.zig");
 

@@ -11,6 +11,7 @@ const interface = @import("../database/interface.zig");
 const HttpClient = @import("../protocols/http.zig").HttpClient;
 const FileStorage = @import("../storage/files.zig").FileStorage;
 const PlatformPaths = @import("../storage/paths.zig").PlatformPaths;
+const starter_art = @import("../storage/starter_art.zig");
 const ArchiveDatabase = interface.ArchiveDatabase;
 
 fn ArrayList(comptime T: type) type {
@@ -256,6 +257,14 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: R
     // Create directories if needed
     try paths.ensureDirectoriesExist();
 
+    const provisioned_starter_count = try ensureStarterArtwork(allocator, paths.random_dir, paths.local_dir);
+    if (provisioned_starter_count > 0) {
+        std.debug.print(
+            "Provisioned {d} repo-owned starter artwork file(s) into local/.\n",
+            .{provisioned_starter_count},
+        );
+    }
+
     if (try selectLocalArtwork(allocator, paths.random_dir, paths.local_dir)) |local_path| {
         defer allocator.free(local_path);
 
@@ -449,6 +458,19 @@ pub fn selectLocalArtwork(
     var prng = std.Random.DefaultPrng.init(@as(u64, @intCast(std.time.nanoTimestamp())));
     const selected_index = prng.random().uintLessThan(usize, candidates.items.len);
     return try allocator.dupe(u8, candidates.items[selected_index]);
+}
+
+pub fn ensureStarterArtwork(
+    allocator: Allocator,
+    random_dir: []const u8,
+    local_dir: []const u8,
+) !usize {
+    if (try selectLocalArtwork(allocator, random_dir, local_dir)) |existing| {
+        allocator.free(existing);
+        return 0;
+    }
+
+    return try starter_art.materializeLocalStarterPool(allocator, local_dir);
 }
 
 fn appendPlayableFilesFromDir(

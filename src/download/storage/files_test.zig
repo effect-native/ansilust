@@ -4,6 +4,7 @@ const std = @import("std");
 const testing = std.testing;
 const files = @import("files.zig");
 const FileStorage = files.FileStorage;
+const starter_art = @import("starter_art.zig");
 
 fn createRandomCacheFile(dir: std.fs.Dir, name: []const u8) !void {
     try dir.writeFile(.{ .sub_path = name, .data = "ansi" });
@@ -164,4 +165,59 @@ test "FileStorage.cleanupRandom removes the oldest timestamp-prefixed files firs
     try testing.expect(!containsFilename(remaining, filenames[0]));
     try testing.expect(!containsFilename(remaining, filenames[1]));
     try testing.expect(containsFilename(remaining, filenames[11]));
+}
+
+test "FileStorage.cleanupRandom does not evict starter art stored in local pool" {
+    var tmp = testing.tmpDir(.{});
+    defer tmp.cleanup();
+
+    try tmp.dir.makePath("random");
+    try tmp.dir.makePath("local");
+
+    const filenames = [_][]const u8{
+        "20260101000001-oldest.ans",
+        "20260101000002-second-oldest.ans",
+        "20260101000003-keep-01.ans",
+        "20260101000004-keep-02.ans",
+        "20260101000005-keep-03.ans",
+        "20260101000006-keep-04.ans",
+        "20260101000007-keep-05.ans",
+        "20260101000008-keep-06.ans",
+        "20260101000009-keep-07.ans",
+        "20260101000010-keep-08.ans",
+        "20260101000011-keep-09.ans",
+        "20260101000012-newest.ans",
+    };
+
+    for (filenames) |name| {
+        const sub_path = try std.fmt.allocPrint(testing.allocator, "random/{s}", .{name});
+        defer testing.allocator.free(sub_path);
+        try createRandomCacheFile(tmp.dir, sub_path);
+    }
+
+    const allocator = testing.allocator;
+    const root = try tmp.dir.realpathAlloc(allocator, ".");
+    defer allocator.free(root);
+
+    const random_dir = try std.fs.path.join(allocator, &.{ root, "random" });
+    defer allocator.free(random_dir);
+
+    const local_dir = try std.fs.path.join(allocator, &.{ root, "local" });
+    defer allocator.free(local_dir);
+
+    _ = try starter_art.materializeLocalStarterPool(allocator, local_dir);
+
+    var storage = FileStorage.init(allocator);
+    try storage.cleanupRandom(random_dir, 10);
+
+    const starter_path = try std.fs.path.join(allocator, &.{ local_dir, "ansilust-starter.ans" });
+    defer allocator.free(starter_path);
+
+    const file = try std.fs.openFileAbsolute(starter_path, .{});
+    defer file.close();
+
+    const contents = try file.readToEndAlloc(allocator, 1024);
+    defer allocator.free(contents);
+
+    try testing.expect(contents.len > 0);
 }

@@ -14,6 +14,7 @@ pub const protocols = struct {
 pub const storage = struct {
     pub const paths = @import("storage/paths.zig");
     pub const files = @import("storage/files.zig");
+    pub const starter_art = @import("storage/starter_art.zig");
 };
 
 test {
@@ -21,5 +22,6 @@ test {
     _ = @import("protocols/http_test.zig");
     _ = @import("storage/files_test.zig");
     _ = @import("storage/paths_test.zig");
+    _ = @import("storage/starter_art.zig");
     _ = @import("commands/random_test.zig");
 }
