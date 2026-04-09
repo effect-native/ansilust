@@ -19,6 +19,7 @@ This file governs ansilust's current screensaver reality and its shortest-path d
 - Minimal Stage 1 config loading is evidenced in `src/download/commands/random.zig` and `src/download/commands/stage1_config.zig`: `random` and `screensaver` load `config.toml` from the `16colors` root, missing files fall back to defaults, and the shipped config surface is limited to `[playback] dwell_seconds` plus `[source] mode = "auto"`.
 - `src/download/commands/random.zig` also shows that artwork display is ansilust-owned: `displayArtwork` reads the selected file, parses it with `ansilust.parsers.ansi.parse`, renders it with `ansilust.renderToUtf8Ansi`, and writes the result to stdout.
 - `src/download/commands/random.zig` and `src/download/commands/random_test.zig` evidence current session cleanup behavior for `screensaver`: alternate-screen enter/leave, cursor hide/restore, stdin-driven exit during dwell, and best-effort SIGINT/SIGTERM cleanup are implemented, while random-cache file cleanup still remains a TODO in `src/download/storage/files.zig`.
+- Current fresh-start evidence is negative: the runtime still depends on already-local playable artwork in `random/` or `local/`, and the repo does not yet ship a repo-owned `16c` package or first-use starter-art provisioning artifact that would make `16c screensaver` immediately usable on a fresh machine.
 
 ## Capability Ladder
 
@@ -27,8 +28,12 @@ This file governs ansilust's current screensaver reality and its shortest-path d
 - TRUE: `16c random-1` remains the single-piece bridge command: it can still seed `random/` by falling back to the hardcoded remote source, stores the fetched artwork under `random/`, renders it through ansilust, and exits.
 - TRUE: The current standard dwell default is 20 seconds, and `random` plus `screensaver` can override that only through the minimal Stage 1 config surface in `config.toml`; `--instant` and `--streaming-speed <preset>` remain the only shipped playback flags.
 - TRUE: The current `screensaver` session surface owns basic terminal lifecycle cleanup when stdout is a TTY: it enters and leaves the alternate screen, hides and restores the cursor, exits when input arrives during dwell, and restores signal handlers on best-effort SIGINT/SIGTERM cleanup.
+- TRUE: The current screensaver runtime still requires already-local artwork; on a fresh machine the only evidenced ways to reach first playback are to place supported art in `local/` or to seed `random/` indirectly through `16c random-1`.
 - TRUE: This is still a narrow Stage 1 surface. The repo does not yet evidence pack-based local pools, richer source modes, metadata overlays, `.index.db` selection, desktop idle-manager integration, or a broader persisted screensaver config schema.
 - FUTURE: Stage 1 shortest-path MVP beyond the current shipped surface is limited to hardening and finishing what is already present, not to expanding scope into Stage 2+ archive or desktop integration work.
+- FUTURE: The first supported out-of-box screensaver slice on a fresh machine is package-owned first-use local art availability through a real `16c` launch channel; it must satisfy the first-frame guarantee from already-local starter art rather than by making `.index.db`, mirror sync, or background bootstrap part of the startup contract.
+- FUTURE: Optional bootstrap or remote growth may enlarge the screensaver library after first playback, but that growth is additive and must not redefine the zero-setup first-frame guarantee.
+- FUTURE: If a supported package or launcher path claims that `16c screensaver` just works on a fresh machine, the repo must own the artifact that materializes starter art into the current local playable pool before the runtime enters the session loop.
 - FUTURE: Stage 2 is post-MVP art-source growth and remains dependent on future local archive inventory work from the download surface, including broader local cache or mirror enumeration and optional `.index.db`-backed selection, as described in `.specs/screensaver/requirements.md` and `.ok/download.ok.md`.
 - FUTURE: Stage 3 is post-MVP config expansion and remains dependent on a future persisted screensaver config surface for duration, filters, overlays, and other playback policy controls; no such config surface is current truth in checked-in repo evidence.
 - FUTURE: Stage 4 is post-MVP launch and packaging integration and remains dependent on future owned docs or artifacts for systemd user services, hypridle or swayidle hooks, packaging-time artwork availability, and other desktop-launch surfaces; `.ok/deployments.ok.md` does not currently promote those channels as shipped deployment guarantees.
@@ -40,7 +45,13 @@ This file governs ansilust's current screensaver reality and its shortest-path d
 - TRUE: Mirror, database, and richer local-library work are post-MVP dependencies, not MVP prerequisites; `.specs/screensaver/requirements.md` records them in `FR1.4`, `DEP6.2`, and `SC7.2`, and `.ok/download.ok.md` says the current repo still lacks shipped `.index.db`, mirror sync, and broader archive-management behavior.
 - TRUE: Broader persistent config is a post-MVP dependency, not an MVP prerequisite; `.specs/screensaver/requirements.md` records config work in `FR1.5` and `DEP6.3`, while the current repo only evidences the narrow Stage 1 `config.toml` surface for dwell seconds and `source.mode = "auto"`.
 - TRUE: Launch, idle-manager, service, and packaging integration are post-MVP dependencies, not MVP prerequisites; `.specs/screensaver/requirements.md` records them in `FR1.6`, `DEP6.4`, and `SC7.4`, and `.ok/deployments.ok.md` says a channel is not supported just because a spec or script exists.
+- TRUE: A future zero-setup screensaver path depends jointly on deployment-owned launch/package artifacts and download-owned first-use art supply; it is not just a session-loop concern inside `src/download/commands/random.zig`.
 - TRUE: Because current checked-in runtime evidence stops at local-pool-first looping playback, minimal config loading, and basic screensaver terminal cleanup, every broader screensaver claim remains FUTURE until code, tests, or owned artifacts explicitly promote it here.
+
+## Session Output Contract
+
+- TRUE: `16c screensaver` is a long-running display surface, not a one-shot completion command, so it must not print celebratory completion text such as `✓ Done!` before, during, or after a normal session exit.
+- FALSE: `16c screensaver` writes `✓ Done!` to stdout or stderr as part of its normal startup, dwell loop, shutdown, or cleanup path.
 
 ## States We Do Not Want
 
@@ -50,6 +61,9 @@ This file governs ansilust's current screensaver reality and its shortest-path d
 - FALSE: The current Stage 1 config and playback surface is overstated into support for filters, richer source selection, overlays, or other controls that the checked-in parser and loader do not yet implement.
 - FALSE: Renderer ambitions such as streaming baud simulation, scaling modes, SAUCE-driven layout, or metadata overlays are treated as current screensaver guarantees without checked-in implementation evidence on this surface.
 - FALSE: Example service files, Hyprland rules, config snippets, or idle-manager examples in `.specs/screensaver/**` are treated as installed or supported artifacts when no owned repo artifacts or docs currently exist.
+- FALSE: Fresh-machine screensaver support is treated as solved by today's empty-pool guidance, by asking the user to run `16c random-1` manually, or by relying on a single hardcoded remote fallback file.
+- FALSE: A future out-of-box screensaver path is defined around `.index.db`, archive search, mirror sync, or background bootstrap before the repo first guarantees a small already-local starter pool for the opening frame.
+- FALSE: Placeholder npm packages, example launcher snippets, or environment-local recipes are mistaken for a supported `16c screensaver` delivery path that just works on a fresh machine.
 - FALSE: Later-stage ladder items override present-tense truth; until a stage is evidenced in checked-in code, tests, or owned artifacts, it remains future-facing here.
 
 ## Required Governance Rules
@@ -57,5 +71,7 @@ This file governs ansilust's current screensaver reality and its shortest-path d
 - TRUE: Changes to the `16c` command surface, playback path, fullscreen lifecycle, config handling, mirror selection, or idle-system integration require updating this file in the same reconciliation loop.
 - TRUE: Screensaver advancement claims must identify which ladder stage became current truth and must be backed by checked-in code, tests, or owned artifacts; spec prose and examples are not sufficient evidence.
 - TRUE: Every new TRUE implementation claim in this file must cite at least one live checked-in code, test, or artifact path that demonstrates the claim.
+- TRUE: Claims that `16c screensaver` works on a fresh machine must distinguish first-use starter-art availability from later bootstrap or archive-growth behavior and must cite the repo-owned artifact that supplies that first-use local art.
+- TRUE: Package, launch, or installer claims for zero-setup screensaver behavior may rely only on deployment guarantees promoted in `.ok/deployments.ok.md` and download-side first-use art guarantees promoted in `.ok/download.ok.md`.
 - TRUE: Downstream orchestration may rely only on screensaver guarantees declared TRUE here, not on FUTURE ladder stages.
 - TRUE: Screensaver scope remains binary at each stage boundary: a capability is either evidenced and governed here as current truth or it remains future, partial, or unevidenced.
