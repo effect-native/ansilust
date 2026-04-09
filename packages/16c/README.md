@@ -1,17 +1,18 @@
 # 16c
 
-⚠️ **This is a placeholder package.** The real 16c package is under development.
+Native launcher package for the `16c` CLI.
 
 ## About
 
-Shorthand CLI for 16colo.rs ANSI art archive.
+This package resolves the correct platform-specific `16c-*` payload and launches the native `16c` executable.
 
-**Status**: Coming soon
+## Commands
 
-**Related Projects**:
-- [16colors](https://www.npmjs.com/package/16colors) - 16colo.rs utilities
-- [ansilust](https://www.npmjs.com/package/ansilust) - ANSI art rendering engine
+- `16c random`
+- `16c random-1`
+- `16c screensaver`
 
----
+## Notes
 
-*Package reserved to prevent squatting. Real package will be published soon.*
+- The published `16c` package is a meta package.
+- Native binaries ship in the matching `16c-<platform>` optional dependency.

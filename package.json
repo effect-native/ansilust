@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "release": "./scripts/release.sh",
+    "test:package-channels": "node --test ./scripts/package-channel.test.mjs",
     "test:website-scaffold": "node --test ./scripts/website-root-scaffold.test.mjs"
   }
 }

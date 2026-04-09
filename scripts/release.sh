@@ -39,17 +39,36 @@ if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
   git push origin ":refs/tags/$TAG"
 fi
 
-# Update version in packages/ansilust/package.json
-echo "Updating packages/ansilust/package.json to version $VERSION..."
-MAIN_PKG="packages/ansilust/package.json"
-sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" "$MAIN_PKG"
+# Update version in launcher package manifests
+echo "Updating npm launcher packages to version $VERSION..."
+node - "$VERSION" <<'EOF'
+const fs = require('fs');
 
-# Update optionalDependencies versions
-sed -i "s/\"ansilust-\([^\"]*\)\": \"[^\"]*\"/\"ansilust-\1\": \"$VERSION\"/g" "$MAIN_PKG"
+const version = process.argv[2];
+const manifestPaths = [
+  'packages/ansilust/package.json',
+  'packages/16c/package.json',
+];
+
+for (const manifestPath of manifestPaths) {
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  manifest.version = version;
+
+  for (const depsKey of ['optionalDependencies']) {
+    const deps = manifest[depsKey];
+    if (!deps) continue;
+    for (const name of Object.keys(deps)) {
+      deps[name] = version;
+    }
+  }
+
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+EOF
 
 # Commit the version bump
 echo "Committing version bump..."
-git add "$MAIN_PKG"
+git add "packages/ansilust/package.json" "packages/16c/package.json"
 git commit -m "chore: release v$VERSION"
 
 # Create and push tag

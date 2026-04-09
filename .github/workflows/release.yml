@@ -55,8 +55,10 @@ jobs:
             mkdir -p "release/$platform"
             if [[ "$platform" == win32* ]]; then
               cp zig-out/bin/ansilust.exe "release/$platform/"
+              cp zig-out/bin/16c.exe "release/$platform/"
             else
               cp zig-out/bin/ansilust "release/$platform/"
+              cp zig-out/bin/16c "release/$platform/"
             fi
             
             # Clean for next build
@@ -112,7 +114,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-packages
-          path: packages/ansilust*/
+          path: |
+            packages/ansilust/
+            packages/ansilust-*/
+            packages/16c/
+            packages/16c-*/
           retention-days: 1
 
   publish-npm:
@@ -143,23 +149,27 @@ jobs:
       - name: Publish platform packages
         run: |
           failed=0
-          for pkg in packages/ansilust-*/; do
-            if [ -f "$pkg/package.json" ]; then
-              echo "Publishing $pkg..."
-              cd "$pkg"
-              if ! npm publish --provenance --access public; then
-                echo "::error::Failed to publish $pkg"
-                failed=1
+          for pattern in packages/ansilust-*/ packages/16c-*/; do
+            for pkg in $pattern; do
+              if [ -f "$pkg/package.json" ]; then
+                echo "Publishing $pkg..."
+                cd "$pkg"
+                if ! npm publish --provenance --access public; then
+                  echo "::error::Failed to publish $pkg"
+                  failed=1
+                fi
+                cd - > /dev/null
               fi
-              cd - > /dev/null
-            fi
+            done
           done
           if [ "$failed" -eq 1 ]; then
             exit 1
           fi
       
-      - name: Publish meta package
-        run: npm publish packages/ansilust/ --provenance --access public
+      - name: Publish meta packages
+        run: |
+          npm publish packages/ansilust/ --provenance --access public
+          npm publish packages/16c/ --provenance --access public
 
   create-release:
     name: Create GitHub release
@@ -183,6 +193,8 @@ jobs:
             platform=$(basename "$platform_dir")
             binary="$platform_dir/ansilust"
             binary_exe="$platform_dir/ansilust.exe"
+            sixteenc_binary="$platform_dir/16c"
+            sixteenc_binary_exe="$platform_dir/16c.exe"
             
             if [[ -f "$binary_exe" ]]; then
               # Windows: create zip
@@ -199,6 +211,23 @@ jobs:
               chmod +x "temp/ansilust-$platform/ansilust"
               cd temp
               tar -czf "../release-artifacts/ansilust-$platform.tar.gz" "ansilust-$platform/"
+              cd ..
+              rm -rf temp
+            fi
+
+            if [[ -f "$sixteenc_binary_exe" ]]; then
+              mkdir -p "temp/16c-$platform"
+              cp "$sixteenc_binary_exe" "temp/16c-$platform/"
+              cd temp
+              zip -r "../release-artifacts/16c-$platform.zip" "16c-$platform/"
+              cd ..
+              rm -rf temp
+            elif [[ -f "$sixteenc_binary" ]]; then
+              mkdir -p "temp/16c-$platform"
+              cp "$sixteenc_binary" "temp/16c-$platform/"
+              chmod +x "temp/16c-$platform/16c"
+              cd temp
+              tar -czf "../release-artifacts/16c-$platform.tar.gz" "16c-$platform/"
               cd ..
               rm -rf temp
             fi
