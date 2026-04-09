@@ -1,7 +1,7 @@
 ---
 id: task-low-spec-and-build-opentui-bridge-surface
 level: low
-status: pending
+status: in_progress
 blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
