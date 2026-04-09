@@ -29,3 +29,4 @@ Status: active until explicit human approval or rejection supersedes it
 ### Traceability
 
 - Used on 2026-04-09 as anti-blocker evidence to reconcile `task-high-track-durdraw-darkdraw-authorization-gate` and unblock `task-med-secure-durdraw-phase2-authorization` for mock-only/local continuation.
+- Reused on 2026-04-09 to close `task-med-secure-durdraw-phase2-authorization` and leave `task-low-request-phase2-authorization-from-tom` as the remaining real human-approval gate.
