@@ -1,7 +1,7 @@
 ---
 id: task-low-author-launch-integration-artifact-ownership
 level: low
-status: pending
+status: done
 blocked_by: []
 expires_at: 2026-04-15T19:41:46Z
 ---
@@ -10,6 +10,13 @@ expires_at: 2026-04-15T19:41:46Z
 
 Decide which owned docs, service files, or packaging artifacts must exist before screensaver launch integration is promoted from FUTURE.
 
-## Readiness
+## Completion evidence
 
-Unblocked by completion of `task-med-own-launch-and-idle-integration-artifacts`, which resolved the parent governance gate and left this low task as the next concrete spec-authoring step.
+- Confirmed this task was unblocked before editing (`blocked_by: []`).
+- Authored the Stage 4 launch integration ownership contract in `.specs/screensaver/requirements.md` as a doc-only change.
+- Defined the minimum owned launch slice as one repo-owned launch document plus one repo-owned machine-readable launch artifact for the same path.
+- Required any claimed idle-triggered path to also ship the repo-owned activation artifact, such as a systemd user unit, service template, or idle-manager config fragment.
+- Required any claimed packaged launch path to also ship the repo-owned packaging/install artifact that places launch assets and ensures offline artwork availability for first use.
+- Clarified that examples, wiki snippets, screenshots, and distro-local recipes maintained elsewhere do not satisfy the ownership gate.
+- Updated `.specs/screensaver/plan.md` to record the owned Stage 4 baseline and mark `WP-GROW-001` complete now that all linked source/config and launch-ownership tasks are done.
+- Avoided runtime code changes and limited scope to the task file plus the screensaver spec files needed to record the contract.

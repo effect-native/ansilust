@@ -205,6 +205,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `Repo-owned launch artifacts required for Stage 4 claims`: any wrapper entrypoint, desktop/session launcher, user-service unit, idle hook, packaging manifest, install script, or other machine-readable artifact the repository itself ships and can test or review.
 - `Environment-specific examples`: Omarchy snippets, ad-hoc systemd commands, distro package recipes maintained elsewhere, XScreenSaver config fragments, and manual desktop settings instructions. These may document how a user could wire the repo-owned command, but they do not by themselves upgrade launch support into shipped truth.
 - `Ownership gate`: claiming `launch support` requires a repo-owned launch artifact; claiming `idle-manager integration` requires both the launch artifact and the repo-owned idle-manager or user-service artifact; claiming `packaged launch path` additionally requires the repo-owned packaging/install artifact for that channel.
+- `Owned Stage 4 baseline`: the smallest promotable launch slice is one repo-owned launch document plus one repo-owned machine-readable launch artifact for the same path; idle claims add the repo-owned activation/service artifact, and packaged claims add the repo-owned packaging/install artifact for that same channel.
 - `Non-goals for this package until separately evidenced`: background sync, always-on remote refresh, mandatory online setup, remote search/catalog UX, and database-dependent startup.
 - `Execution split`: complete source/config boundary docs before launch/integration artifact docs so the config contract can grow without inheriting desktop-specific blockers, and so launch ownership can be reviewed without reopening source-mode scope.
 
@@ -216,7 +217,7 @@ This plan turns the screensaver spec into a staged delivery ladder that matches 
 - `task-med-own-launch-and-idle-integration-artifacts`
 - `task-low-author-launch-integration-artifact-ownership`
 
-**Status**: [ ] Pending
+**Status**: [x] Complete
 
 ## Validation Checkpoints
 

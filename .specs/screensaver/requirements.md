@@ -102,6 +102,9 @@ FR1.6.2: WHERE idle-manager integration is enabled the system shall support dism
 FR1.6.3: WHERE service-manager integration is enabled the system shall provide documented service templates or equivalent launch artifacts.
 FR1.6.4: WHERE package integration is enabled the system shall provide a defined installation-time or first-run path for making artwork available offline.
 FR1.6.5: WHERE multi-monitor integration is enabled the system shall document the supported launch behavior per monitor topology.
+FR1.6.6: WHERE any Stage 4 launch claim is promoted from FUTURE the repository shall own the launch artifact and the supporting documentation for that claimed path.
+FR1.6.7: WHERE idle-triggered activation is claimed the repository shall also own the corresponding idle-manager or user-service artifact for that activation path.
+FR1.6.8: WHERE packaged launch support is claimed the repository shall also own the packaging or install artifact required to place launch assets and offline artwork on disk for that delivery channel.
 
 ## NFR2: Non-Functional Requirements
 
@@ -148,11 +151,22 @@ DR4.5.1: The smallest persisted screensaver config schema beyond the Stage 1 dwe
 DR4.5.2: The persisted `source.mode` field shall admit only `auto` and `local_archive` until a later evidenced schema revision expands that enum.
 DR4.5.3: The minimal persisted config contract shall exclude metadata overlays, archive filters, launch integration, idle integration, monitor-layout policy, and package-time installation settings.
 
+#### Stage 4 Launch Integration Artifact Ownership Contract
+
+- Launch support is not considered owned until the repo ships both (a) a screensaver launch document that names the supported external entry path and prerequisites, and (b) at least one machine-readable launch artifact for that path such as a wrapper entrypoint, desktop/session launcher, or equivalent launcher-facing file.
+- Idle-manager support is not considered owned until the repo also ships the activation artifact for that path, such as a systemd user unit, service template, idle-manager config fragment, or equivalent machine-readable service/activation file that targets the repo-owned launch artifact.
+- Packaged launch support is not considered owned until the repo also ships the packaging/install artifact for the claimed channel, such as a package manifest, install script, post-install step, or equivalent checked-in delivery artifact that places the launch/service assets and ensures offline artwork availability for first use.
+- Multi-monitor behavior is not considered owned until the repo documents the supported monitor policy for the claimed launch path; example snippets without that repo-owned contract do not upgrade support.
+- Wiki notes, issue comments, screenshots, distro-local recipes maintained elsewhere, and user-specific dotfile snippets are illustrative only and do not satisfy the ownership gate.
+
 ## IR5: Integration Requirements
 
 IR5.1: Stage 1 playback shall integrate with ansilust rendering instead of relying on raw file dumping.
 IR5.2: Stage 2 art-source growth shall integrate with the download surface only through evidenced local storage and indexing contracts.
 IR5.3: Stage 4 launch surfaces shall integrate with external desktop tools through documented artifacts owned by the screensaver surface.
+IR5.3.1: The minimum owned Stage 4 launch slice shall consist of one repo-owned launch document plus one repo-owned machine-readable launch artifact for the same launch path.
+IR5.3.2: Any claimed idle-triggered launch slice shall add a repo-owned idle-manager or user-service artifact that targets that same launch path.
+IR5.3.3: Any claimed packaged launch slice shall add the repo-owned packaging/install artifact for the same delivery path.
 
 ## DEP6: Dependencies
 
@@ -167,4 +181,5 @@ DEP6.4: Stage 4 depends on future packaging and external-launch documentation or
 SC7.1: Stage 1 is complete when a user with local artwork can run `16c random` for continuous playback and `16c screensaver` for input-dismissible playback, and both commands restore terminal state on input exit and on `SIGINT` and `SIGTERM`, without needing mirror, database, or desktop-integration setup.
 SC7.2: Stage 2 is complete when the artwork pool can grow beyond the MVP local source through defined local archive and optional metadata-backed selection paths.
 SC7.3: Stage 3 is complete when persistent configuration can control selection and playback behavior without redefining the Stage 1 command contract.
+SC7.4: Stage 4 launch integration is complete only when the repository owns the documented launch path, the machine-readable launch artifact for that path, any claimed idle/service activation artifact, and any claimed packaging/install artifact needed to deliver that behavior.
 SC7.4: Stage 4 is complete when documented launch and idle-integration surfaces can start and dismiss the screensaver in supported environments.
