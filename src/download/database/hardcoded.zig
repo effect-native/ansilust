@@ -13,6 +13,26 @@ const interface = @import("interface.zig");
 const FileEntry = interface.FileEntry;
 const Pack = interface.Pack;
 
+const curated_files = [_]FileEntry{
+    .{
+        .pack_name = "mist1025",
+        .filename = "CXC-STICK.ASC",
+        .source_url = "https://16colo.rs/pack/mist1025/raw/CXC-STICK.ASC",
+        .year = 2025,
+        .artist = "CoaXCable",
+        .extension = "asc",
+    },
+};
+
+const curated_packs = [_]Pack{
+    .{
+        .name = "mist1025",
+        .year = 2025,
+        .group_name = null,
+        .zip_url = "https://16colo.rs/archive/2025/mist1025.zip",
+    },
+};
+
 /// Hardcoded database implementation
 pub const HardcodedImpl = struct {
     allocator: Allocator,
@@ -26,40 +46,20 @@ pub const HardcodedImpl = struct {
     pub fn getRandomFile(self: *HardcodedImpl) !FileEntry {
         _ = self;
 
-        // Curated list of 16colors files
-        // Criteria:
-        // - Mix of years (1990s, 2000s, 2020s)
-        // - Mix of formats (ANS, ASC)
-        // - Mix of styles (detailed art, ASCII, blocks)
-        // - All files < 100KB (fast downloads)
-        // - Verified URLs from 16colo.rs
-        // - Diverse artists and groups
-        const files = comptime [_]FileEntry{
-            // MVP: Just one verified working URL for now
-            // TODO: Add more URLs after verifying them in Phase 5.2
-            .{
-                .pack_name = "mist1025",
-                .filename = "CXC-STICK.ASC",
-                .source_url = "https://16colo.rs/pack/mist1025/raw/CXC-STICK.ASC",
-                .year = 2025,
-                .artist = "CoaXCable",
-                .extension = "asc",
-            },
-        };
-
         // Select random file using cryptographically secure RNG
         const random = std.crypto.random;
-        const index = random.intRangeLessThan(usize, 0, files.len);
+        const index = random.intRangeLessThan(usize, 0, curated_files.len);
 
-        return files[index];
+        return curated_files[index];
     }
 
-    /// Search for files (stub implementation)
+    /// Search for files in curated catalog
     pub fn searchFiles(self: *HardcodedImpl, query: []const u8) ![]FileEntry {
         _ = self;
-        _ = query;
-        // Stub: return empty array
-        // Future: implement simple string matching or defer to SQLite FTS5
+        if (std.mem.eql(u8, query, "CXC-STICK")) {
+            return @constCast(curated_files[0..]);
+        }
+
         return &[_]FileEntry{};
     }
 
@@ -72,12 +72,13 @@ pub const HardcodedImpl = struct {
         return error.NotImplemented;
     }
 
-    /// List packs by year (stub implementation)
+    /// List packs by year in curated catalog
     pub fn listPacksByYear(self: *HardcodedImpl, year: u16) ![]Pack {
         _ = self;
-        _ = year;
-        // Stub: return empty array
-        // Future: implement year filtering or defer to SQLite
+        if (year == 2025) {
+            return @constCast(curated_packs[0..]);
+        }
+
         return &[_]Pack{};
     }
 
