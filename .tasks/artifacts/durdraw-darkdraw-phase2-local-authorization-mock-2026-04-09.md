@@ -25,3 +25,7 @@ Status: active until explicit human approval or rejection supersedes it
 ### Supersession Rule
 
 - The first checked-in artifact that records Tom's explicit approval or rejection immediately supersedes this mock.
+
+### Traceability
+
+- Used on 2026-04-09 as anti-blocker evidence to reconcile `task-high-track-durdraw-darkdraw-authorization-gate` and unblock `task-med-secure-durdraw-phase2-authorization` for mock-only/local continuation.
