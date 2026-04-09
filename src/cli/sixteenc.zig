@@ -25,7 +25,7 @@ pub fn main() !void {
     // Need at least program name + command
     if (args.len < 2) {
         printUsage();
-        return error.MissingCommand;
+        return;
     }
 
     const command = args[1];
@@ -38,7 +38,8 @@ pub fn main() !void {
         const mode = try parsePlaybackMode(args[2..]);
         try random.executeScreensaverWithMode(allocator, mode);
     } else if (std.mem.eql(u8, command, "random-1")) {
-        try random.executeRandomOne(allocator);
+        const mode = try parsePlaybackMode(args[2..]);
+        try random.executeRandomOneWithMode(allocator, mode);
     } else if (std.mem.eql(u8, command, "--help") or std.mem.eql(u8, command, "-h")) {
         printHelp();
     } else if (std.mem.eql(u8, command, "--version") or std.mem.eql(u8, command, "-v")) {
@@ -217,4 +218,13 @@ test "16c rejects mutually exclusive instant and streaming speed flags for rando
     try std.testing.expect(std.mem.indexOf(u8, source, "--instant") != null);
     try std.testing.expect(std.mem.indexOf(u8, source, "--streaming-speed") != null);
     try std.testing.expect(std.mem.indexOf(u8, source, "cannot be used together") != null);
+}
+
+test "16c random-1 parses playback flags instead of ignoring them" {
+    const source = try std.fs.cwd().readFileAlloc(std.testing.allocator, "src/cli/sixteenc.zig", 64 * 1024);
+    defer std.testing.allocator.free(source);
+
+    try std.testing.expect(std.mem.indexOf(u8, source, "std.mem.eql(u8, command, \"random-1\")") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "const mode = try parsePlaybackMode(args[2..]);") != null);
+    try std.testing.expect(std.mem.indexOf(u8, source, "try random.executeRandomOneWithMode(allocator, mode);") != null);
 }

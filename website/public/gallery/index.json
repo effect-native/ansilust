@@ -1,0 +1,10 @@
+[
+  {
+    "slug": "gallery-title-card",
+    "title": "Gallery Title Card",
+    "artist": "Ansilust",
+    "year": 2026,
+    "asset": "/gallery/owned/gallery-title-card.ans",
+    "description": "Repository-owned placeholder artwork for gallery route bootstrapping."
+  }
+]

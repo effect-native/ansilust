@@ -84,12 +84,35 @@ pub const FileStorage = struct {
     /// # Errors
     /// - `PermissionDenied`: Cannot delete files
     pub fn cleanupRandom(self: *FileStorage, random_dir: []const u8, keep_count: usize) !void {
-        _ = self;
-        _ = random_dir;
-        _ = keep_count;
+        var dir = try fs.openDirAbsolute(random_dir, .{ .iterate = true });
+        defer dir.close();
 
-        // TODO: Implement cleanup logic
-        // For MVP, skip cleanup - will implement in Phase 5.2
+        var files = std.ArrayList(FileInfo).empty;
+        defer {
+            for (files.items) |file_info| {
+                self.allocator.free(file_info.name);
+            }
+            files.deinit(self.allocator);
+        }
+
+        var iterator = dir.iterate();
+        while (try iterator.next()) |entry| {
+            if (entry.kind != .file) continue;
+
+            try files.append(self.allocator, .{
+                .name = try self.allocator.dupe(u8, entry.name),
+                .timestamp = parseTimestamp(entry.name),
+            });
+        }
+
+        if (files.items.len <= keep_count) return;
+
+        std.mem.sort(FileInfo, files.items, {}, FileInfo.lessThan);
+
+        const delete_count = files.items.len - keep_count;
+        for (files.items[0..delete_count]) |file_info| {
+            try dir.deleteFile(file_info.name);
+        }
     }
 };
 
@@ -99,6 +122,14 @@ const FileInfo = struct {
 
     fn lessThan(context: void, a: FileInfo, b: FileInfo) bool {
         _ = context;
+        if (a.timestamp == b.timestamp) {
+            return std.mem.lessThan(u8, a.name, b.name);
+        }
         return a.timestamp < b.timestamp;
     }
 };
+
+fn parseTimestamp(name: []const u8) i64 {
+    if (name.len < 14) return std.math.maxInt(i64);
+    return std.fmt.parseInt(i64, name[0..14], 10) catch std.math.maxInt(i64);
+}

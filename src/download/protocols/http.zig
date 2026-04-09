@@ -38,28 +38,62 @@ pub const HttpClient = struct {
     /// - `Timeout`: Request timed out
     /// - `OutOfMemory`: Allocation failed
     pub fn download(self: *HttpClient, url: []const u8, dest_path: []const u8) !void {
+        var file = try fs.cwd().createFile(dest_path, .{});
+        defer file.close();
 
-        // For now, use a very simple approach with curl
-        // TODO: Replace with proper std.http.Client implementation
-        const curl_cmd = try std.fmt.allocPrint(
-            self.allocator,
-            "curl -s -f -o {s} {s}",
-            .{ dest_path, url },
-        );
-        defer self.allocator.free(curl_cmd);
+        var file_buffer: [4096]u8 = undefined;
+        var file_writer = file.writer(&file_buffer);
 
-        const result = try std.process.Child.run(.{
-            .allocator = self.allocator,
-            .argv = &[_][]const u8{ "sh", "-c", curl_cmd },
-        });
-        defer self.allocator.free(result.stdout);
-        defer self.allocator.free(result.stderr);
+        const result = self.client.fetch(.{
+            .location = .{ .url = url },
+            .response_writer = &file_writer.interface,
+        }) catch |err| switch (err) {
+            error.ConnectionRefused,
+            error.NetworkUnreachable,
+            error.ConnectionResetByPeer,
+            error.HostLacksNetworkAddresses,
+            error.NameServerFailure,
+            error.TemporaryNameServerFailure,
+            error.UnknownHostName,
+            error.UnexpectedConnectFailure,
+            => return error.NetworkFailure,
+            error.ConnectionTimedOut,
+            => return error.Timeout,
+            error.TlsInitializationFailed,
+            => return error.NetworkFailure,
+            error.CertificateBundleLoadFailure,
+            error.InvalidFormat,
+            error.InvalidPort,
+            error.UnsupportedUriScheme,
+            error.UriMissingHost,
+            error.UriHostTooLong,
+            error.UnsupportedCompressionMethod,
+            error.TooManyHttpRedirects,
+            error.HttpChunkInvalid,
+            error.HttpChunkTruncated,
+            error.HttpConnectionClosing,
+            error.HttpContentEncodingUnsupported,
+            error.HttpHeadersInvalid,
+            error.HttpHeadersOversize,
+            error.HttpRedirectLocationInvalid,
+            error.HttpRedirectLocationMissing,
+            error.HttpRedirectLocationOversize,
+            error.HttpRequestTruncated,
+            error.ReadFailed,
+            error.RedirectRequiresResend,
+            error.UnexpectedCharacter,
+            error.WriteFailed,
+            error.StreamTooLong,
+            => return error.HttpError,
+            else => |e| return e,
+        };
 
-        if (result.term.Exited != 0) {
-            if (result.term.Exited == 22) {
-                return error.FileNotFound; // curl 404
-            }
-            return error.HttpError;
+        try file_writer.interface.flush();
+
+        switch (result.status) {
+            .ok => {},
+            .not_found => return error.FileNotFound,
+            else => return error.HttpError,
         }
     }
 

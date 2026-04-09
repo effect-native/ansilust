@@ -73,8 +73,7 @@ pub const RandomPlaybackLoop = struct {
     source_mode: stage1_config.SourceMode = .auto,
 
     pub fn playOnce(self: RandomPlaybackLoop, allocator: Allocator) !void {
-        _ = self;
-        try executeRandom(allocator, false, loop_messaging);
+        try executeRandom(allocator, false, loop_messaging, self.mode);
     }
 
     pub fn run(self: RandomPlaybackLoop, allocator: Allocator, iterations: ?usize) !void {
@@ -149,14 +148,14 @@ const ScreensaverSession = struct {
         if (!self.manage_terminal) return;
 
         const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-        try writeScreensaverEnter(stdout_file.writer());
+        try writeScreensaverEnter(stdout_file.deprecatedWriter());
     }
 
     fn restoreTerminal(self: *ScreensaverSession) void {
         if (!self.manage_terminal) return;
 
         const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-        writeScreensaverLeave(stdout_file.writer()) catch {};
+        writeScreensaverLeave(stdout_file.deprecatedWriter()) catch {};
     }
 
     fn installSignalHandlers(self: *ScreensaverSession) void {
@@ -198,7 +197,11 @@ const ScreensaverSession = struct {
 /// # Errors
 /// - Various errors from download, storage, or renderer operations
 pub fn executeRandomOne(allocator: Allocator) !void {
-    try executeRandom(allocator, true, random_one_messaging);
+    try executeRandomOneWithMode(allocator, .standard);
+}
+
+pub fn executeRandomOneWithMode(allocator: Allocator, mode: PlaybackMode) !void {
+    try executeRandom(allocator, true, random_one_messaging, mode);
 }
 
 pub fn executeScreensaver(allocator: Allocator) !void {
@@ -243,7 +246,7 @@ fn resolveDelayNs(mode: PlaybackMode, config: stage1_config.Stage1Config) u64 {
     };
 }
 
-fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: RuntimeMessaging) !void {
+fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: RuntimeMessaging, mode: PlaybackMode) !void {
     std.debug.print("{s}: Fetching random artwork...\n", .{messaging.fetch_label});
 
     // 1. Initialize platform paths
@@ -257,13 +260,13 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: R
         defer allocator.free(local_path);
 
         std.debug.print("Selected local artwork: {s}\n", .{local_path});
-        try displayArtwork(local_path);
+        try displayArtwork(local_path, mode);
         std.debug.print("\n✓ Done!\n", .{});
         return;
     }
 
     if (!allow_remote_fallback) {
-        return failEmptyLocalArtworkPool(std.io.getStdErr().writer(), messaging.seed_hint);
+        return failEmptyLocalArtworkPool(std.fs.File.stderr().deprecatedWriter(), messaging.seed_hint);
     }
 
     // 2. Initialize database
@@ -306,7 +309,7 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: R
     try storage.cleanupRandom(paths.random_dir, 10);
 
     // 7. Display artwork through ansilust
-    try displayArtwork(saved_path);
+    try displayArtwork(saved_path, mode);
 
     std.debug.print("\n✓ Done!\n", .{});
 }
@@ -314,7 +317,7 @@ fn executeRandom(allocator: Allocator, allow_remote_fallback: bool, messaging: R
 /// Display artwork
 ///
 /// Parse and render artwork to stdout using ansilust.
-fn displayArtwork(file_path: []const u8) !void {
+fn displayArtwork(file_path: []const u8, mode: PlaybackMode) !void {
     const file_data = try std.fs.cwd().readFileAlloc(
         std.heap.page_allocator,
         file_path,
@@ -330,7 +333,39 @@ fn displayArtwork(file_path: []const u8) !void {
     defer std.heap.page_allocator.free(buffer);
 
     const stdout_file = std.fs.File{ .handle = std.posix.STDOUT_FILENO };
-    try stdout_file.writeAll(buffer);
+    switch (mode) {
+        .streaming => |speed| {
+            if (is_tty) {
+                try writeStreamingBuffer(stdout_file, buffer, speed);
+            } else {
+                try stdout_file.writeAll(buffer);
+            }
+        },
+        else => try stdout_file.writeAll(buffer),
+    }
+}
+
+fn writeStreamingBuffer(stdout_file: std.fs.File, buffer: []const u8, speed: StreamingSpeed) !void {
+    const profile = streamingProfile(speed);
+    var offset: usize = 0;
+
+    while (offset < buffer.len) {
+        const end = @min(offset + profile.chunk_bytes, buffer.len);
+        try stdout_file.writeAll(buffer[offset..end]);
+        offset = end;
+
+        if (offset < buffer.len) {
+            std.Thread.sleep(profile.delay_ns);
+        }
+    }
+}
+
+fn streamingProfile(speed: StreamingSpeed) struct { chunk_bytes: usize, delay_ns: u64 } {
+    return switch (speed) {
+        .slow => .{ .chunk_bytes = 8, .delay_ns = 12 * std.time.ns_per_ms },
+        .normal => .{ .chunk_bytes = 16, .delay_ns = 6 * std.time.ns_per_ms },
+        .fast => .{ .chunk_bytes = 32, .delay_ns = 2 * std.time.ns_per_ms },
+    };
 }
 
 fn screensaverShouldExit(delay_ns: u64) !bool {

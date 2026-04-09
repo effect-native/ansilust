@@ -58,6 +58,16 @@ test "16c playback runtime carries explicit playback mode through random and scr
     try testing.expect(std.mem.indexOf(u8, source, "mode: PlaybackMode = .standard") != null);
     try testing.expect(std.mem.indexOf(u8, source, "pub fn executeRandomLoop") != null);
     try testing.expect(std.mem.indexOf(u8, source, "pub fn executeScreensaverWithMode") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "pub fn executeRandomOneWithMode") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "try executeRandom(allocator, false, loop_messaging, self.mode);") != null);
+}
+
+test "16c streaming playback writes ANSI output in paced chunks" {
+    const source = @embedFile("random.zig");
+
+    try testing.expect(std.mem.indexOf(u8, source, "fn writeStreamingBuffer") != null);
+    try testing.expect(std.mem.indexOf(u8, source, "fn streamingProfile") != null);
+    try testing.expect(std.mem.indexOf(u8, source, ".slow => .{ .chunk_bytes = 8") != null);
 }
 
 test "16c stage1 config falls back to built-in defaults when config.toml is missing" {
