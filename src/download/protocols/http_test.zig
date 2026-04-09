@@ -5,6 +5,10 @@ const testing = std.testing;
 const http = @import("http.zig");
 const HttpClient = http.HttpClient;
 
+fn read_http_source() ![]u8 {
+    return std.fs.cwd().readFileAlloc(testing.allocator, "src/download/protocols/http.zig", 64 * 1024);
+}
+
 test "HttpClient.init creates valid client" {
     var client = HttpClient.init(testing.allocator);
     defer client.deinit();
@@ -28,4 +32,20 @@ test "HttpClient API has expected signature" {
 
     // Would test download with mock server:
     // try client.download("https://example.com/file.txt", "/tmp/test.txt");
+}
+
+test "HttpClient.download does not shell out through curl or sh" {
+    const source = try read_http_source();
+    defer testing.allocator.free(source);
+
+    try testing.expect(std.mem.indexOf(u8, source, "std.process.Child.run") == null);
+    try testing.expect(std.mem.indexOf(u8, source, "\"sh\", \"-c\"") == null);
+    try testing.expect(std.mem.indexOf(u8, source, "curl -s -f -o") == null);
+}
+
+test "HttpClient.download no longer carries curl replacement TODO" {
+    const source = try read_http_source();
+    defer testing.allocator.free(source);
+
+    try testing.expect(std.mem.indexOf(u8, source, "TODO: Replace with proper std.http.Client implementation") == null);
 }
